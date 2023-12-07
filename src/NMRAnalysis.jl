@@ -4,7 +4,6 @@ using LsqFit
 using Measurements
 using NMRTools
 using Plots
-using Roots
 using Statistics
 
 include("diffusion.jl")
