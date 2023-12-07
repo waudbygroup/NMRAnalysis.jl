@@ -1,3 +1,19 @@
+function analyse_tract()
+    println("Current directory: $(pwd())")
+    println()
+
+    print("Enter path to TROSY experiment (i.e. Bruker experiment folder): ")
+    trosy = readline()
+    ispath(trosy) || throw(SystemError("No such file or directory"))
+
+    print("Enter path to anti-TROSY experiment: ")
+    ispath(trosy) || throw(SystemError("No such file or directory"))
+    antitrosy = readline()
+
+    analyse_tract(trosy, antitrosy)
+end
+
+
 function analyse_tract(trosy::String, antitrosy::String)
     analyse_tract(
         loadnmr(trosy),
@@ -26,6 +42,7 @@ function analyse_tract(trosy::NMRData{T,2}, antitrosy::NMRData{T,2}) where T
     trosytau = data(trosy, 2)
     antitrosytau = data(antitrosy, 2)
 
+    # calculate field-dependent quantities
     B0 = 2π * 1e6 * acqus(trosy, :bf1) / γH
     ωN = 2π * 1e6 * acqus(trosy, :bf3)
 
@@ -33,32 +50,31 @@ function analyse_tract(trosy::NMRData{T,2}, antitrosy::NMRData{T,2}) where T
     c = B0 * γN * ΔδN / (3*sqrt(2))
     f = p * c * (3cos(θ)^2 - 1)
     
-    # 2. pick noise position
-    plt = plot([
-        trosy[:,1],
-        antitrosy[:,1]
-    ])
-    display(plt)
-    print("Enter a chemical shift in the noise region: ")
-    noiseppm = readline()
-    noiseppm = tryparse(Float64, noiseppm)
-    # closeall()
+    # 2. pick integration region
 
-    # 3. pick region
     plt = plot([
         trosy[:,1],
         antitrosy[:,1]
-    ])
-    vline!([noiseppm], label="noise")
+    ], grid=true)
+    hline!(plt, [0], c=:grey)
     display(plt)
+    
     print("Defining integration region - please enter first chemical shift: ")
     ppm1 = readline()
     ppm1 = tryparse(Float64, ppm1)
     print("Defining integration region - please enter second chemical shift: ")
     ppm2 = readline()
     ppm2 = tryparse(Float64, ppm2)
-    # closeall()
     
+    # 3. pick noise region
+    vspan!(plt, [ppm1, ppm2], label="integration region", alpha=0.2)
+    display(plt)
+
+    print("Enter a chemical shift in the center of the noise region: ")
+    noiseppm = readline()
+    noiseppm = tryparse(Float64, noiseppm)
+
+
     # create integration region and noise selectors
     ppm1, ppm2 = minmax(ppm1, ppm2)
 
@@ -71,15 +87,14 @@ function analyse_tract(trosy::NMRData{T,2}, antitrosy::NMRData{T,2}) where T
 
     # plot region
     p2 = plot(trosy[:,1],linecolor=:black)
-    plot!(p2, trosy[roi,1], fill=(0,:dodgerblue), linecolor=:navy)
-    plot!(p2, trosy[noiseroi,1], fill=(0,:orange), linecolor=:red)
-	hline!(p2, [0], c=:grey)
+    hline!(p2, [0], c=:grey, primary=false)
+    plot!(p2, trosy[roi,1], fill=(0,:dodgerblue), linecolor=:navy, label="integration region")
+    plot!(p2, trosy[noiseroi,1], fill=(0,:orange), linecolor=:red, label="noise region", legend=:topright)
     title!(p2, "Integration regions")
     display(p2)
-    print("Displaying integration region. Press enter to continue.")
+    print("Displaying integration and noise regions. Press enter to continue.")
     readline()
     
-
 
     # 4. integrate regions
     trosynoise = vec(data(sum(trosy[noiseroi,:], dims=F1Dim)))
@@ -107,6 +122,8 @@ function analyse_tract(trosy::NMRData{T,2}, antitrosy::NMRData{T,2}) where T
     antitrosypars = coef(antitrosyfit) .± stderror(antitrosyfit)
     trosyR2 = trosypars[2]
     antitrosyR2 = antitrosypars[2]
+    trosyI0 = coef(trosyfit)[1]
+    antitrosyI0 = coef(antitrosyfit)[1]
 
     # 6. calculate τc
     ΔR = antitrosyR2 - trosyR2
@@ -127,28 +144,48 @@ function analyse_tract(trosy::NMRData{T,2}, antitrosy::NMRData{T,2}) where T
     yfit1 = model(t, coef(trosyfit))
     yfit2 = model(t, coef(antitrosyfit))
 
-    p1 = scatter(trosytau, trosyintegrals .± trosynoise, label="TROSY",
+    p1 = scatter(1000trosytau, (trosyintegrals .± trosynoise) / trosyI0, label="TROSY",
 			frame=:box,
-			xlabel="Relaxation time / s",
+			xlabel="Relaxation time / ms",
 			ylabel="Integrated signal",
 			title="TRACT: τc = $τc ns",
 			grid=nothing)
-    scatter!(p1, antitrosytau, antitrosyintegrals .± antitrosynoise, label="Anti-TROSY")
-    plot!(p1, t, yfit1, label="TROSY fit (R₂ = $trosyR2 s⁻¹)", c=1)
-    plot!(p1, t, yfit2, label="Anti-TROSY fit (R₂ = $antitrosyR2 s⁻¹)", c=2)
+    scatter!(p1, 1000antitrosytau, (antitrosyintegrals .± antitrosynoise) / antitrosyI0, label="Anti-TROSY")
+    plot!(p1, 1000t, yfit1 / trosyI0,
+        label="TROSY fit (R₂ = $trosyR2 s⁻¹)",
+        c=1,
+        z_order = :back)
+    plot!(p1, 1000t, yfit2 / antitrosyI0,
+        label="Anti-TROSY fit (R₂ = $antitrosyR2 s⁻¹)",
+        c=2,
+        z_order = :back)
 
-    println("Fitted TROSY relaxation rate: $trosyR2 ns")
-    println("Fitted anti-TROSY relaxation rate: $antitrosyR2 ns")
-    println("Fitted τc: $τc ns")
+    println()
+    @info """TRACT results
+
+Current directory: $(pwd())
+TROSY experiment: $(trosy[:filename])
+Anti-TROSY experiment: $(antitrosy[:filename])
+
+Integration region: $ppm1 - $ppm2 ppm
+Noise region: $noise1 - $noise2 ppm
+
+Fitted TROSY relaxation rate: $trosyR2 ns
+Fitted anti-TROSY relaxation rate: $antitrosyR2 ns
+
+Estimated τc: $τc ns
+
+N.B. TRACT analysis assumes the protein is perfectly rigid. In the presence of flexibility or disorder, reported τc values will be underestimates.
+"""
     display(p1)
 
-    # 6. adjust region?
-    # 7. add new region?
     # 8. make final plot
 
+    println()
     print("Enter a filename to save figure (press enter to skip): ")
     outputfilename = readline()
     if length(outputfilename) > 0
+        plot!(p1, title="")
         savefig(p1, outputfilename)
         println("Figure saved to $outputfilename.")
     end
