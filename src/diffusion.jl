@@ -1,4 +1,4 @@
-function analyse_diffusion()
+function analyse_diffusion(coherence=SQ(H1))
     println("Current directory: $(pwd())")
     println()
 
@@ -6,18 +6,18 @@ function analyse_diffusion()
     experiment = readline()
     ispath(experiment) || throw(SystemError("No such file or directory"))
 
-    analyse_diffusion(experiment)
+    analyse_diffusion(experiment, coherence)
 end
 
 
-function analyse_diffusion(experiment::String)
-    analyse_diffusion(loadnmr(experiment))
+function analyse_diffusion(experiment::String, coherence=SQ(H1))
+    analyse_diffusion(loadnmr(experiment), coherence)
 end
 
 function analyse_diffusion(spec::NMRData{T,2}, coherence=SQ(H1)) where T
     spec = deepcopy(spec) # work on copy of the data
     label!(spec, "Diffusion")
-    
+
     # 1. get experiment parameters
     td = spec[2, :npoints]
 
