@@ -33,6 +33,15 @@ function diffusion(spec::NMRData{T,2}, coherence=SQ(H1)) where {T}
             σ = 0.6366
         end
     end
+    temp = acqus(spec, :te)
+    solvent = acqus(spec, :solvent)
+    if solvent == "D2O"
+        solvent = :d2o
+    elseif solvent == "H2O+D2O"
+        solvent = :h2o
+    else
+        solvent = missing
+    end
 
     print("Gradient pulse length δ = $(1e6*δ) μs (2*p30). Press enter to confirm or type correct value (in μs): ")
     response = readline()
@@ -159,6 +168,15 @@ function diffusion(spec::NMRData{T,2}, coherence=SQ(H1)) where {T}
           label="fit",
           z_order=:back)
 
+    # 8. estimate rH (if solvent permits)
+    if !ismissing(solvent)
+        η = viscosity(solvent, temp)
+        kB = 1.38e-23
+        rH = kB*temp / (6π*η*0.001 * D) * 1e10 # in Å
+    else
+        rH = missing
+    end
+
     println()
     @info """diffusion results
 
@@ -168,7 +186,12 @@ Experiment: $(spec[:filename])
 Integration region: $ppm1 - $ppm2 ppm
 Noise region: $noise1 - $noise2 ppm
 
+Solvent: $solvent
+Temperature: $temp K
+Expected viscosity: $η mPa s
+
 Fitted diffusion coefficient: $D m² s⁻¹
+Calculated hydrodynamic radius: $rH Å
 """
     display(p1)
 

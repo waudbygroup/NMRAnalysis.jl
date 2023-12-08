@@ -6,12 +6,14 @@ using NMRTools
 using Plots
 using Statistics
 
+include("viscosity.jl")
 include("diffusion.jl")
 include("tract.jl")
 
 using PrecompileTools
 include("precompile.jl")
 
+export viscosity
 export tract
 export diffusion
 
