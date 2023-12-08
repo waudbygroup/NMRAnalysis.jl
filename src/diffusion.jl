@@ -1,4 +1,4 @@
-function analyse_diffusion(coherence=SQ(H1))
+function diffusion(coherence=SQ(H1))
     println("Current directory: $(pwd())")
     println()
 
@@ -6,14 +6,14 @@ function analyse_diffusion(coherence=SQ(H1))
     experiment = readline()
     ispath(experiment) || throw(SystemError("No such file or directory"))
 
-    return analyse_diffusion(experiment, coherence)
+    return diffusion(experiment, coherence)
 end
 
-function analyse_diffusion(experiment::String, coherence=SQ(H1))
-    return analyse_diffusion(loadnmr(experiment), coherence)
+function diffusion(experiment::String, coherence=SQ(H1))
+    return diffusion(loadnmr(experiment), coherence)
 end
 
-function analyse_diffusion(spec::NMRData{T,2}, coherence=SQ(H1)) where {T}
+function diffusion(spec::NMRData{T,2}, coherence=SQ(H1)) where {T}
     spec = deepcopy(spec) # work on copy of the data
     label!(spec, "Diffusion")
 
@@ -182,4 +182,6 @@ Fitted diffusion coefficient: $D m² s⁻¹
         savefig(p1, outputfilename)
         println("Figure saved to $outputfilename.")
     end
+
+    return p1
 end

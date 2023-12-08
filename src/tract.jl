@@ -1,4 +1,4 @@
-function analyse_tract()
+function tract()
     println("Current directory: $(pwd())")
     println()
 
@@ -10,15 +10,15 @@ function analyse_tract()
     ispath(trosy) || throw(SystemError("No such file or directory"))
     antitrosy = readline()
 
-    return analyse_tract(trosy, antitrosy)
+    return tract(trosy, antitrosy)
 end
 
-function analyse_tract(trosy::String, antitrosy::String)
-    return analyse_tract(loadnmr(trosy),
+function tract(trosy::String, antitrosy::String)
+    return tract(loadnmr(trosy),
                          loadnmr(antitrosy))
 end
 
-function analyse_tract(trosy::NMRData{T,2}, antitrosy::NMRData{T,2}) where {T}
+function tract(trosy::NMRData{T,2}, antitrosy::NMRData{T,2}) where {T}
     # numerical constants
     μ0 = 4π * 1e-7
     γH = gyromagneticratio(H1)
@@ -185,4 +185,6 @@ N.B. TRACT analysis assumes the protein is perfectly rigid. In the presence of f
         savefig(p1, outputfilename)
         println("Figure saved to $outputfilename.")
     end
+
+    return p1
 end

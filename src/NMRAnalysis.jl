@@ -12,8 +12,8 @@ include("tract.jl")
 using PrecompileTools
 include("precompile.jl")
 
-export analyse_tract
-export analyse_diffusion
+export tract
+export diffusion
 
 @info """
 NMRAnalysis.jl
@@ -24,8 +24,8 @@ Usage:
 - call the desired analysis routine
 
 Available analysis routines:
-- analyse_tract()
-- analyse_diffusion()
+- tract()
+- diffusion()
 
 Current working directory: $(pwd())
 """
