@@ -1,4 +1,15 @@
-"calculate viscosity, in mPa s"
+"""
+    viscosity(solvent, T)
+
+Calculate the viscosity of a solvent (in mPa s) at a given temperature.
+
+# Arguments
+- `solvent`: Should be either `:h2o` or `:d2o`.
+- `T`: The temperature (in K) at which the viscosity is calculated.
+
+# Notes
+The calculation is based on the formula proposed by Cho et al in the paper "J Phys Chem B (1999) 103 1991-1994".
+"""
 function viscosity(solvent, T)
     @info "Viscosity: calculation based on Cho et al, J Phys Chem B (1999) 103 1991-1994"
 	if solvent==:h2o
