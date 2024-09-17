@@ -4,11 +4,15 @@ using LsqFit
 using Measurements
 using NMRTools
 using Plots
+using Reexport
 using Statistics
 
 include("viscosity.jl")
 include("diffusion.jl")
 include("tract.jl")
+
+include("gui/gui.jl")
+using .GUI
 
 using PrecompileTools
 include("precompile.jl")
@@ -16,6 +20,9 @@ include("precompile.jl")
 export viscosity
 export tract
 export diffusion
+
+@reexport using .GUI: view2d, fit2d
+
 
 @info """
 NMRAnalysis.jl
