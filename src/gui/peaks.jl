@@ -7,11 +7,16 @@ mutable struct Peak2D
     label::String
     touched::Bool
 
+    pars0
     pars#::Dict{Symbol, Float64}
-    # pars_err::Dict{Symbol, Float64}
+    pars_err#::Dict{Symbol, Float64}
     sim_parameters
 end
-Peak2D(position, label="") = Peak2D(MaybeVector(position), label, true, DefaultDict{Symbol, Any}(nothing), DefaultDict{Symbol, Any}(nothing))
+Peak2D(position, label="") = Peak2D(MaybeVector(position), label, true,
+    DefaultDict{Symbol, Any}(nothing),
+    DefaultDict{Symbol, Any}(nothing),
+    DefaultDict{Symbol, Any}(nothing),
+    DefaultDict{Symbol, Any}(nothing))
 
 getpeakpositions(state) = @lift([p.initial_position[$(state[:slice])] for p ∈ $(state[:peaks])])
 function getfitpositions(state)
@@ -50,11 +55,11 @@ function getpeaklabels(state)
 end
 
 
-function createpeak!(state, newpos)
+function createpeak(state, newpos)
     state[:peakcounter] += 1
     newlabel = "X$(state[:peakcounter])"
     positionpoint = Point2f(newpos)
-    createpeak!(state, positionpoint, newlabel, state[:model])
+    createpeak(state, positionpoint, newlabel, state[:model])
     # if state[:fixpeakpositions]
     #     Peak2D(Point2f(newpos), newlabel)
     # else

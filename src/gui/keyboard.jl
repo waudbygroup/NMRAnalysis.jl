@@ -29,7 +29,7 @@ function process_keyboardbutton(state, event)
         # Add marker
         newpos = mouseposition(state[:gui][:mainax].scene)
         
-        newpeak = createpeak!(state, newpos)
+        newpeak = createpeak(state, newpos)
         addpeakandrecluster!(state, newpeak)
         return Consume()
     end

@@ -4,6 +4,7 @@ using DataStructures
 using GLMakie
 using LightGraphs
 using LsqFit
+using Measurements
 using NMRTools
 
 include("util.jl")
@@ -18,24 +19,33 @@ include("clustering.jl")
 include("sim.jl")
 include("fitting.jl")
 
-spectra = [
-    loadnmr("/Users/chris/NMR/crick-950/pallavi_trxl2_240322/4/"),
-    # loadnmr("/Users/chris/NMR/crick-800/jiwoo_CTD_his_20240725/804"),
-    # loadnmr("/Users/chris/NMR/crick-800/jiwoo_CTD_his_20240725/806"),
-]
-model = ModelAmplitudes()
+# spectra = [
+#     loadnmr("/Users/chris/NMR/crick-950/pallavi_trxl2_240322/4/"),
+#     # loadnmr("/Users/chris/NMR/crick-800/jiwoo_CTD_his_20240725/804"),
+#     # loadnmr("/Users/chris/NMR/crick-800/jiwoo_CTD_his_20240725/806"),
+# ]
+spec=loadnmr("/Users/chris/Documents/Work/NMRTools/additional-data/pseudo3D_HN_R2")
+vc = acqus(spec, :vclist)
+tau = 16e-3 * vc
+spectra = [deepcopy(spec[:,:,i]) for i=1:11]
+for i=1:11
+    # label!(spectra[i], "Time $i")
+    metadata(spectra[i])[:relaxationtime] = tau[i]
+end
+model = ModelExp()
 
 
-# create dictionaries to hold the data, state, and gui elements
-state = Dict()
-state[:gui] = Dict()
-state[:specdata] = preparespecdata(spectra, 6 .. 10)
-gui = state[:gui] # for convenience
-specdata = state[:specdata] # for convenience
 
 
 
 # now create a state dictionary
+state = Dict()
+
+state[:specdata] = preparespecdata(spectra, 6 .. 10) # spectrum data
+preparemetadata!(state, model)
+specdata = state[:specdata] # for convenience
+
+state[:gui] = Dict()
 state[:model] = model
 state[:slice] = Observable(1)
 state[:x] = Observable(specdata[:x][1])
@@ -58,6 +68,8 @@ state[:fixpeakpositions] = fixpeakpositions(model)
 state[:fixamplitudes] = fixamplitudes(model)
 state[:fixlinewidths] = fixlinewidths(model)
 
+gui = state[:gui] # for convenience
+
 # create the figure
 gui[:fig] = Figure()
 gui[:mainpanel] = gui[:fig][1, 1]
@@ -67,35 +79,39 @@ gui[:sidepanel] = gui[:fig][1, 2]
 gui[:sg_spectrum] = SliderGrid(
     gui[:sidepanel][1, 1],
     (label = "Spectrum", range = 1:specdata[:nspec], format = "{}", startvalue = 1),
-    tellheight = false)
+    tellheight = true)
 gui[:slider_spectrum] = gui[:sg_spectrum].sliders[1]
 connect!(state[:slice], gui[:slider_spectrum].value)
-gui[:cmd_lower] = Button(gui[:sidepanel][2,1][1,1], label="Lower Levels")
-gui[:cmd_raise] = Button(gui[:sidepanel][2,1][1,2], label="Raise Levels")
+gui[:cmd_lower] = Button(gui[:sidepanel][2,1][1,1], label="Lower Levels", tellheight = true)
+gui[:cmd_raise] = Button(gui[:sidepanel][2,1][1,2], label="Raise Levels", tellheight = true)
 
 gui[:sg_radii] = SliderGrid(
     gui[:sidepanel][3, 1],
     (label = "X fitting radius", range = 0.005:0.005:0.1, format = "{:.3f}", startvalue = 0.06),
     (label = "Y fitting radius", range = 0.05:0.05:1, format = "{:.2f}", startvalue = 0.4),
-    tellheight = false)
+    tellheight = true)
 gui[:slider_Xradius] = gui[:sg_radii].sliders[1]
 gui[:slider_Yradius] = gui[:sg_radii].sliders[2]
 connect!(state[:Xradius], gui[:slider_Xradius].value)
 connect!(state[:Yradius], gui[:slider_Yradius].value)
 
-gui[:toggle_fit] = Toggle(gui[:sidepanel][4,1][1,1], active=false)
+gui[:toggle_fit] = Toggle(gui[:sidepanel][4,1][1,1], active=false, tellheight = true)
 Label(gui[:sidepanel][4,1][1,2], "Fitting")
 
-gui[:cmd_quit] = Button(gui[:sidepanel][5,1], label="Quit")
+gui[:cmd_quit] = Button(gui[:sidepanel][5,1], label="Quit", tellheight = true)
+
+# gui[:infopanel] = Label(gui[:sidepanel][6,1], "", lineheight=1.1, valign=:top)
+gui[:infoplot] = prepareplot(gui[:sidepanel][6,1], state, state[:model])
+
 
 # callbacks
 on(state[:slice]) do i
     # update the axis values and data simultaneously:
     state[:x].val = specdata[:x][i]
     state[:y].val = specdata[:y][i]
-    state[:zfit][] = specdata[:zfit][i]
-    state[:z][] = specdata[:z][i]
-    state[:fitpositions][] = getfitpositions(state)
+    state[:z][] = specdata[:z][i] # trigger update
+    state[:zfit][] = specdata[:zfit][i] # trigger update
+    state[:fitpositions][] = getfitpositions(state) # trigger update
 end
 on(gui[:cmd_lower].clicks) do i
     state[:clev0][] /= state[:cfactor]
@@ -123,6 +139,7 @@ gui[:contourplot] = contour!(gui[:mainax], state[:x], state[:y], state[:z],
     colorrange=(-0.001, 0.001),
     lowclip=:pink,
     highclip=:grey,
+    inspectable=false,
     )
 gui[:fitplot] = contour!(gui[:mainax], state[:x], state[:y], state[:zfit],
     levels=@lift(state[:baselev] * $(state[:clev0])),
@@ -130,23 +147,41 @@ gui[:fitplot] = contour!(gui[:mainax], state[:x], state[:y], state[:zfit],
     colorrange=(-0.001, 0.001),
     lowclip=:blue,
     highclip=:red,
+    inspectable=false,
     )
 gui[:fitpeakplot] = scatter!(gui[:mainax], state[:fitpositions],
     color=:darkblue,
     markersize=15,
     marker=:+,
-    # inspectable=true,
+    inspectable=true,
+    inspector_label = (self,idx,pos)->peakinfo(state[:peaks][][idx], state[:model])
     )
 gui[:peakplot] = scatter!(gui[:mainax], getpeakpositions(state),
         color=getpeakcolors(state),
         markersize=15,
         marker=:x,
-        # inspectable=true,
+        inspectable=false,
         )
 gui[:labelsplot] = text!(gui[:mainax], getpeaklabels(state), offset=(10,10))
+gui[:inspector] = DataInspector(gui[:fig])
 connect!(gui[:fitplot].visible, gui[:toggle_fit].active)
 connect!(gui[:fitpeakplot].visible, gui[:toggle_fit].active)
 
+function peaktooltip(plt, idx, position)
+    peakinfo(idx, state[:model])
+end
+# TODO adapt this for showing infoplot
+# function getpeakinfo(state)
+#     lift(state[:peaks], state[:highlighted]) do peaks, idx
+#         if idx == 0
+#             "No peak selected"
+#         else
+#             peak = peaks[idx]
+#             peakinfo(peak, state[:model])
+#         end
+#     end
+# end
+# connect!(gui[:infopanel].text, getpeakinfo(state))
 
 # key commands
 on(events(gui[:mainax]).keyboardbutton, priority = 2) do event

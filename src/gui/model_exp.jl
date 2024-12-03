@@ -1,23 +1,28 @@
 # Model code: fitting amplitudes, keep everything else fixed
 
-struct ModelAmplitudes <: Model end
+struct ModelExp <: Model end
 
 # flags to control whether positions, amplitudes and linewidths are fixed across spectra
-fixpeakpositions(::ModelAmplitudes) = true
-fixamplitudes(::ModelAmplitudes) = false
-fixlinewidths(::ModelAmplitudes) = true
+fixpeakpositions(::ModelExp) = true
+fixamplitudes(::ModelExp) = false
+fixlinewidths(::ModelExp) = true
 
-function preparemetadata!(state, ::ModelAmplitudes)
-    # nothing to do here
+
+function preparemetadata!(state, ::ModelExp)
+    tau = map(state[:specdata][:spectra]) do spec
+        metadata(spec, :relaxationtime)
+    end
+    state[:specdata][:tau] = tau
 end
 
-function createpeak(state, positionpoint, newlabel, ::ModelAmplitudes)
-    # TODO set up initial parameters, dictionaries etc.
-    Peak2D(positionpoint, newlabel)
+function createpeak(state, positionpoint, newlabel, ::ModelExp)
+    p = Peak2D(positionpoint, newlabel)
+    p.pars0[:rate] = 5.
+    return p
 end
 
-function fitcluster!(state, cluster, ::ModelAmplitudes)
-    @debug "fitting cluster (ModelAmplitudes)" cluster
+function fitcluster!(state, cluster, ::ModelExp)
+    @debug "fitting cluster (ModelExp)" cluster
     peaks = state[:peaks][] # for convenience
     specdata = state[:specdata]
     nspec = specdata[:nspec]
@@ -171,7 +176,101 @@ function fitcluster!(state, cluster, ::ModelAmplitudes)
         peaks[peakindex].sim_parameters[:R2Y] = MaybeVector(pfit[i, 4])
         peaks[peakindex].sim_parameters[:amplitude] = MaybeVector(pfit[i, 5:end])
     end
+
+    # 13. curve fitting
+    fitexp!(state, cluster, ModelExp())
 end
 
 
 
+function fitexp!(state, cluster, ::ModelExp)
+    # get relaxation times
+    tau = state[:specdata][:tau]
+
+    # model function
+    model(t, p) = p[1] * exp.(-t * p[2])
+
+    peaks = [state[:peaks][][i] for i in cluster]
+    for peak in peaks
+        y = peak.pars[:amplitude]
+        ye = peak.pars_err[:amplitude]
+        wt = 1 ./ ye.^2
+        R0 = peak.pars0[:rate]
+        p0 = [y[1], R0]
+        fitresults = curve_fit(model, tau, y, wt, p0)
+        pfit = coef(fitresults)
+        perr = stderror(fitresults)
+        peak.pars[:rate] = pfit[2]
+        peak.pars_err[:rate] = perr[2]
+        peak.pars[:A] = pfit[1]
+        peak.pars_err[:A] = perr[1]
+    end
+end
+
+
+function peakinfo(peak, ::ModelExp)
+    if peak.touched
+        # get position only
+        "$(peak.label) [not fitted]\n" *
+        "δX: $(peak.initial_position[1][1]) ppm\n" *
+        "δY: $(peak.initial_position[1][2]) ppm"
+    else
+        "$(peak.label) [fitted]\n" *
+        "δX: $(peak.pars[:position][1] ± peak.pars_err[:position][1]) ppm\n" *
+        "δY: $(peak.pars[:position][2] ± peak.pars_err[:position][2]) ppm\n" *
+        "R2X*: $(peak.pars[:R2X] ± peak.pars_err[:R2X]) s-1\n" *
+        "R2Y*: $(peak.pars[:R2Y] ± peak.pars_err[:R2Y]) s-1\n" *
+        "Rate: $(peak.pars[:rate] ± peak.pars_err[:rate]) s-1"
+    end
+end
+
+
+function prepareplot(figpanel, state, ::ModelExp)
+    ax = Axis(figpanel,
+        xlabel="Relaxation time (s)",
+        ylabel="Amplitude",
+        # title="Fit (no peak highlighted)",
+    )
+    state[:gui][:fitax] = ax
+
+    x = state[:specdata][:tau]
+    xmax = maximum(x)*1.1
+    xplot = collect(LinRange(0, xmax, 100))
+
+    # set default values
+    state[:model_xplot] = xplot
+    state[:model_yplot] = Observable(0. * xplot)
+    state[:model_y] = Observable(0. * x)
+    state[:model_ye] = Observable(0. * x)
+
+    lines!(ax, xplot, state[:model_yplot])
+    errorbars!(ax, x, state[:model_y], state[:model_ye])
+    scatter!(ax, x, state[:model_y])
+end
+
+
+function updatefitplot(peak_idx, state, ::ModelExp)
+    if(peak_idx == 0)
+        state[:model_y][] = 0. * state[:specdata][:tau]
+        state[:model_ye][] = 0. * state[:specdata][:tau]
+        state[:model_yplot][] = 0. * state[:model_xplot]
+        return
+    end
+
+    peak = state[:peaks][][peak_idx]
+    if peak.touched
+        state[:model_y][] = 0. * state[:specdata][:tau]
+        state[:model_ye][] = 0. * state[:specdata][:tau]
+        state[:model_yplot][] = 0. * state[:model_xplot]
+        return
+    end
+
+    A = peak.pars[:A]
+    R = peak.pars[:rate]
+        
+    state[:model_y][] = peak.pars[:amplitude] / A
+    state[:model_ye][] = peak.pars_err[:amplitude] / A
+
+    state[:model_yplot][] = exp.(-R .* state[:model_xplot])
+    autolimits!(state[:gui][:fitax])
+end

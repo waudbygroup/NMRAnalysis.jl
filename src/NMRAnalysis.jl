@@ -21,7 +21,7 @@ export viscosity
 export tract
 export diffusion
 
-@reexport using .GUI: view2d, fit2d
+@reexport using .GUI: view2d #, fit2d
 
 
 @info """

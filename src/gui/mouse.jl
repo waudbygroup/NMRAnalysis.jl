@@ -37,9 +37,9 @@ function process_mouseposition(state, mousepos)
         return Consume()
     else
         pick_plt, pick_i = pick(state[:gui][:fig].scene, Makie.mouseposition_px(state[:gui][:fig].scene), 50)
-        # @show pick_plt == state[:gui][:peakplot], pick_i
         if(pick_plt == state[:gui][:peakplot])
             state[:highlighted][] = pick_i
+            updatefitplot(pick_i, state)
         else
             state[:highlighted][] = 0
         end
