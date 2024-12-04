@@ -17,6 +17,10 @@ export viscosity
 export tract
 export diffusion
 
+include("BatchAnalysis/BatchAnalysis.jl")
+using .BatchAnalysis
+export batchanalysis
+
 @info """
 NMRAnalysis.jl
 
