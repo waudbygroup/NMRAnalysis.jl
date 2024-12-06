@@ -3,16 +3,28 @@ function linedata(spectra, plotscale)
     # x values are obtained from data(spec, F1Dim)
     # y values are obtained from data(spec) / scale
     
-    map(enumerate(spectra)) do (idx, spec)
+    dat = map(enumerate(spectra)) do (idx, spec)
         x = data(spec, F1Dim)
         y = data(spec) * plotscale
         [Point2f(x[i], y[i] + idx - 1) for i in 1:length(x)]
     end
+
+    # if length of dat is < 96, pad it with empty lists
+    if length(dat) < 96
+        append!(dat, [Point2f[] for i in 1:96 - length(dat)])
+    end
+
+    return dat
 end
 
 function linecolors(n)
     # using Colors
 
-    # return [hue2rgb(HSV(i / n, 1.0, 1.0)) for i in 0:n-1]
-    return :rainbow1
+    c = resample_cmap(:darkrainbow, n)
+    # pad to length 96
+    if length(c) < 96
+        append!(c, [c[1] for i in 1:96 - length(c)])
+    end
+    return c
+    # return :rainbow1
 end
