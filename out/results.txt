@@ -1,0 +1,15 @@
+Input file: /Users/chris/NMR/sop-600/sophia_hsp90_075_194_240807/6
+Input file: /Users/chris/NMR/sop-600/sophia_hsp90_075_194_240807/8
+Peak position (ppm):, -73.17757076053047
+Noise position (ppm):, -81.23623934287029
+
+Integration width (ppm):, 0.5
+Initial I0:, 59.279988339803445
+Initial R2,0 (s⁻¹):, 2.0
+Initial Rex (s⁻¹):, 50.0
+Initial kex (s⁻¹):, 1808.0424144560632
+
+Fitted I0:, 58.73 ± 0.27
+Fitted R2,0 (s⁻¹):, 15.97 ± 0.22
+Fitted Rex (s⁻¹):, 40.6 ± 1.4
+Fitted kex (s⁻¹):, 5040.0 ± 230.0

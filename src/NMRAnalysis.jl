@@ -17,6 +17,11 @@ export viscosity
 export tract
 export diffusion
 
+include("R1rho/R1rho.jl")
+using .R1rho
+export r1rho
+
+
 @info """
 NMRAnalysis.jl
 
