@@ -117,6 +117,8 @@ function gui!(state)
     scatter!(ax_fit, state[:currentscatter], label = "Observed")
     lines!(ax_fit, state[:currentfit], label = "Global fit")
     lines!(ax_fit, state[:currentexpfit], label = "Exponential fit")
+    errorbars!(ax_fit, state[:residualerror], color=c4)
+    scatter!(ax_fit, state[:residualpoints], color=c4, label = "Residuals")
     axislegend(ax_fit, position=:rt)
 
     ax_fit_R1rho = Axis(bottom_panel[1,2],
@@ -146,33 +148,31 @@ function gui!(state)
         savefig!(state)
     end
 
-    dragging = :nothing
+    gui[:dragging] = :nothing
     on(events(ax_spectra).mousebutton) do event
-        global dragging, dragidx
         if event.button == Mouse.left
             if event.action == Mouse.press
                 if mouseover(fig, gui[:peakspan])
-                    dragging = :peak
+                    gui[:dragging] = :peak
                 elseif mouseover(fig, gui[:noisespan])
-                    dragging = :noise
+                    gui[:dragging] = :noise
                 else
-                    dragging = :nothing
+                    gui[:dragging] = :nothing
                 end
-                return Consume(dragging != :nothing)
+                return Consume(gui[:dragging] != :nothing)
             elseif event.action == Mouse.release
                 # Exit dragging
-                dragging = :nothing
+                gui[:dragging] = :nothing
                 return Consume(false)
             end    
         end
     end
     on(events(fig).mouseposition, priority = 2) do mp
-        global dragging
-        if dragging != :nothing
+        if gui[:dragging] != :nothing
             p = mouseposition(ax_spectra)
-            if dragging == :peak
+            if gui[:dragging] == :peak
                 state[:peakppm][] = p[1]
-            elseif dragging == :noise
+            elseif gui[:dragging] == :noise
                 state[:noiseppm][] = p[1]
             end
             return Consume(true)
@@ -252,6 +252,42 @@ function savefig!(state)
         println(f, "Fitted R2,0 (s⁻¹):, $(state[:fitR20][])")
         println(f, "Fitted Rex (s⁻¹):, $(state[:fitRex][])")
         println(f, "Fitted kex (s⁻¹):, $(exp(state[:fitlnk][]))")
+    end
+
+    # write dispersion fit data to CSVs
+    filename = joinpath(outputdir, "dispersion-fit.csv")
+    open(filename, "w") do f
+        println(f, "vSL (kHz),R1rho fit (s-1)")
+        for i in state[:fitR1rho][]
+            println(f, "$(i[1]),$(i[2])")
+        end
+    end
+    filename = joinpath(outputdir, "dispersion-points.csv")
+    open(filename, "w") do f
+        println(f, "vSL (kHz),R1rho (s-1) [exponential fit],error (s-1)")
+        for i in state[:expfiterror][]
+            println(f, "$(i[1]),$(i[2]),$(i[3])")
+        end
+    end
+
+    # write intensity data and fits to CSVs
+    for i=1:state[:nseries]
+        filename = "intensities_$(round(0.001*νSL(state[:dataset])[i],digits=2))_kHz-fit.csv"
+        filename = joinpath(outputdir, filename)
+        open(filename, "w") do f
+            println(f, "TSL (ms),fitted intensity")
+            for p in state[:fitseries][][i]
+                println(f, "$(p[1]),$(p[2])")
+            end
+        end
+        filename = "intensities_$(round(0.001*νSL(state[:dataset])[i],digits=2))_kHz-points.csv"
+        filename = joinpath(outputdir, filename)
+        open(filename, "w") do f
+            println(f, "TSL (ms),intensity,error")
+            for p in state[:errorpoints][][i]
+                println(f, "$(p[1]),$(p[2]),$(p[3])")
+            end
+        end
     end
 end
 

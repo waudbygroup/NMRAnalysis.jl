@@ -104,6 +104,19 @@ function initialisestate(dataset)
             ys = @. I0 * exp(-ts * R2)
             Point2f.(1000 * ts, ys)
         end
+        state[:residualpoints] = lift(state[:currentseries], state[:intensities], state[:fitpars]) do i, I, p
+            t = dataset.TSLs[state[:series][i]]
+            y = I[state[:series][i]]
+            yfit = model_I_onres(t, νSL(dataset)[i], p)
+            Point2f.(1000 * t, y - yfit)
+        end
+        state[:residualerror] = lift(state[:currentseries], state[:intensities], state[:noise], state[:fitpars]) do i, I, σ, p
+            t = dataset.TSLs[state[:series][i]]
+            y = I[state[:series][i]]
+            ye = σ
+            yfit = model_I_onres(t, νSL(dataset)[i], p)
+            tuple.(1000 * t, y - yfit, ye)
+        end
     end
 
     return state
