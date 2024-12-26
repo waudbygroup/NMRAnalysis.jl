@@ -47,12 +47,12 @@ end
 struct PlotPanel
     axis
     contourplot
-    # scatterplot
-    # labelsplot
-    # maskplot
-    # fitplot
+    scatterplot
+    labelsplot
+    maskplot
+    fitplot
 end
-PlotPanel() = PlotPanel(nothing, nothing)#, nothing, nothing, nothing, nothing)
+PlotPanel() = PlotPanel(nothing, nothing, nothing, nothing, nothing, nothing)
 
 struct FitPanel
     axis
@@ -87,45 +87,45 @@ function fit2d(spectra, fit_function=nothing, peaklistfilename=nothing)
         state.baselev[] /= 1.3
     end
     # - mouse dragging
-    # on(events(state.fig).mousebutton, priority = 2) do event
-    #     process_mousebutton(state, event)
-    # end
-    # on(events(state.fig).mouseposition, priority = 2) do mousepos
-    #     process_mouseposition(state, mousepos)
-    # end
+    on(events(state.fig).mousebutton, priority = 2) do event
+        process_mousebutton(state, event)
+    end
+    on(events(state.fig).mouseposition, priority = 2) do mousepos
+        process_mouseposition(state, mousepos)
+    end
     
     # - key commands
-    # on(events(state.fig).keyboardbutton, priority = 2) do event
-    #     process_keyboardbutton(state, event)
-    # end
-    # on(events(state.fig).unicode_input) do character
-    #     process_unicode_input(state, character)
-    # end
+    on(events(state.fig).keyboardbutton, priority = 2) do event
+        process_keyboardbutton(state, event)
+    end
+    on(events(state.fig).unicode_input) do character
+        process_unicode_input(state, character)
+    end
     # # - fitting
-    # onany(state.peaks, state.controls.□fitting.active) do P, fitting
-    #     if !fitting
-    #         state.controls.□expfitting.active[] = false
-    #     end
-    #     fitting || return Consume(false)
-    #     state.dragging[] && return Consume(false)
+    onany(state.peaks, state.controls.□fitting.active) do P, fitting
+        if !fitting
+            state.controls.□expfitting.active[] = false
+        end
+        fitting || return Consume(false)
+        state.dragging[] && return Consume(false)
 
-    #     fit!(state)
-    #     return Consume()
-    # end
+        fit!(state)
+        return Consume()
+    end
     # # - exp fitting
-    # onany(state.peaks, state.controls.□expfitting.active) do P, expfitting
-    #     expfitting || return Consume(false)
-    #     state.dragging[] && return Consume(false)
+    onany(state.peaks, state.controls.□expfitting.active) do P, expfitting
+        expfitting || return Consume(false)
+        state.dragging[] && return Consume(false)
 
-    #     state.controls.□expfitting.active[] || return Consume(false)
-    #     fitexp!(state)
+        state.controls.□expfitting.active[] || return Consume(false)
+        fitexp!(state)
 
-    #     return Consume()
-    # end
+        return Consume()
+    end
     # - save peak list
-    # on(state.controls.□savelist.clicks) do clicks
-    #     savepeaklist(state)
-    # end
+    on(state.controls.□savelist.clicks) do clicks
+        savepeaklist(state)
+    end
 
     # display app
     return state.fig
@@ -138,19 +138,19 @@ function preparefigure!(state)
     
     preparecontrolpanel!(state, controllayout)
     preparecontourpanel!(state, mainpanel)
-    # preparefitplot!(state, fitplotpanel)
+    preparefitplot!(state, fitplotpanel)
 
     # only display fitted spectrum if fitting is enabled
-    # connect!(state.plots.fitplot.alpha, state.controls.□fitting.active)
+    connect!(state.plots.fitplot.alpha, state.controls.□fitting.active)
 
     # only display exponential fits if exponential fitting is enabled
-    # connect!(state.fitplots.fitplot.visible, state.controls.□expfitting.active)
+    connect!(state.fitplots.fitplot.visible, state.controls.□expfitting.active)
 
     bgcolor = lift(x -> x ? colorant"pink" : colorant"white", state.renaming)
     connect!(state.fig.scene.backgroundcolor, bgcolor)
     
-    # infolabeltext = getpeakinfo(state)
-    # connect!(state.controls.□info.text, infolabeltext)
+    infolabeltext = getpeakinfo(state)
+    connect!(state.controls.□info.text, infolabeltext)
 
     connect!(state.currentslice, state.controls.□plane.slider.value)
     connect!(state.setup.peakradiusX, state.controls.□Xradius.slider.value)
@@ -185,26 +185,26 @@ function preparecontourpanel!(state, panel)
 
     
 
-    # maskplot = heatmap!(contourax, state.specdata.dX, state.specdata.dY, getmask(state),
-    #     colormap=[colorant"white", colorant"navajowhite"], inspectable=false)
-    # fitplot = contour!(contourax,
-    #     state.specdata.dX,
-    #     state.specdata.dY,
-    #     currentZsim,
-    #     levels=state.specdata.clev,
-    #     colormap=[colorant"cyan", colorant"magenta"],
-    #     colorrange=(-0.001*state.specdata.σ, 0.001*state.specdata.σ),
-    #     lowclip=:cyan,
-    #     highclip=:magenta,
-    #     inspectable=false)
-    # scatterplot = scatter!(contourax, getpeakpositions(state),
-    #     color=getpeakcolors(state),
-    #     markersize=15,
-    #     marker=:circle,
-    #     inspectable=true)
-    # labelsplot = text!(contourax, getpeaktext(state), offset=(10,10))
+    maskplot = heatmap!(contourax, state.specdata.dX, state.specdata.dY, getmask(state),
+        colormap=[colorant"white", colorant"navajowhite"], inspectable=false)
+    fitplot = contour!(contourax,
+        state.specdata.dX,
+        state.specdata.dY,
+        currentZsim,
+        levels=state.specdata.clev,
+        colormap=[colorant"cyan", colorant"magenta"],
+        colorrange=(-0.001*state.specdata.σ, 0.001*state.specdata.σ),
+        lowclip=:cyan,
+        highclip=:magenta,
+        inspectable=false)
+    scatterplot = scatter!(contourax, getpeakpositions(state),
+        color=getpeakcolors(state),
+        markersize=15,
+        marker=:circle,
+        inspectable=true)
+    labelsplot = text!(contourax, getpeaktext(state), offset=(10,10))
 
-    # inspector = DataInspector(contourax)
+    inspector = DataInspector(contourax)
 
     state.plots = PlotPanel(contourax, contourplot)#, scatterplot, labelsplot, maskplot, fitplot)
 end

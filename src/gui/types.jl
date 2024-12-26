@@ -33,3 +33,24 @@ Base.IndexStyle(::Type{StandardVector}) = IndexLinear()
 
 
 
+mutable struct PeakPseudo2D
+    position::Point2f
+    amp::Vector{Float64}
+    lwX::Float64
+    lwY::Float64
+
+    position_err::Point2f
+    amp_err::Vector{Float64}
+    lwX_err::Float64
+    lwY_err::Float64
+
+    A::Float64
+    k::Float64
+    A_err::Float64
+    k_err::Float64
+
+    label::String
+    touched::Bool
+end
+PeakPseudo2D(position::Point2f, amplitude, lwX=30, lwY=30, label="") = PeakPseudo2D(position, amplitude, lwX, lwY, Point2f(0.0, 0.0), 0amplitude, 0.0, 0.0, 0., 0., 0., 0., label, true)
+PeakPseudo2D(position::Point2f, label="") = PeakPseudo2D(position, Vector{Float64}(), 30., 30., Point2f(0.0, 0.0), Vector{Float64}(), 0.0, 0.0, 0., 0., 0., 0., label, true)
