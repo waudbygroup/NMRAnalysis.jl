@@ -31,3 +31,27 @@ function fitexp(t, I, p)
 
     return R ± Re
 end
+
+
+function optimisewidth!(state)
+    # make a range of dx values
+    # set them, fit, and store the result
+    # find the integration width giving minimum error in parameters
+    # set the integration width to that value
+
+    dx0 = state[:dx][]
+    dxs = logrange(.02, 50, 21) .* dx0
+    dxs = filter(x -> 0.01 <= x <= 5, dxs)
+
+    # scoring function
+    score(state) = det(estimate_covar(state[:fit][]))
+    scores = map(dxs) do dx
+        @info dx
+        state[:dx][] = dx
+        @show score(state)
+    end
+
+    best = argmin(scores)
+    @info "best dx: $(dxs[best])"
+    state[:dx][] = dxs[best]
+end

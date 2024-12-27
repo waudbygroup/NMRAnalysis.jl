@@ -44,37 +44,41 @@ function gui!(state)
     input_panel = top_panel[1,2] = GridLayout()
 
     input_panel[1,1] = Label(fig, "Series:")
-    slider_current = input_panel[1,2] = Slider(fig, range = 1:state[:nseries], width=150)
+    slider_current = input_panel[1,2:3] = Slider(fig, range = 1:state[:nseries], width=150)
     gui[:slider_current] = slider_current
     connect!(state[:currentseries], slider_current.value)
 
-    input_panel[2,1] = Label(fig, "Peak position (ppm):")
-    text_peakppm = input_panel[2,2] = Textbox(fig, stored_string=string(round(state[:peakppm][],digits=2)), validator=Float64, width=150)
+    input_panel[3,1] = Label(fig, "Peak position (ppm):")
+    text_peakppm = input_panel[3,2:3] = Textbox(fig, stored_string=string(round(state[:peakppm][],digits=2)), validator=Float64, width=150)
     gui[:text_peakppm] = text_peakppm
     on(text_peakppm.stored_string) do s
         state[:peakppm][] = parse(Float64, s)
     end
 
-    input_panel[3,1] = Label(fig, "Noise position (ppm):")
-    text_noiseppm = input_panel[3,2] = Textbox(fig, stored_string=string(round(state[:noiseppm][],digits=2)), validator=Float64, width=150)
+    input_panel[4,1] = Label(fig, "Noise position (ppm):")
+    text_noiseppm = input_panel[4,2:3] = Textbox(fig, stored_string=string(round(state[:noiseppm][],digits=2)), validator=Float64, width=150)
     gui[:text_noiseppm] = text_noiseppm
     on(text_noiseppm.stored_string) do s
         state[:noiseppm][] = parse(Float64, s)
     end
 
-    input_panel[4,1] = Label(fig, "Integration width (ppm):")
-    text_dx = input_panel[4,2] = Textbox(fig, stored_string=string(round(state[:dx][], digits=2)), validator=Float64, width=150)
+    input_panel[2,1] = Label(fig, "Integration width (ppm):")
+    text_dx = input_panel[2,2] = Textbox(fig, stored_string=string(round(state[:dx][], digits=2)), validator=Float64, width=50)
     gui[:text_dx] = text_dx
     on(text_dx.stored_string) do s
         state[:dx][] = parse(Float64, s)
     end
-
+    button_optimisewidth = input_panel[2,3] = Button(fig, label="Optimise")
+    on(button_optimisewidth.clicks) do _
+        optimisewidth!(state)
+        gui[:text_dx].displayed_string[] = string(round(state[:dx][], digits=3))
+    end
     # input_panel[5,1] = Label(fig, "Fit")
     # cb_fit = input_panel[5, 2] = Checkbox(fig, checked = state[:isfitting][])
     # connect!(state[:isfitting], cb_fit.checked)
 
     input_panel[5,1] = Label(fig, "Initial I0:")
-    text_I0 = input_panel[5,2] = Textbox(fig, stored_string=string(round(state[:initialI0][], digits=1)), validator=Float64, width=150)
+    text_I0 = input_panel[5,2:3] = Textbox(fig, stored_string=string(round(state[:initialI0][], digits=1)), validator=Float64, width=150)
     gui[:text_I0] = text_I0
     on(text_I0.stored_string) do s
         state[:initialI0][] = parse(Float64, s)
@@ -85,21 +89,21 @@ function gui!(state)
     end
 
     input_panel[6,1] = Label(fig, "Initial R2,0 (s⁻¹):")
-    text_R20 = input_panel[6,2] = Textbox(fig, stored_string=string(round(state[:initialR20][], digits=1)), validator=Float64, width=150)
+    text_R20 = input_panel[6,2:3] = Textbox(fig, stored_string=string(round(state[:initialR20][], digits=1)), validator=Float64, width=150)
     gui[:text_R20] = text_R20
     on(text_R20.stored_string) do s
         state[:initialR20][] = parse(Float64, s)
     end
 
     input_panel[7,1] = Label(fig, "Initial Rex (s⁻¹):")
-    text_Rex = input_panel[7,2] = Textbox(fig, stored_string=string(round(state[:initialRex][], digits=1)), validator=Float64, width=150)
+    text_Rex = input_panel[7,2:3] = Textbox(fig, stored_string=string(round(state[:initialRex][], digits=1)), validator=Float64, width=150)
     gui[:text_Rex] = text_Rex
     on(text_Rex.stored_string) do s
         state[:initialRex][] = parse(Float64, s)
     end
 
     input_panel[8,1] = Label(fig, "Initial kex (s⁻¹):")
-    text_kex = input_panel[8,2] = Textbox(fig, stored_string=string(round(exp(state[:initiallnk][]), digits=1)), validator=Float64, width=150)
+    text_kex = input_panel[8,2:3] = Textbox(fig, stored_string=string(round(exp(state[:initiallnk][]), digits=1)), validator=Float64, width=150)
     gui[:text_kex] = text_kex
     on(text_kex.stored_string) do s
         state[:initiallnk][] = log(parse(Float64, s))
@@ -126,6 +130,7 @@ function gui!(state)
         ylabel = "R1rho (s⁻¹)",
         title = "Dispersion curve"
         )
+    hlines!(ax_fit_R1rho, [0], linewidth=0)
     errorbars!(ax_fit_R1rho, state[:expfiterror], color=c2)
     scatter!(ax_fit_R1rho, state[:expfitpoints], label = "Exponential fits", color=c2)
     lines!(ax_fit_R1rho, state[:fitR1rho], label = "Global fit")
@@ -172,8 +177,10 @@ function gui!(state)
             p = mouseposition(ax_spectra)
             if gui[:dragging] == :peak
                 state[:peakppm][] = p[1]
+                text_peakppm.displayed_string[] = string(round(p[1], digits=3))
             elseif gui[:dragging] == :noise
                 state[:noiseppm][] = p[1]
+                text_noiseppm.displayed_string[] = string(round(p[1], digits=3))
             end
             return Consume(true)
         end
@@ -195,9 +202,18 @@ end
 
 
 function savefig!(state)
-    outputdir = state[:outputdir][]
-    @info "Saving results to $(joinpath(pwd(),outputdir))"
+    outputdir = joinpath(pwd(), state[:outputdir][])
+    @info "Saving results to $outputdir"
     if !isdir(outputdir)
+        mkdir(outputdir)
+    else
+        # move existing files to a backup folder
+        backupdir = outputdir * "_previous"
+        @info "Backing up previous results to $backupdir"
+        if isdir(backupdir)
+            rm(backupdir; recursive=true)
+        end
+        mv(outputdir, backupdir)
         mkdir(outputdir)
     end
 
@@ -210,6 +226,7 @@ function savefig!(state)
         xlabel = "νSL (kHz)",
         ylabel = "R1rho (s⁻¹)"
         )
+    hlines!(ax_fit_R1rho, [0], linewidth=0)
     errorbars!(ax_fit_R1rho, state[:expfiterror], color=c2)
     scatter!(ax_fit_R1rho, state[:expfitpoints], label = "Exponential fits", color=c2)
     lines!(ax_fit_R1rho, state[:fitR1rho], label = "Global fit")

@@ -33,6 +33,7 @@ Usage:
 Available analysis routines:
 - tract()
 - diffusion()
+- r1rho()
 
 Current working directory: $(pwd())
 """

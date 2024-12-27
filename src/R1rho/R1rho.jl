@@ -2,6 +2,7 @@ module R1rho
 
 using CairoMakie
 using GLMakie
+using LinearAlgebra
 using LsqFit
 using Measurements
 using NMRTools
