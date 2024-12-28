@@ -13,9 +13,10 @@ function gui!(state)
 
     top_panel = fig[1, 1] = GridLayout()
     bottom_panel = fig[2, 1] = GridLayout()
+    right_panel = fig[1:2, 2] = GridLayout()
 
     gui[:specplottitle] = lift(state[:currentseries]) do i
-        "Observed spectrum (νSL = $(round(0.001*νSL(state[:dataset])[i],digits=2)) kHz)"
+        "Observed spectrum (νSL = $(round(0.001*νSL(state[:dataset])[i],digits=2)) kHz) – drag to move peak/noise positions"
     end
     ax_spectra = Axis(top_panel[1,1],
         xreversed=true,
@@ -41,7 +42,7 @@ function gui!(state)
     lines!(ax_spectra, state[:currentspectrum], label = "Observed")
     axislegend(ax_spectra, position=:lt)
 
-    input_panel = top_panel[1,2] = GridLayout()
+    input_panel = right_panel[1,1] = GridLayout()
 
     input_panel[1,1] = Label(fig, "Series:")
     slider_current = input_panel[1,2:3] = Slider(fig, range = 1:state[:nseries], width=150)
@@ -73,9 +74,6 @@ function gui!(state)
         optimisewidth!(state)
         gui[:text_dx].displayed_string[] = string(round(state[:dx][], digits=3))
     end
-    # input_panel[5,1] = Label(fig, "Fit")
-    # cb_fit = input_panel[5, 2] = Checkbox(fig, checked = state[:isfitting][])
-    # connect!(state[:isfitting], cb_fit.checked)
 
     input_panel[5,1] = Label(fig, "Initial I0:")
     text_I0 = input_panel[5,2:3] = Textbox(fig, stored_string=string(round(state[:initialI0][], digits=1)), validator=Float64, width=150)
@@ -136,19 +134,20 @@ function gui!(state)
     lines!(ax_fit_R1rho, state[:fitR1rho], label = "Global fit")
     axislegend(ax_fit_R1rho, position=:rt)
 
-    results_panel = bottom_panel[1,3] = GridLayout(tellheight=false)
-    Label(results_panel[1,1:2], lift(x->"I0: $x", state[:fitI0]))
-    Label(results_panel[2,1:2], lift(x->"R2,0 (s⁻¹): $x", state[:fitR20]))
-    Label(results_panel[3,1:2], lift(x->"Rex (s⁻¹): $x", state[:fitRex]))
-    Label(results_panel[4,1:2], lift(x->"kex (s⁻¹): $(exp(x))", state[:fitlnk]))
-    results_panel[5,1:2] = Label(fig, "Working directory:\n$(pwd())")
-    results_panel[6,1] = Label(fig, "Output folder:")
-    text_out = results_panel[6,2] = Textbox(fig, stored_string="out", width=150)
+    results_panel = right_panel[2,1] = GridLayout(tellheight=false)
+    Label(results_panel[1,1:2], "Fit results:", font=:bold)
+    Label(results_panel[2,1:2], lift(x->"I0: $x", state[:fitI0]))
+    Label(results_panel[3,1:2], lift(x->"R2,0 (s⁻¹): $x", state[:fitR20]))
+    Label(results_panel[4,1:2], lift(x->"Rex (s⁻¹): $x", state[:fitRex]))
+    Label(results_panel[5,1:2], lift(x->"kex (s⁻¹): $(exp(x))", state[:fitlnk]))
+    results_panel[6,1:2] = Label(fig, "Working directory:\n$(pwd())")
+    results_panel[7,1] = Label(fig, "Output folder:")
+    text_out = results_panel[7,2] = Textbox(fig, stored_string="out", width=150)
     gui[:text_out] = text_out
     on(text_out.stored_string) do s
         state[:outputdir][] = s
     end
-    button_save = results_panel[7,1:2] = Button(fig, label="Save results")
+    button_save = results_panel[8,1:2] = Button(fig, label="Save results")
     on(button_save.clicks) do _
         savefig!(state)
     end
@@ -189,14 +188,14 @@ function gui!(state)
     
 
     display(fig)
-    # while !state["should_close"][]
-    #     sleep(0.1)
-    #     if !isopen(fig.scene)
-    #         break
-    #     end
-    # end
+    while true #!state["should_close"][]
+        sleep(0.1)
+        if !isopen(fig.scene)
+            break
+        end
+    end
     
-    # GLMakie.closeall()
+    GLMakie.closeall()
 end
 
 

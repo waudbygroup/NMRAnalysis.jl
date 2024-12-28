@@ -21,12 +21,17 @@ function fitexp(t, I, p)
 
     model(t, p) = @. p[1] * exp(-t * p[2])
 
-    fit = LsqFit.curve_fit(model, t, I, p0)
-    R = coef(fit)[2]
-    Re = try
-        stderror(fit)[2]
+    R, Re = try
+        fit = LsqFit.curve_fit(model, t, I, p0)
+        R = coef(fit)[2]
+        Re = try
+            stderror(fit)[2]
+        catch
+            0.
+        end
+        R, Re
     catch
-        0.
+        0., 0.
     end
 
     return R ± Re

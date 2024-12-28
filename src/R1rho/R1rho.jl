@@ -18,7 +18,7 @@ include("state.jl")
 include("gui.jl")
 
 function r1rho(filenames)
-    GLMakie.activate!()
+    GLMakie.activate!(;focus_on_show=true, title="NMRAnalysis.jl: R1rho fitting")
     dataset = processexperiments(filenames)
     state = initialisestate(dataset)
     state[:filenames] = filenames
