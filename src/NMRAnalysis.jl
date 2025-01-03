@@ -2,10 +2,13 @@ module NMRAnalysis
 
 using LsqFit
 using Measurements
+using NativeFileDialog
 using NMRTools
 using Plots
+using REPL.TerminalMenus
 using Statistics
 
+include("fileselection.jl")
 include("viscosity.jl")
 include("diffusion.jl")
 include("tract.jl")

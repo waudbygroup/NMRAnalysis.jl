@@ -10,7 +10,7 @@ function processexperiments(experimentfiles)
     for experimentfile in experimentfiles
         i = i + 1
         expt = loadnmr(experimentfile)
-        expt /= scale(expt)
+        expt /= NMRTools.scale(expt)
 
         offres = occursin("offres", expt[:pulseprogram])
         if offres

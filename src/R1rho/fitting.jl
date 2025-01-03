@@ -49,14 +49,18 @@ function optimisewidth!(state)
     dxs = filter(x -> 0.01 <= x <= 5, dxs)
 
     # scoring function
-    score(state) = det(estimate_covar(state[:fit][]))
+    score(state) = try
+        det(estimate_covar(state[:fit][]))
+    catch e
+        Inf
+    end
     scores = map(dxs) do dx
-        @info dx
         state[:dx][] = dx
-        @show score(state)
+        @debug dx, score(state)
+        score(state)
     end
 
     best = argmin(scores)
-    @info "best dx: $(dxs[best])"
+    @debug "best dx: $(dxs[best])"
     state[:dx][] = dxs[best]
 end
