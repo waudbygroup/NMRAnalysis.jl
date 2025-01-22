@@ -1,5 +1,17 @@
 last_folder = Ref{String}("")
 
+"""
+    select_expts(directory_path=""; title_filters=String[])
+
+Interactively select NMR experiment folders from a given directory path.
+
+# Arguments
+- `directory_path::String`: Path to start folder selection from. If empty, uses last selected folder or current directory.
+- `title_filters::Vector{String}`: Optional filters to apply when selecting experiment folders.
+
+# Returns
+- `Vector{String}`: Array of selected experiment folder paths. Returns empty array if no selection is made.
+"""
 function select_expts(directory_path=""; title_filters=String[])
     if isempty(directory_path)
         directory_path = last_folder[]
@@ -66,6 +78,14 @@ function pick_expt_folders(directory_path; title_filters=String[])
 end
 
 
+"""
+    isexpt(directory) -> Bool
+
+Check if the given directory contains an NMR experiment by verifying the existence of
+a 'pdata/1/title' file, which is typical for Bruker NMR data structure.
+
+Return `true` if the directory has the expected title file structure, `false` otherwise.
+"""
 function isexpt(directory)
     # check for existence of pdata/1/title file
     title_path = joinpath(directory, "pdata", "1", "title")
