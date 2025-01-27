@@ -13,6 +13,7 @@ include("parameters.jl")
 include("specdata.jl")
 include("peaks.jl")
 include("experiments.jl")
+include("clustering.jl")
 
 # basic workflow:
 # 1. create an Experiment, with associated data

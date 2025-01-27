@@ -19,12 +19,3 @@ function findclusters(adjacencymatrix)
 
     clusters
 end
-
-function setup_graph_fields(expt::Experiment)
-    adjacency = @lift makeadjacency(expt.peaks, expt)
-    clusters = @lift findclusters($adjacency)
-    expt.adjacency = adjacency
-    expt.clusters = clusters
-
-    expt
-end

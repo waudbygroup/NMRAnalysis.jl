@@ -10,10 +10,11 @@ function choptitle(title, maxlength=30)
 end
 
 function maskellipse!(mask, x, y, x0, y0, xradius, yradius)
+    @info "masking ellipse at $x0, $y0 with radii $xradius, $yradius"
     x = x .- x0
     y = y' .- y0
     fx = @. yradius^2 * x^2
     fy = @. xradius^2 * y^2
-    f = @. fx + fy - a^2*b^2
+    f = @. fx + fy - xradius^2*yradius^2
     mask[f .≤ 0] .= true
 end

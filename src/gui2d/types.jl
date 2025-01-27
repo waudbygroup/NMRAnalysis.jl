@@ -8,6 +8,7 @@ struct SpecData
     σ
     zlabels
     zfit
+    mask
 end
 
 struct Parameter

@@ -1,16 +1,16 @@
 function Peak(initialposition, label, xradius=0.03, yradius=0.3)
-    Peak(Observable(initialposition),
+    pos = MaybeVector(initialposition)
+    Peak(Observable(pos),
         Observable(label),
         Observable(true), # touched
         Observable(xradius), # xradius
         Observable(yradius), # yradius
-        DefaultDict{Symbol, Any}(nothing))
+        Dict{Symbol, Any}())
 end
 
 # generic overlap function - can specialise for different experiments
-isoverlapping(peak1, peak2, expt::Experiment) = isoverlapping(peak1, peak2, typeof(expt))
-isoverlapping(peak1, peak2) = isoverlapping(peak1, peak2, ::Experiment)
-function isoverlapping(peak1, peak2, ::Experiment)
+isoverlapping(peak1, peak2, ::Experiment) = isoverlapping(peak1, peak2)
+function isoverlapping(peak1, peak2)
     # Δδs will be a MaybeVector - could be a single element or a list of different shifts
     Δδs = peak1.initialposition[] .- peak2.initialposition[]
     any(Δδ -> begin
