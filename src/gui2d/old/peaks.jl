@@ -18,7 +18,7 @@ Peak2D(position, label="") = Peak2D(MaybeVector(position), label, true,
     DefaultDict{Symbol, Any}(nothing),
     DefaultDict{Symbol, Any}(nothing))
 
-getpeakpositions(state) = @lift([p.initial_position[$(state[:slice])] for p ∈ $(state[:peaks])])
+# getpeakpositions(state) = @lift([p.initial_position[$(state[:slice])] for p ∈ $(state[:peaks])])
 function getfitpositions(state)
     peaks = state[:peaks][]
     slice = state[:slice][]

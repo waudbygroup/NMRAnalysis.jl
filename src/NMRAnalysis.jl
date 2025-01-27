@@ -11,8 +11,8 @@ include("viscosity.jl")
 include("diffusion.jl")
 include("tract.jl")
 
-include("gui/gui.jl")
-using .GUI
+include("gui2d/GUI2D.jl")
+using .GUI2D
 
 using PrecompileTools
 include("precompile.jl")
@@ -21,7 +21,7 @@ export viscosity
 export tract
 export diffusion
 
-@reexport using .GUI: view2d, peakfit2dseries
+# @reexport using .GUI: view2d, peakfit2dseries
 
 
 @info """

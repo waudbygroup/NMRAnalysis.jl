@@ -355,6 +355,7 @@ function preparecontourpanel!(state, panel)
         lowclip=:cyan,
         highclip=:magenta,
         inspectable=false)
+    @show getpeakpositions(state)
     scatterplot = scatter!(contourax, getpeakpositions(state),
         color=getpeakcolors(state),
         markersize=15,

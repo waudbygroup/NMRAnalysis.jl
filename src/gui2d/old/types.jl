@@ -52,5 +52,5 @@ mutable struct PeakPseudo2D
     label::String
     touched::Bool
 end
-PeakPseudo2D(position::Point2f, amplitude, lwX=30, lwY=30, label="") = PeakPseudo2D(position, amplitude, lwX, lwY, Point2f(0.0, 0.0), 0amplitude, 0.0, 0.0, 0., 0., 0., 0., label, true)
+PeakPseudo2D(position::Point2f, amplitude::Vector{Float64}, lwX=30, lwY=30, label="") = PeakPseudo2D(position, amplitude, lwX, lwY, Point2f(0.0, 0.0), 0amplitude, 0.0, 0.0, 0., 0., 0., 0., label, true)
 PeakPseudo2D(position::Point2f, label="") = PeakPseudo2D(position, Vector{Float64}(), 30., 30., Point2f(0.0, 0.0), Vector{Float64}(), 0.0, 0.0, 0., 0., 0., 0., label, true)
