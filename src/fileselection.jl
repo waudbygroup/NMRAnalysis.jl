@@ -41,6 +41,7 @@ end
 function pick_expt_folders(directory_path; title_filters=String[])
     # Get all experiment directories and their titles
     numbered_dirs = filter(ispath, readdir(directory_path; join=true))
+    filter!(isexpt, numbered_dirs)
     
     # Build menu options, skipping folders without title files
     options = String[]
@@ -49,6 +50,7 @@ function pick_expt_folders(directory_path; title_filters=String[])
         folder_num = basename(dir)
 
         title_path = joinpath(dir, "pdata", "1", "title")
+        # isfile(title_path) || continue  # test if title file exists
         title_content = readline(title_path) |> strip
         
         # Apply title filters if any are specified
@@ -60,6 +62,9 @@ function pick_expt_folders(directory_path; title_filters=String[])
     
     # Handle case where no folders match filters
     if isempty(options)
+        if isempty(title_filters)
+            error("No experiment folders found in '$directory_path'.")
+        end
         # fall back to unfiltered options
         return pick_expt_folders(directory_path)
     end
