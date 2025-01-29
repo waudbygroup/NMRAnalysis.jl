@@ -1,3 +1,11 @@
+"Update experiment with non-overlapping clusters for fitting (e.g. [[1], [2, 3]])"
+function cluster!(expt)
+    adjacency = makeadjacency(expt.peaks[], expt)
+    expt.clusters[] = connected_components(SimpleGraph(adjacency))
+    @debug "$(length(expt.clusters[])) clusters of peaks found" expt.clusters[]
+end
+
+"Generate adjacency matrix for peak overlap"
 function makeadjacency(peaks, expt)
     npeaks = length(peaks)
     adjacency = zeros(npeaks, npeaks)
@@ -10,12 +18,4 @@ function makeadjacency(peaks, expt)
     end
 
     adjacency
-end
-
-"Find non-overlapping clusters for fitting, return list of clusters (e.g. [[1], [2, 3]])"
-function findclusters(adjacencymatrix)
-    clusters = connected_components(SimpleGraph(adjacencymatrix))
-    @debug "$(length(clusters)) clusters of peaks found" clusters
-
-    clusters
 end

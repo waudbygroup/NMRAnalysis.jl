@@ -13,9 +13,10 @@ Concrete subtypes must implement:
 
 Expected fields:
 - `peaks`: A list of peaks in the experiment
-- `specdata`: A SpecData object representing the simulated data
-- `adjacency`: An Observable adjacency matrix for the peaks
+- `specdata`: A SpecData object representing the observed and simulated data plus mask
 - `clusters`: An Observable list of clusters of peaks
+- `touched`: An Observable list of touched clusters
+- `isfitting`: An Observable boolean indicating if real-time fitting is active
 
 # Functions handled by the abstract type
 
@@ -34,7 +35,56 @@ include("expt-relaxation.jl")
 nslices(expt::Experiment) = length(expt.specdata.z)
 npeaks(expt::Experiment) = length(expt.peaks[])
 
+function setupexptobservables!(expt)
+    on(expt.peaks) do _
+        mask!(expt)
+        cluster!(expt)
+        simulate!(expt)
+    end
+    on(expt.clusters) do _
+        checktouched!(expt)
+    end
+    on(expt.touched, expt.isfitting) do _
+        if expt.isfitting[]
+            fit!(expt)
+        end
+    end
+
+    expt
+end
+
+function checktouched!(expt)
+    @debug "Checking touched clusters"
+    touched = Vector{Bool}(length(expt.clusters[]))
+    for i in 1:length(expt.clusters[])
+        touched[i] = any([expt.peaks[][j].touched[] for j in expt.clusters[i]])
+    end
+    expt.touched[] = touched
+end
+
+function fit!(expt::Experiment)
+    @debug "Fitting experiment"
+    # iterate over touched clusters and fit
+    for i in 1:length(expt.clusters[])
+        if expt.touched[][i]
+            fit!(expt.clusters[][i], expt)
+        end
+    end
+    notify(expt.peaks)
+end
+
+function fit!(cluster::Vector, expt::Experiment)
+    @debug "Fitting cluster $cluster"
+    # TODO
+    # untouch peaks in the cluster
+    for i in cluster
+        expt.peaks[][i].touched[] = false
+    end
+end
+
+
 function simulate!(expt::Experiment)
+    @debug "Simulating experiment"
     z = expt.specdata.zfit.val
     for zi in z
         fill!(zi, 0)
@@ -44,19 +94,22 @@ function simulate!(expt::Experiment)
 end
 
 function simulate!(z, expt::Experiment)
+    @debug "Simulating experiment with z"
     for cluster in expt.clusters[]
         simulate!(z, cluster, expt)
     end
 end
 
-function simulate!(z, cluster, expt::Experiment)
+function simulate!(z, cluster::Vector, expt::Experiment)
+    @debug "Simulating cluster $cluster"
     for i in cluster
         simulate!(z, expt.peaks[][i], expt)
     end
 end
 
+
 function mask!(expt::Experiment)
-    @info "Masking experiment"
+    @debug "Masking experiment"
     z = expt.specdata.mask.val
     for zi in z
         fill!(zi, false)
@@ -66,14 +119,14 @@ function mask!(expt::Experiment)
 end
 
 function mask!(z, expt::Experiment)
-    @info "Masking experiment with z"
+    @debug "Masking experiment with z"
     for cluster in expt.clusters[]
         mask!(z, cluster, expt)
     end
 end
 
 function mask!(z, cluster::Vector, expt::Experiment)
-    @info "Masking experiment with cluster $cluster"
+    @debug "Masking experiment with cluster $cluster"
     for i in cluster
         mask!(z, expt.peaks[][i], expt)
     end

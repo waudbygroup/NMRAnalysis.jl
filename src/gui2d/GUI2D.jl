@@ -4,6 +4,7 @@ using DelimitedFiles
 using GLMakie
 using LightGraphs
 using NMRTools
+using OrderedCollections
 
 
 include("util.jl")

@@ -1,19 +1,21 @@
-
-function setup_expt_fields(expt)
-    expt.adjacency = @lift makeadjacency($(expt.peaks), expt)
-    expt.clusters = @lift findclusters($(expt.adjacency))
-
-    expt
-end
-
-mutable struct RelaxationExperiment <: Experiment
+struct RelaxationExperiment <: Experiment
     specdata
     peaks
     relaxationtimes
 
-    adjacency
     clusters
-    RelaxationExperiment(specdata, peaks, relaxationtimes) = setup_expt_fields(new(specdata, peaks, relaxationtimes))
+    touched
+    isfitting
+
+    RelaxationExperiment(specdata, peaks, relaxationtimes) = begin
+        expt = new(specdata, peaks, relaxationtimes,
+            Observable(Vector{Vector{Int}}()),
+            Observable(Vector{Bool}()),
+            Observable(false)
+            )
+        setupexptobservables!(expt)
+        expt
+    end
 end
 
 export RelaxationExperiment
@@ -52,6 +54,7 @@ function addpeak!(expt::RelaxationExperiment, initialposition::Point2f, label, x
 
     @debug "Adding peak $label at $initialposition" newpeak
     push!(expt.peaks[], newpeak)
+    notify(expt.peaks)
 end
 
 function simulate!(z, peak, expt::RelaxationExperiment)
