@@ -36,8 +36,8 @@ hasfixedpositions(expt::RelaxationExperiment) = true
 function addpeak!(expt::RelaxationExperiment, initialposition::Point2f, label, xradius=0.03, yradius=0.3)
     newpeak = Peak(initialposition, label, xradius, yradius)
     # pars: R2x, R2y, amp
-    R2x0 = 10.
-    R2y0 = 10.
+    R2x0 = MaybeVector(10.)
+    R2y0 = MaybeVector(10.)
     R2x = Parameter("R2x", R2x0, 1., 100.)
     R2y = Parameter("R2y", R2y0, 1., 100.)
     # get initial values for amplitude
@@ -45,7 +45,7 @@ function addpeak!(expt::RelaxationExperiment, initialposition::Point2f, label, x
     amp0 = map(1:nslices(expt)) do i
         ix = findnearest(expt.specdata.x[i], x0)
         iy = findnearest(expt.specdata.y[i], y0)
-        expt.specdata.z[i][ix, iy] / (R2x0 * R2y0)
+        expt.specdata.z[i][ix, iy] / (R2x0[i] * R2y0[i])
     end
     amp = Parameter("amp", amp0, -1e4, 1e4)
     newpeak.parameters[:R2x] = R2x
@@ -57,7 +57,7 @@ function addpeak!(expt::RelaxationExperiment, initialposition::Point2f, label, x
     notify(expt.peaks)
 end
 
-function simulate!(z, peak, expt::RelaxationExperiment)
+function simulate!(z, peak::Peak, expt::RelaxationExperiment)
     n = length(z)
     for i in 1:n
         # get axis references for window functions
@@ -67,12 +67,11 @@ function simulate!(z, peak, expt::RelaxationExperiment)
         x = data(xaxis)
         y = data(yaxis)
 
-        pos = peak.initialposition[][i]
-        x0 = pos[1]
-        y0 = pos[2]
-        R2x = peak.pars[:R2x][i].value
-        R2y = peak.pars[:R2y][i].value
-        amp = peak.pars[:amp][i].value
+        x0 = peak.parameters[:x].value[][i]
+        y0 = peak.parameters[:y].value[][i]
+        R2x = peak.parameters[:R2x].value[][i]
+        R2y = peak.parameters[:R2y].value[][i]
+        amp = peak.parameters[:amp].value[][i]
         # find indices of x and y axes within peak radius of peak position
         xi = x0 .- peak.xradius[] .≤ x .≤ x0 .+ peak.xradius[]
         yi = y0 .- peak.yradius[] .≤ y .≤ y0 .+ peak.yradius[]
@@ -85,14 +84,15 @@ function simulate!(z, peak, expt::RelaxationExperiment)
 end
 
 function mask!(z, peak::Peak, expt::RelaxationExperiment)
-    @info "masking peak $peak"
+    @debug "masking peak $peak"
     n = length(z)
     for i in 1:n
+        @show i
         x = data(expt.specdata.nmrdata[i], F1Dim)
         y = data(expt.specdata.nmrdata[i], F2Dim)
         maskellipse!(z[i], x, y,
-            peak.initialposition[][i][1],
-            peak.initialposition[][i][2],
+            initialposition(peak)[][i][1],
+            initialposition(peak)[][i][2],
             peak.xradius[], peak.yradius[])
     end
 end

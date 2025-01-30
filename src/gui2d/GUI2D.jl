@@ -16,6 +16,8 @@ include("peaks.jl")
 include("experiments.jl")
 include("clustering.jl")
 
+export MaybeVector
+
 # basic workflow:
 # 1. create an Experiment, with associated data
 #    - this is handled by the particular experiment type

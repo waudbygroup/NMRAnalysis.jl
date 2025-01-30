@@ -21,10 +21,9 @@ struct Parameter
 end
 
 struct Peak
-    initialposition::Observable{MaybeVector{Point2f}}
+    parameters::OrderedDict{Symbol, Parameter}
     label::Observable{String}
     touched::Observable{Bool}
     xradius::Observable{Float64}
     yradius::Observable{Float64}
-    parameters::Dict{Symbol, Parameter}
 end

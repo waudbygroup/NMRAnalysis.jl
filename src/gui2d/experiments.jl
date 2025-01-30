@@ -37,14 +37,23 @@ npeaks(expt::Experiment) = length(expt.peaks[])
 
 function setupexptobservables!(expt)
     on(expt.peaks) do _
+        @debug "Peaks changed"
         mask!(expt)
         cluster!(expt)
         simulate!(expt)
     end
     on(expt.clusters) do _
+        @debug "Clusters changed"
         checktouched!(expt)
     end
-    on(expt.touched, expt.isfitting) do _
+    on(expt.touched) do _
+        @debug "Cluster touched"
+        if expt.isfitting[]
+            fit!(expt)
+        end
+    end
+    on(expt.isfitting) do _
+        @debug "Fitting changed"
         if expt.isfitting[]
             fit!(expt)
         end
@@ -55,9 +64,8 @@ end
 
 function checktouched!(expt)
     @debug "Checking touched clusters"
-    touched = Vector{Bool}(length(expt.clusters[]))
-    for i in 1:length(expt.clusters[])
-        touched[i] = any([expt.peaks[][j].touched[] for j in expt.clusters[i]])
+    touched = map(expt.clusters[]) do cluster
+        any([expt.peaks[][j].touched[] for j in cluster])
     end
     expt.touched[] = touched
 end
@@ -100,7 +108,7 @@ function simulate!(z, expt::Experiment)
     end
 end
 
-function simulate!(z, cluster::Vector, expt::Experiment)
+function simulate!(z, cluster::Vector{Int}, expt::Experiment)
     @debug "Simulating cluster $cluster"
     for i in cluster
         simulate!(z, expt.peaks[][i], expt)
@@ -120,14 +128,7 @@ end
 
 function mask!(z, expt::Experiment)
     @debug "Masking experiment with z"
-    for cluster in expt.clusters[]
-        mask!(z, cluster, expt)
-    end
-end
-
-function mask!(z, cluster::Vector, expt::Experiment)
-    @debug "Masking experiment with cluster $cluster"
-    for i in cluster
-        mask!(z, expt.peaks[][i], expt)
+    for peak in expt.peaks[]
+        mask!(z, peak, expt)
     end
 end
