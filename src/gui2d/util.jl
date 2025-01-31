@@ -10,7 +10,7 @@ function choptitle(title, maxlength=30)
 end
 
 function maskellipse!(mask, x, y, x0, y0, xradius, yradius)
-    @debug "masking ellipse at $x0, $y0 with radii $xradius, $yradius"
+    # @debug "masking ellipse at $x0, $y0 with radii $xradius, $yradius" maxlog=10
     x = x .- x0
     y = y' .- y0
     fx = @. yradius^2 * x^2

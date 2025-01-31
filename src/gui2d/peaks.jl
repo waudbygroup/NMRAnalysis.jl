@@ -8,18 +8,19 @@ function Peak(initialposition, label, xradius=0.03, yradius=0.3)
         y = MaybeVector(y[1])
     end
     pars = OrderedDict{Symbol, Parameter}()
-    pars[:x] = Parameter("δx", x, -10., 20.)
-    pars[:y] = Parameter("δy", y, -10., 150.)
+    postpars = OrderedDict{Symbol, Parameter}()
+    pars[:x] = Parameter("δx", x)
+    pars[:y] = Parameter("δy", y)
     Peak(pars,
         Observable(label),
         Observable(true), # touched
         Observable(xradius), # xradius
-        Observable(yradius)) # yradius
+        Observable(yradius), # yradius
+        postpars,
+        Observable(false)) # post-fitted
 end
 
-position(peak::Peak) = lift(peak.parameters[:x].value, peak.parameters[:y].value) do (x,y)
-    MaybeVector(Point2f.(x,y))
-end
+position(peak::Peak) = lift((x,y)->MaybeVector(Point2f.(x,y)), peak.parameters[:x].value, peak.parameters[:y].value)
 initialposition(peak::Peak) = lift((x,y)->MaybeVector(Point2f.(x,y)), peak.parameters[:x].initialvalue, peak.parameters[:y].initialvalue)
 
 
@@ -43,11 +44,6 @@ function pack(peaks::Vector{Peak}, quantity=:value)
     p
 end
 
-function unpack!(v, peaks::Vector{Peak}, quantity=:value)
-    for peak in peaks
-        unpack!(v, peak, quantity)
-    end
-end
 
 "Create vector of parameters (options - :min, :max, :initial)"
 function pack!(p, peak::Peak, quantity=:value)
@@ -66,10 +62,38 @@ function pack!(p, peak::Peak, quantity=:value)
     p
 end
 
+function unpack!(v, peaks::Vector{Peak}, quantity=:value)
+    @debug "Unpacking peaks" maxlog=10
+    for peak in peaks
+        unpack!(v, peak, quantity)
+    end
+end
+
 "Unpack a parameter and pop from input vector. Quantity could also be :uncertainty"
 function unpack!(v, peak::Peak, quantity=:value)
+    @debug "Unpacking peak $(peak.label)" maxlog=10
     d = peak.parameters
     for par in values(d)
         unpack!(v, par, quantity)
+    end
+end
+
+function Base.show(io::IO, p::Peak)
+    print(io, "Peak($(p.label[]), position=$(position(p)[]))")
+end
+
+function Base.show(io::IO, mime::MIME"text/plain", p::Peak)
+    println(io, "Peak: $(p.label[])")
+    println(io, "  initial position: $(initialposition(p)[])")
+    println(io, "  radius: [$(p.xradius[]), $(p.yradius[])]")
+    println(io, "  parameters:")
+    for (k,v) in p.parameters
+        println(io, "    $k: $(v.value[])")
+    end
+    if !isempty(p.postparameters)
+        println(io, "  post-fit parameters:")
+        for (k,v) in p.postparameters
+            println(io, "    $k: $(v.value[])")
+        end
     end
 end

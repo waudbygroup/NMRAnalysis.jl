@@ -34,25 +34,28 @@ end
 hasfixedpositions(expt::RelaxationExperiment) = true
 
 function addpeak!(expt::RelaxationExperiment, initialposition::Point2f, label, xradius=0.03, yradius=0.3)
+    @debug "Add peak $label at $initialposition"
     newpeak = Peak(initialposition, label, xradius, yradius)
     # pars: R2x, R2y, amp
     R2x0 = MaybeVector(10.)
     R2y0 = MaybeVector(10.)
-    R2x = Parameter("R2x", R2x0, 1., 100.)
-    R2y = Parameter("R2y", R2y0, 1., 100.)
+    R2x = Parameter("R2x", R2x0, minvalue=1., maxvalue=100.)
+    R2y = Parameter("R2y", R2y0, minvalue=1., maxvalue=100.)
     # get initial values for amplitude
     x0, y0 = initialposition
     amp0 = map(1:nslices(expt)) do i
         ix = findnearest(expt.specdata.x[i], x0)
         iy = findnearest(expt.specdata.y[i], y0)
-        expt.specdata.z[i][ix, iy] / (R2x0[i] * R2y0[i])
+        expt.specdata.z[i][ix, iy]
     end
-    amp = Parameter("amp", amp0, -1e4, 1e4)
+    amp = Parameter("amp", amp0)
     newpeak.parameters[:R2x] = R2x
     newpeak.parameters[:R2y] = R2y
     newpeak.parameters[:amp] = amp
 
-    @debug "Adding peak $label at $initialposition" newpeak
+    newpeak.postparameters[:amp] = Parameter("amp", maximum(amp0))
+    newpeak.postparameters[:relaxationrate] = Parameter("Relaxation rate", 4/maximum(expt.relaxationtimes))
+
     push!(expt.peaks[], newpeak)
     notify(expt.peaks)
 end
@@ -77,17 +80,17 @@ function simulate!(z, peak::Peak, expt::RelaxationExperiment)
         yi = y0 .- peak.yradius[] .≤ y .≤ y0 .+ peak.yradius[]
         xs = x[xi]
         ys = y[yi]
+        # NB. scale intensities by R2x and R2y to decouple amplitude estimation from linewidth
         zx = NMRTools.NMRBase._lineshape(getω(xaxis, x0), R2x, getω(xaxis, xs), xaxis[:window], RealLineshape())
-        zy = amp * NMRTools.NMRBase._lineshape(getω(yaxis, y0), R2y, getω(yaxis, ys), yaxis[:window], RealLineshape())
+        zy = (amp * R2x * R2y) * NMRTools.NMRBase._lineshape(getω(yaxis, y0), R2y, getω(yaxis, ys), yaxis[:window], RealLineshape())
         z[i][xi, yi] .+= zx .* zy'
     end
 end
 
 function mask!(z, peak::Peak, expt::RelaxationExperiment)
-    @debug "masking peak $peak"
+    @debug "masking peak $(peak.label)" maxlog=10
     n = length(z)
     for i in 1:n
-        @show i
         x = data(expt.specdata.nmrdata[i], F1Dim)
         y = data(expt.specdata.nmrdata[i], F2Dim)
         maskellipse!(z[i], x, y,
@@ -99,6 +102,7 @@ end
 
 # load the NMR data and prepare the SpecData object
 function preparespecdata(inputfilename, relaxationtimes, ::Type{RelaxationExperiment})
+    @debug "Preparing spec data for relaxation experiment: $inputfilename"
     spec = loadnmr(inputfilename)
     x = data(spec, F1Dim)
     y = data(spec, F2Dim)
@@ -115,4 +119,27 @@ function preparespecdata(inputfilename, relaxationtimes, ::Type{RelaxationExperi
         z ./ σ,
         SingleElementVector(1),
         zlabels)
+end
+
+function postfit!(peak::Peak, expt::RelaxationExperiment)
+    @debug "Post-fitting peak $(peak.label)" maxlog=10
+    t = expt.relaxationtimes
+    y = peak.parameters[:amp].value[]
+
+    A0 = maximum(y)
+    peak.postparameters[:amp].initialvalue[] .= A0
+    R0 = peak.postparameters[:relaxationrate].initialvalue[][1]
+
+    model(t, p) = p[1] * exp.(-p[2] * t)
+    p0 = [A0, R0]
+    fit = curve_fit(model, t, y, p0)
+    pfit = coef(fit)
+    perr = stderror(fit)
+
+    peak.postparameters[:amp].value[] .= pfit[1]
+    peak.postparameters[:amp].uncertainty[] .= perr[1]
+    peak.postparameters[:relaxationrate].value[] .= pfit[2]
+    peak.postparameters[:relaxationrate].uncertainty[] .= perr[2]
+
+    peak.postfitted[] = true
 end

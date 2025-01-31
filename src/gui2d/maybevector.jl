@@ -11,7 +11,7 @@ abstract type MaybeVector{T} <: AbstractVector{T} end
 
 Vector type that returns its single element for any valid index.
 """
-struct SingleElementVector{T} <: MaybeVector{T}
+mutable struct SingleElementVector{T} <: MaybeVector{T}
     x::T
 end
 

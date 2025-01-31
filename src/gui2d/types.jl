@@ -26,4 +26,6 @@ struct Peak
     touched::Observable{Bool}
     xradius::Observable{Float64}
     yradius::Observable{Float64}
+    postparameters::OrderedDict{Symbol, Parameter}
+    postfitted::Observable{Bool}
 end

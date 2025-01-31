@@ -3,6 +3,7 @@ module GUI2D
 using DelimitedFiles
 using GLMakie
 using LightGraphs
+using LsqFit
 using NMRTools
 using OrderedCollections
 
