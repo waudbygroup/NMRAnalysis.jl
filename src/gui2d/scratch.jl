@@ -18,8 +18,8 @@ NMRAnalysis.GUI2D.addpeak!(expt, Point2f(7.99,123.1), "X1")
 NMRAnalysis.GUI2D.addpeak!(expt, Point2f(8.06,122.75), "X2")
 NMRAnalysis.GUI2D.addpeak!(expt, Point2f(7.98,122.45), "X3")
 NMRAnalysis.GUI2D.addpeak!(expt, Point2f(8.01,122.45), "X4")
-
-
+##
+NMRAnalysis.GUI2D.deletepeak!(expt, 4)
 ##
 f = Figure()
 ax1 = Axis(f[1,1])

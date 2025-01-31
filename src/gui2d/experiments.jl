@@ -70,6 +70,17 @@ function setupexptobservables!(expt)
     expt
 end
 
+function deletepeak!(expt, idx)
+    # touch other peaks in the same cluster before deleting and notifying
+    clusteridx = findfirst(i -> idx in i, expt.clusters[])
+    cluster = expt.clusters[][clusteridx]
+    for i in cluster
+        expt.peaks[][i].touched[] = true
+    end
+    deleteat!(expt.peaks[], idx)
+    notify(expt.peaks)
+end
+
 function checktouched!(expt)
     @debug "Checking touched clusters" maxlog=10
     touched = map(expt.clusters[]) do cluster
@@ -111,7 +122,7 @@ postfit!(peak::Peak, expt::Experiment) = nothing
 postfitglobal!(expt::Experiment) = nothing
 
 function fit!(cluster::Vector{Int}, expt::Experiment)
-    @debug "Fitting cluster $cluster" maxlog=10
+    @debug "Fitting cluster $cluster" #maxlog=10
     peaks = [expt.peaks[][i] for i in cluster]
 
     # TODO - adjust to work with smaller area of spectra
