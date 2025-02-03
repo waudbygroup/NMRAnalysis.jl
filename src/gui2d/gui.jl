@@ -85,8 +85,10 @@ function gui!(state, expt::FixedPeakExperiment)
     g[:pltinitialpeaks] = scatter!(g[:axcontour], state[:initialpositions], markersize=15, color=state[:peakcolours])
 
     # peak info
-    g[:cmddelete] = Button(g[:panelinfo][1,1], label="Delete peak")
-    g[:infotext] = Label(g[:panelinfo][2,1], state[:current_peak_info])
+    g[:cmdrename] = Button(g[:panelinfo][1,1], label="(R)ename peak")
+    g[:cmddelete] = Button(g[:panelinfo][1,2], label="(D)elete peak")
+    Label(g[:panelinfo][2,1:2], "Press (A) to add new peak under mouse cursor")
+    g[:infotext] = Label(g[:panelinfo][3,1:2], state[:current_peak_info])
 
     # peak plot panel
     makepeakplot!(g, state, expt)
@@ -98,6 +100,22 @@ end
 
 
 function addhanders!(g, state, expt::FixedPeakExperiment)
+    g[:fig].scene.backgroundcolor = lift(state[:mode]) do mode
+        if mode == :fitting
+            RGBAf(1., 0.63, 0.48, 1.0)
+            # :salmon
+        elseif mode == :renaming || mode == :renamingstart
+            RGBAf(0.75, 0.94, 1.0, 1.0)
+            # :lightblue
+        elseif mode == :moving
+            RGBAf(0.6, 0.98, 0.6, 1.0)
+            # :palegreen
+        else
+            RGBAf(1.0, 1.0, 1.0, 1.0)
+            # :white
+        end
+    end
+
     # link 2D and 3D contour plot limits
     if haskey(g, :ax3d)
         on(g[:axcontour].xaxis.attributes.limits) do xl
@@ -135,7 +153,7 @@ function addhanders!(g, state, expt::FixedPeakExperiment)
 
     # peak hover
     onpick(g[:axcontour], g[:pltinitialpeaks]) do _, idx
-        if state[:current_peak_idx][] != idx
+        if state[:current_peak_idx][] != idx && state[:mode][] == :normal
             @debug "Setting current peak to $idx"
             state[:current_peak_idx][] = idx
             if haskey(g, :axpeakplot)
@@ -153,16 +171,93 @@ function addhanders!(g, state, expt::FixedPeakExperiment)
         end
     end
 
-    # keyboard
-    on(events(g[:axcontour]).keyboardbutton) do event
-        if event.action == Keyboard.press && ispressed(g[:fig], Keyboard.a)
-            @show pos = mouseposition(g[:axcontour])
-            state[:total_peaks][] += 1
-            id = "X$(state[:total_peaks][])"
-            addpeak!(expt, Point2f(pos), id)
+    # rename peak
+    on(g[:cmdrename].clicks) do _
+        if state[:current_peak_idx][] > 0
+            renamepeak!(expt, state, :mouse)
         end
+    end
+
+    # keyboard
+    on(events(g[:axcontour]).keyboardbutton, priority=2) do event
+        @debug "keyboard event: $event"
+        if state[:mode][] == :normal
+            if event.action == Keyboard.press && ispressed(g[:fig], Keyboard.a)
+                pos = mouseposition(g[:axcontour])
+                state[:total_peaks][] += 1
+                id = "X$(state[:total_peaks][])"
+                addpeak!(expt, Point2f(pos), id)
+            elseif event.action == Keyboard.press && ispressed(g[:fig], Keyboard.d)
+                idx = state[:current_peak_idx][]
+                if idx > 0
+                    state[:current_peak_idx][] = 0
+                    deletepeak!(expt, idx)
+                end
+            elseif event.action == Keyboard.press && ispressed(g[:fig], Keyboard.r)
+                if state[:current_peak_idx][] > 0
+                    @debug "keyboard - rename peak $(state[:current_peak_idx][])"
+                    renamepeak!(expt, state, :keyboard)
+                end
+            end
+        elseif state[:mode][] == :renaming || state[:mode][] == :renamingstart
+            if event.action == Keyboard.press && event.key == Keyboard.enter
+                state[:current_peak][].label[] = state[:current_peak][].label[][1:end-1]
+                state[:mode][] = :normal
+                notify(expt.peaks)
+                return Consume()
+            elseif event.action == Keyboard.press && event.key == Keyboard.backspace
+                if length(state[:peaks][][state[:activepeakindex]].label) > 1
+                    state[:current_peak][].label[] = state[:current_peak][].label[][1:end-2] * "‸"
+                    notify(expt.peaks)
+                    return Consume()
+                end
+            elseif event.action == Keyboard.press && event.key == Keyboard.escape
+                @debug "keyboard - cancel renaming"
+                # restore previous label
+                state[:current_peak][].label[] = state[:oldlabel][]
+                notify(expt.peaks)
+    
+                state[:mode][] = :normal
+                return(Consume())
+            end
+            return Consume(false)
+        end
+    end
+    on(events(g[:fig]).unicode_input) do character
+        process_unicode_input(expt, state, character)
     end
 end
 
 
 makepeakplot!(panel, state, expt::Experiment) = nothing
+
+
+function renamepeak!(expt, state, initiator)
+    @debug "Renaming peak"
+    if initiator == :keyboard
+        state[:mode][] = :renamingstart
+    else
+        state[:mode][] = :renaming
+    end
+    # state[:current_peak_info][] = "Renaming peak $(peak.label[]), press Enter to finish, Backspace to delete, Esc to cancel"
+    state[:oldlabel][] = state[:current_peak][].label[]
+    state[:current_peak][].label[] = "‸"
+    notify(expt.peaks)
+end
+
+function process_unicode_input(expt, state, character)
+    @debug "Processing unicode input: $character"
+    if state[:mode][] == :renamingstart
+        state[:mode][] = :renaming
+        if character == 'r'
+            # discard 'r' character hanging over from initial keypress
+            return Consume()
+        end
+    end
+    if state[:mode][] == :renaming
+        state[:current_peak][].label[] = state[:current_peak][].label[][1:end-1] * character * "‸"
+        notify(expt.peaks)
+        return Consume()
+    end
+    return Consume(false)
+end

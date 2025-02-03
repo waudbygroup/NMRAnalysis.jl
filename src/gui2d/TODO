@@ -1,2 +1,5 @@
 [ ] move peak
 [ ] scale fitting by noise
+[ ] restrict fitting area to ROIs
+[ ] figure out amplitudes / intensities
+[x] name peaks

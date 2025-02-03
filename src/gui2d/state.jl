@@ -2,6 +2,8 @@ function preparestate(expt::Experiment)
     @debug "Preparing state"
     state = Dict{Symbol, Observable}()
 
+    state[:mode] = Observable(:normal) # options = :normal, :renaming, :renamingstart, :moving, :fitting
+
     state[:total_peaks] = Observable(length(expt.peaks[]))
 
     state[:current_slice] = Observable(1)
@@ -62,6 +64,7 @@ function preparestate(expt::Experiment)
     state[:initialpositions] = Observable{Vector{Point2f}}([])
     state[:positions] = Observable{Vector{Point2f}}([])
     state[:labels] = Observable{Vector{String}}([])
+    state[:oldlabel] = Observable("")
     state[:peakcolours] = Observable{Vector{Symbol}}([])
     on(state[:current_peaks]) do d
     # onany(state[:current_peaks], state[:current_peak_idx]) do d, idx
