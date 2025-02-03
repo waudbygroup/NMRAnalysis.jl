@@ -4,6 +4,7 @@ using DelimitedFiles
 using GLMakie
 using LightGraphs
 using LsqFit
+using Measurements
 using NMRTools
 using OrderedCollections
 
@@ -16,6 +17,8 @@ include("specdata.jl")
 include("peaks.jl")
 include("experiments.jl")
 include("clustering.jl")
+include("state.jl")
+include("gui.jl")
 
 export MaybeVector
 

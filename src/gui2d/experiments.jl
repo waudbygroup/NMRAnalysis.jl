@@ -35,6 +35,9 @@ include("expt-relaxation.jl")
 nslices(expt::Experiment) = length(expt.specdata.z)
 npeaks(expt::Experiment) = length(expt.peaks[])
 
+hasfixedpositions(expt::FixedPeakExperiment) = true
+hasfixedpositions(expt::MovingPeakExperiment) = false
+
 function setupexptobservables!(expt)
     on(expt.peaks) do _
         @debug "Peaks changed"
@@ -82,7 +85,7 @@ function deletepeak!(expt, idx)
 end
 
 function checktouched!(expt)
-    @debug "Checking touched clusters" maxlog=10
+    @debug "Checking touched clusters" #maxlog=10
     touched = map(expt.clusters[]) do cluster
         any([expt.peaks[][j].touched[] for j in cluster])
     end
@@ -90,18 +93,18 @@ function checktouched!(expt)
 end
 
 function fit!(expt::Experiment)
-    @debug "Fitting experiment" maxlog=10
+    @debug "Fitting experiment" #maxlog=10
     anythingchanged = false
     # iterate over touched clusters and fit
     for i in 1:length(expt.clusters[])
-        if expt.peaks[][i].touched[]
+        if expt.touched[][i]
             fit!(expt.clusters[][i], expt)
             postfit!(expt.clusters[][i], expt)
             anythingchanged = true
         end
     end
     if anythingchanged
-        @debug "Fit finished - notifying peaks" maxlog=10
+        @debug "Fit finished - notifying peaks" #maxlog=10
         postfitglobal!(expt)
         notify(expt.peaks)
     end
@@ -109,7 +112,7 @@ end
 
 # placeholder functions for additional fitting following spectrum fit
 function postfit!(cluster::Vector{Int}, expt::Experiment)
-    @debug "Post-fitting cluster $cluster" maxlog=10
+    @debug "Post-fitting cluster $cluster" #maxlog=10
     for i in cluster
         postfit!(expt.peaks[][i], expt)
     end
@@ -165,7 +168,7 @@ end
 
 
 function simulate!(expt::Experiment)
-    @debug "Simulating experiment" maxlog=10
+    @debug "Simulating experiment" #maxlog=10
     z = expt.specdata.zfit.val
     for zi in z
         fill!(zi, 0)
@@ -190,7 +193,7 @@ end
 
 
 function mask!(expt::Experiment)
-    @debug "Masking experiment" maxlog=10
+    @debug "Masking experiment" #maxlog=10
     z = expt.specdata.mask.val
     for zi in z
         fill!(zi, false)

@@ -1,4 +1,4 @@
-struct RelaxationExperiment <: Experiment
+struct RelaxationExperiment <: FixedPeakExperiment
     specdata
     peaks
     relaxationtimes
@@ -31,8 +31,6 @@ end
 
 
 # implementation requirements
-hasfixedpositions(expt::RelaxationExperiment) = true
-
 function addpeak!(expt::RelaxationExperiment, initialposition::Point2f, label, xradius=0.03, yradius=0.3)
     @debug "Add peak $label at $initialposition"
     newpeak = Peak(initialposition, label, xradius, yradius)
@@ -142,4 +140,75 @@ function postfit!(peak::Peak, expt::RelaxationExperiment)
     peak.postparameters[:relaxationrate].uncertainty[] .= perr[2]
 
     peak.postfitted[] = true
+end
+
+function slicelabel(expt::RelaxationExperiment, idx)
+    "τ = $(round(expt.relaxationtimes[idx],sigdigits=3)) ($idx of $(nslices(expt)))"
+end
+
+function peakinfotext(expt::RelaxationExperiment, idx)
+    if idx == 0
+        return "No peak selected"
+    end
+    peak = expt.peaks[][idx]
+    if peak.postfitted[]
+        return "Peak: $(peak.label[])\n" *
+            "Relaxation rate: $(peak.postparameters[:relaxationrate].value[][1] ± peak.postparameters[:relaxationrate].uncertainty[][1]) s-1\n" *
+            "δX: $(peak.parameters[:x].value[][1] ± peak.parameters[:x].uncertainty[][1]) ppm\n" *
+            "δY: $(peak.parameters[:y].value[][1] ± peak.parameters[:y].uncertainty[][1]) ppm\n" *
+            "Amplitude: $(peak.postparameters[:amp].value[][1] ± peak.postparameters[:amp].uncertainty[][1])\n" *
+            "X Linewidth: $(peak.parameters[:R2x].value[][1] ± peak.parameters[:R2x].uncertainty[][1]) s-1\n" *
+            "Y Linewidth: $(peak.parameters[:R2y].value[][1] ± peak.parameters[:R2y].uncertainty[][1]) s-1"
+    else
+        return "Peak: $(peak.label)\n" *
+            "Not fitted"
+    end
+end
+
+
+function completestate!(state, expt::RelaxationExperiment)
+    # add observables for plotting fits for the current peak
+    state[:peakplot_obs_xy] = lift(state[:current_peak]) do peak
+        if peak === nothing
+            return Point2f[]
+        else
+            x = expt.relaxationtimes
+            y = peak.parameters[:amp].value[]
+            return Point2f.(x, y)
+        end
+    end
+    state[:peakplot_obs_xye] = lift(state[:current_peak]) do peak
+        if peak === nothing
+            return [(0.,0.,0.)]
+        else
+            x = expt.relaxationtimes
+            y = peak.parameters[:amp].value[]
+            err = peak.parameters[:amp].uncertainty[]
+            return [(x[i], y[i], err[i]) for i=1:length(x)]
+        end
+    end
+    state[:peakplot_fit_xy] = lift(state[:current_peak]) do peak
+        if peak === nothing
+            return Point2f[]
+        else
+            t = expt.relaxationtimes
+            tpred = range(0, 1.1 * maximum(t), 100)
+
+            A = peak.postparameters[:amp].value[][1]
+            R = peak.postparameters[:relaxationrate].value[][1]
+            
+            ypred = A * exp.(-R * tpred)
+            return Point2f.(tpred, ypred)
+        end
+    end
+end
+
+
+function makepeakplot!(gui, state, ::RelaxationExperiment)
+    gui[:axpeakplot] = ax = Axis(gui[:panelpeakplot][1,1], xlabel="Relaxation time / s", ylabel="Amplitude")
+    hlines!(ax, [0], linewidth=0)
+    lines!(ax, state[:peakplot_fit_xy], label="Fit", color=:red)
+    errorbars!(ax, state[:peakplot_obs_xye], whiskerwidth=10)
+    scatter!(ax, state[:peakplot_obs_xy], label="Observed")
+    # axislegend(ax)
 end

@@ -1,4 +1,6 @@
 abstract type Experiment end
+abstract type FixedPeakExperiment <: Experiment end
+abstract type MovingPeakExperiment <: Experiment end
 
 struct SpecData
     nmrdata
