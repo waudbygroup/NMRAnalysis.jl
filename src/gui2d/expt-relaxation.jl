@@ -11,7 +11,7 @@ struct RelaxationExperiment <: FixedPeakExperiment
         expt = new(specdata, peaks, relaxationtimes,
             Observable(Vector{Vector{Int}}()),
             Observable(Vector{Bool}()),
-            Observable(false)
+            Observable(true) # isfitting
             )
         setupexptobservables!(expt)
         expt

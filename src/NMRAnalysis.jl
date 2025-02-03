@@ -22,7 +22,7 @@ export tract
 export diffusion
 
 # @reexport using .GUI: view2d, peakfit2dseries
-@reexport using .GUI2D: MaybeVector
+@reexport using .GUI2D: MaybeVector, gui!, RelaxationExperiment
 
 @info """
 NMRAnalysis.jl

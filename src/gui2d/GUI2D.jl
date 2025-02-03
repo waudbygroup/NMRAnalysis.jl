@@ -19,8 +19,11 @@ include("experiments.jl")
 include("clustering.jl")
 include("state.jl")
 include("gui.jl")
+include("mouse.jl")
+include("keyboard.jl")
 
 export MaybeVector
+export gui!
 
 # basic workflow:
 # 1. create an Experiment, with associated data
