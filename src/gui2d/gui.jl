@@ -7,17 +7,7 @@ function gui!(state, expt::FixedPeakExperiment)
     g = Dict{Symbol, Any}() # GUI state
     state[:gui] = g
 
-    g[:fig] = Figure(size=(1000,700))
-    # g[:paneltop] = g[:fig][1,1] = GridLayout()
-    # g[:panelmiddle] = g[:fig][2,1] = GridLayout()
-    # g[:panelcontour] = g[:panelmiddle][1,1] = GridLayout()
-    # # g[:panel3d] = g[:panelmiddle][1,2] = GridLayout()
-    # g[:panelbottom] = g[:fig][3,1] = GridLayout()
-    # g[:panelinfo] = g[:panelbottom][1,1] = GridLayout()
-    # g[:panelpeakplot] = g[:panelbottom][1,2] = GridLayout()
-    # rowsize!(g[:fig].layout, 1, Auto(true))
-    # rowsize!(g[:fig].layout, 2, Auto(2))
-    # rowsize!(g[:fig].layout, 3, Auto(1))
+    g[:fig] = Figure(size=(1100,700))
     g[:paneltop] = g[:fig][1,1:2] = GridLayout()
     g[:panelcontour] = g[:fig][2:3,1] = GridLayout()
     g[:panelinfo] = g[:fig][2,2] = GridLayout()
@@ -32,10 +22,14 @@ function gui!(state, expt::FixedPeakExperiment)
     # top panel
     g[:cmdcontourup] = Button(g[:paneltop][1,1], label="contour ↑")
     g[:cmdcontourdown] = Button(g[:paneltop][1,2], label="contour ↓")
-    g[:sliderslice] = Slider(g[:paneltop][1,3], range = 1:nslices(expt))
-    g[:cmdsliceleft] = Button(g[:paneltop][1,4], label="←")
-    g[:cmdsliceright] = Button(g[:paneltop][1,5], label="→")
-    g[:slicelabel] = Label(g[:paneltop][1,6], state[:current_slice_label])
+    g[:cmdresetzoom] = Button(g[:paneltop][1,3], label="reset zoom")
+    g[:sliderslice] = Slider(g[:paneltop][1,4], range = 1:nslices(expt))
+    g[:cmdsliceleft] = Button(g[:paneltop][1,5], label="←")
+    g[:cmdsliceright] = Button(g[:paneltop][1,6], label="→")
+    g[:slicelabel] = Label(g[:paneltop][1,7], state[:current_slice_label])
+    g[:togglefit] = Toggle(g[:paneltop][1,8], active = true)
+    Label(g[:paneltop][1,9], "Fitting")
+    
 
     # create contour plot
     g[:basecontour] = Observable(10.0)
@@ -92,8 +86,16 @@ function gui!(state, expt::FixedPeakExperiment)
     # peak info
     g[:cmdrename] = Button(g[:panelinfo][1,1], label="(R)ename peak")
     g[:cmddelete] = Button(g[:panelinfo][1,2], label="(D)elete peak")
-    Label(g[:panelinfo][2,1:2], "Press (A) to add new peak under mouse cursor")
-    g[:infotext] = Label(g[:panelinfo][3,1:2], state[:current_peak_info])
+    Label(g[:panelinfo][2,1:2], "Press (A) to add new peak under mouse cursor", word_wrap=true)
+    g[:sgradii] = SliderGrid(
+        g[:panelinfo][3,1:2],
+        (label = "X radius", range = 0.02:0.005:0.1, format = "{:.3f} ppm", startvalue = expt.xradius[]),
+        (label = "Y radius", range = 0.1:0.02:0.5, format = "{:.2f} ppm", startvalue = expt.yradius[]),
+        ) # width = 350, tellheight = false)
+    g[:sliderxradius] = g[:sgradii].sliders[1].value
+    g[:slideryradius] = g[:sgradii].sliders[2].value
+
+    g[:infotext] = Label(g[:panelinfo][4,1:2], state[:current_peak_info])
 
     # peak plot panel
     makepeakplot!(g, state, expt)
@@ -135,6 +137,11 @@ function addhanders!(g, state, expt::FixedPeakExperiment)
         g[:basecontour][] /= g[:contourscale][]
     end
 
+    # zoom
+    on(g[:cmdresetzoom].clicks) do _
+        reset_limits!(g[:axcontour])
+    end
+
     # slices
     connect!(state[:current_slice], g[:sliderslice].value)
     on(g[:cmdsliceleft].clicks) do _
@@ -152,6 +159,10 @@ function addhanders!(g, state, expt::FixedPeakExperiment)
         end
     end
 
+    # fitting active
+    connect!(expt.isfitting, g[:togglefit].active)
+    connect!(g[:pltfit].visible, g[:togglefit].active)
+
     # delete peak
     on(g[:cmddelete].clicks) do _
         idx = state[:current_peak_idx][]
@@ -167,6 +178,10 @@ function addhanders!(g, state, expt::FixedPeakExperiment)
             renamepeak!(expt, state, :mouse)
         end
     end
+
+    # radius sliders
+    connect!(expt.xradius, g[:sliderxradius])
+    connect!(expt.yradius, g[:slideryradius])
 
     # peak hover
     onpick(g[:axcontour], g[:pltinitialpeaks]) do _, idx

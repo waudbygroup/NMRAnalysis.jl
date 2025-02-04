@@ -69,7 +69,24 @@ function setupexptobservables!(expt)
             fit!(expt)
         end
     end
-
+    on(expt.xradius) do _
+        @debug "X radius changed"
+        # update xradius for all peaks
+        for peak in expt.peaks[]
+            peak.xradius.val = expt.xradius[]
+            peak.touched.val = true
+        end
+        notify(expt.peaks)
+    end
+    on(expt.yradius) do _
+        @debug "Y radius changed"
+        # update yradius for all peaks
+        for peak in expt.peaks[]
+            peak.yradius.val = expt.yradius[]
+            peak.touched.val = true
+        end
+        notify(expt.peaks)
+    end
     expt
 end
 

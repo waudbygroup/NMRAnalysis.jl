@@ -1,12 +1,12 @@
 [x] name peaks
 [x] move peak
-[ ] peak radii
+[x] peak radii
+[x] keyboard shortcut for contours
+[x] keyboard shortcut for slice
+[x] reset zoom button
+[x] fitting toggle
+[ ] fitting status background
+[ ] save output
 [ ] scale fitting by noise
 [ ] restrict fitting area to ROIs
 [ ] figure out amplitudes / intensities
-[ ] save output
-[ ] keyboard shortcut for contours
-[ ] keyboard shortcut for slice
-[ ] reset zoom button
-[ ] fitting status background
-[ ] fitting toggle

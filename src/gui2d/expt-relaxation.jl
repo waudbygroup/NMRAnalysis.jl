@@ -7,18 +7,23 @@ struct RelaxationExperiment <: FixedPeakExperiment
     touched
     isfitting
 
+    xradius
+    yradius
+
+    # TODO add state to experiment
+
     RelaxationExperiment(specdata, peaks, relaxationtimes) = begin
         expt = new(specdata, peaks, relaxationtimes,
-            Observable(Vector{Vector{Int}}()),
-            Observable(Vector{Bool}()),
-            Observable(true) # isfitting
+            Observable(Vector{Vector{Int}}()), # clusters
+            Observable(Vector{Bool}()), # touched
+            Observable(true), # isfitting
+            Observable(0.03, ignore_equal_values=true), # xradius
+            Observable(0.2, ignore_equal_values=true), # yradius
             )
         setupexptobservables!(expt)
         expt
     end
 end
-
-export RelaxationExperiment
 
 # create a new relaxation experiment
 function RelaxationExperiment(inputfilename, taufilename)
@@ -31,7 +36,8 @@ end
 
 
 # implementation requirements
-function addpeak!(expt::RelaxationExperiment, initialposition::Point2f, label, xradius=0.03, yradius=0.3)
+function addpeak!(expt::RelaxationExperiment, initialposition::Point2f, label,
+                    xradius=expt.xradius[], yradius=expt.yradius[])
     @debug "Add peak $label at $initialposition"
     newpeak = Peak(initialposition, label, xradius, yradius)
     # pars: R2x, R2y, amp
@@ -143,7 +149,7 @@ function postfit!(peak::Peak, expt::RelaxationExperiment)
 end
 
 function slicelabel(expt::RelaxationExperiment, idx)
-    "τ = $(round(expt.relaxationtimes[idx],sigdigits=3)) ($idx of $(nslices(expt)))"
+    "τ = $(round(expt.relaxationtimes[idx],sigdigits=3)) s ($idx of $(nslices(expt)))"
 end
 
 function peakinfotext(expt::RelaxationExperiment, idx)
@@ -153,12 +159,13 @@ function peakinfotext(expt::RelaxationExperiment, idx)
     peak = expt.peaks[][idx]
     if peak.postfitted[]
         return "Peak: $(peak.label[])\n" *
-            "Relaxation rate: $(peak.postparameters[:relaxationrate].value[][1] ± peak.postparameters[:relaxationrate].uncertainty[][1]) s-1\n" *
+            "Relaxation rate: $(peak.postparameters[:relaxationrate].value[][1] ± peak.postparameters[:relaxationrate].uncertainty[][1]) s⁻¹\n" *
+            "\n" *
             "δX: $(peak.parameters[:x].value[][1] ± peak.parameters[:x].uncertainty[][1]) ppm\n" *
             "δY: $(peak.parameters[:y].value[][1] ± peak.parameters[:y].uncertainty[][1]) ppm\n" *
             "Amplitude: $(peak.postparameters[:amp].value[][1] ± peak.postparameters[:amp].uncertainty[][1])\n" *
-            "X Linewidth: $(peak.parameters[:R2x].value[][1] ± peak.parameters[:R2x].uncertainty[][1]) s-1\n" *
-            "Y Linewidth: $(peak.parameters[:R2y].value[][1] ± peak.parameters[:R2y].uncertainty[][1]) s-1"
+            "X Linewidth: $(peak.parameters[:R2x].value[][1] ± peak.parameters[:R2x].uncertainty[][1]) s⁻¹\n" *
+            "Y Linewidth: $(peak.parameters[:R2y].value[][1] ± peak.parameters[:R2y].uncertainty[][1]) s⁻¹"
     else
         return "Peak: $(peak.label)\n" *
             "Not fitted"

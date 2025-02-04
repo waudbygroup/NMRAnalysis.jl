@@ -1,21 +1,39 @@
 function process_keyboardbutton(expt, state, event)
     @debug "keyboard event: $event"
     g = state[:gui][]
-    if state[:mode][] == :normal
-        if event.action == Keyboard.press && ispressed(g[:fig], Keyboard.a)
+    if state[:mode][] == :normal && event.action == Keyboard.press
+        if  ispressed(g[:fig], Keyboard.a)
             pos = mouseposition(g[:axcontour])
             state[:total_peaks][] += 1
             id = "X$(state[:total_peaks][])"
             addpeak!(expt, Point2f(pos), id)
-        elseif event.action == Keyboard.press && ispressed(g[:fig], Keyboard.d)
+        elseif ispressed(g[:fig], Keyboard.d)
             idx = state[:current_peak_idx][]
             if idx > 0
                 state[:current_peak_idx][] = 0
                 deletepeak!(expt, idx)
             end
-        elseif event.action == Keyboard.press && ispressed(g[:fig], Keyboard.r)
+        elseif ispressed(g[:fig], Keyboard.r)
             if state[:current_peak_idx][] > 0
                 renamepeak!(expt, state, :keyboard)
+            end
+        elseif ispressed(g[:fig], Keyboard.up)
+            g[:basecontour][] *= g[:contourscale][]
+        elseif ispressed(g[:fig], Keyboard.down)
+            g[:basecontour][] /= g[:contourscale][]
+        elseif ispressed(g[:fig], Keyboard.left)
+            # left
+            i = state[:current_slice][]
+            if i > 1
+                i -= 1
+                set_close_to!(state[:gui][][:sliderslice], i)
+            end
+        elseif ispressed(g[:fig], Keyboard.right)
+            # right
+            i = state[:current_slice][]
+            if i < nslices(expt)
+                i += 1
+                set_close_to!(state[:gui][][:sliderslice], i)
             end
         end
     elseif state[:mode][] == :renaming || state[:mode][] == :renamingstart
