@@ -14,10 +14,7 @@ function process_mousebutton(expt, state, event)
         @debug "event: stop dragging"
         state[:mode][] = :normal
         newpos = mouseposition(state[:gui][][:axcontour])
-        state[:current_peak][].parameters[:x].initialvalue[][state[:current_slice][]] = newpos[1]
-        state[:current_peak][].parameters[:y].initialvalue[][state[:current_slice][]] = newpos[2]
-        state[:current_peak][].touched[] = true
-        notify(expt.peaks)
+        movepeak!(expt, state[:current_peak_idx][], newpos)
         return Consume(true)
     end
     return Consume(false)

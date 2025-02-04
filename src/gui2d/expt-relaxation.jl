@@ -9,8 +9,7 @@ struct RelaxationExperiment <: FixedPeakExperiment
 
     xradius
     yradius
-
-    # TODO add state to experiment
+    state
 
     RelaxationExperiment(specdata, peaks, relaxationtimes) = begin
         expt = new(specdata, peaks, relaxationtimes,
@@ -19,8 +18,10 @@ struct RelaxationExperiment <: FixedPeakExperiment
             Observable(true), # isfitting
             Observable(0.03, ignore_equal_values=true), # xradius
             Observable(0.2, ignore_equal_values=true), # yradius
+            Observable{Dict}()
             )
         setupexptobservables!(expt)
+        expt.state[] = preparestate(expt)
         expt
     end
 end

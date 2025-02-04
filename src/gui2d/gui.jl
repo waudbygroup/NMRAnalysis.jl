@@ -1,9 +1,6 @@
-function gui!(expt)
-    state = preparestate(expt)
-    gui!(state, expt)
-end
+function gui!(expt::FixedPeakExperiment)
+    state = expt.state[]
 
-function gui!(state, expt::FixedPeakExperiment)
     g = Dict{Symbol, Any}() # GUI state
     state[:gui] = g
 
@@ -29,6 +26,8 @@ function gui!(state, expt::FixedPeakExperiment)
     g[:slicelabel] = Label(g[:paneltop][1,7], state[:current_slice_label])
     g[:togglefit] = Toggle(g[:paneltop][1,8], active = true)
     Label(g[:paneltop][1,9], "Fitting")
+    g[:cmdload] = Button(g[:paneltop][1,10], label="Load peak list")
+    g[:cmdsave] = Button(g[:paneltop][1,11], label="Save to folder")
     
 
     # create contour plot
@@ -162,6 +161,16 @@ function addhanders!(g, state, expt::FixedPeakExperiment)
     # fitting active
     connect!(expt.isfitting, g[:togglefit].active)
     connect!(g[:pltfit].visible, g[:togglefit].active)
+
+    # load peak list
+    on(g[:cmdload].clicks) do _
+        loadpeaks!(expt)
+    end
+
+    # save peak list
+    on(g[:cmdsave].clicks) do _
+        saveresults!(expt)
+    end
 
     # delete peak
     on(g[:cmddelete].clicks) do _

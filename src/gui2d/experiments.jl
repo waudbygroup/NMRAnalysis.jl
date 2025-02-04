@@ -90,6 +90,21 @@ function setupexptobservables!(expt)
     expt
 end
 
+function movepeak!(expt, idx, newpos)
+    # touch other peaks in the same cluster before moving and notifying
+    clusteridx = findfirst(i -> idx in i, expt.clusters[])
+    cluster = expt.clusters[][clusteridx]
+    for i in cluster
+        # this will touch the moved peak as well as any in the same cluster
+        expt.peaks[][i].touched.val = true
+    end
+    slice = expt.state[][:current_slice][]
+    expt.peaks[][idx].parameters[:x].initialvalue[][slice] = newpos[1]
+    expt.peaks[][idx].parameters[:y].initialvalue[][slice] = newpos[2]
+    expt.peaks[][idx].touched.val = true
+    notify(expt.peaks)
+end
+
 function deletepeak!(expt, idx)
     # touch other peaks in the same cluster before deleting and notifying
     clusteridx = findfirst(i -> idx in i, expt.clusters[])
@@ -112,18 +127,33 @@ end
 function fit!(expt::Experiment)
     @debug "Fitting experiment" #maxlog=10
     anythingchanged = false
-    # iterate over touched clusters and fit
+    # first check if anything has been touched and needs fitting
     for i in 1:length(expt.clusters[])
         if expt.touched[][i]
-            fit!(expt.clusters[][i], expt)
-            postfit!(expt.clusters[][i], expt)
             anythingchanged = true
         end
     end
-    if anythingchanged
-        @debug "Fit finished - notifying peaks" #maxlog=10
+    anythingchanged || return
+
+    @async begin
+        expt.state[][:mode][] = :fitting
+        sleep(0.1) # allow time for mode change to be processed
+    end
+    @async begin # do fitting in a separate task
+        sleep(0.1) # allow time for mode change to be processed
+        # iterate over touched clusters and fit
+        for i in 1:length(expt.clusters[])
+            if expt.touched[][i]
+                fit!(expt.clusters[][i], expt)
+                postfit!(expt.clusters[][i], expt)
+            end
+        end
+        
         postfitglobal!(expt)
+        @debug "Fit finished - notifying peaks" #maxlog=10
         notify(expt.peaks)
+
+        expt.state[][:mode][] = :normal
     end
 end
 

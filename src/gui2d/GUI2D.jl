@@ -5,6 +5,7 @@ using GLMakie
 using LightGraphs
 using LsqFit
 using Measurements
+using NativeFileDialog
 using NMRTools
 using OrderedCollections
 
@@ -21,6 +22,7 @@ include("state.jl")
 include("gui.jl")
 include("mouse.jl")
 include("keyboard.jl")
+include("files.jl")
 
 export MaybeVector
 export gui!
