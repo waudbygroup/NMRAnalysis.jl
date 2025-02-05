@@ -1,5 +1,6 @@
 module GUI2D
 
+using CairoMakie
 using DelimitedFiles
 using GLMakie
 using LightGraphs
@@ -8,7 +9,6 @@ using Measurements
 using NativeFileDialog
 using NMRTools
 using OrderedCollections
-
 
 include("util.jl")
 include("maybevector.jl")

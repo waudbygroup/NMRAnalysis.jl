@@ -21,10 +21,31 @@ function saveresults!(expt)
     folder == "" && return
 
     @info "Saving results to $folder"
-    writepeaklists!(expt, folder)
+    @async begin
+        expt.state[][:mode][] = :fitting
+        sleep(0.1) # allow time for mode change to be processed
+    end
+    @async begin # do fitting in a separate task
+        sleep(0.2) # allow time for mode change to be processed
+        
+        writepeaklists!(expt, folder)
 
-    # save post-fit parameters to separate file
-    writefitresults!(expt, folder)
+        # save post-fit parameters to separate file
+        writefitresults!(expt, folder)
+
+        # remove any files peak_XXX.pdf from output folder before saving new plots
+        for file in readdir(folder)
+            if occursin(r"^peak_.*\.pdf$", file)
+                rm(joinpath(folder, file))
+            end
+        end
+        save_peak_plots!(expt, folder)
+
+        # save current contour plot figure
+        save_contour_plot!(expt, folder)
+
+        expt.state[][:mode][] = :normal
+    end
 end
 
 
@@ -362,4 +383,60 @@ function writefitresults!(expt, folder)
             println(f, join(values, "\t"))
         end
     end
+end
+
+
+function save_contour_plot!(expt, folder)
+    CairoMakie.activate!()
+
+    state = expt.state[]
+    rect = state[:gui][][:axcontour].finallimits[]
+    x0, y0 = rect.origin
+    dx, dy = rect.widths
+    lims = ((x0, x0+dx),(y0, y0+dy))
+
+    for i=1:nslices(expt)
+        f = Figure()
+        ax = Axis(f[1,1],
+            xlabel="$(label(expt.specdata.nmrdata[1],F1Dim)) chemical shift (ppm)",
+            ylabel="$(label(expt.specdata.nmrdata[1],F2Dim)) chemical shift (ppm)",
+            xreversed=true, yreversed=true, limits=lims,
+            title=slicelabel(expt, i))
+        heatmap!(ax,
+            expt.specdata.x[i],
+            expt.specdata.y[i],
+            expt.specdata.mask[][i],
+            # state[:current_mask_x],
+            # state[:current_mask_y],
+            # state[:current_mask_z],
+            colormap=[:white,:lightgoldenrod1],
+            colorrange=(0,1),
+            )
+        contour!(ax,
+            expt.specdata.x[i],
+            expt.specdata.y[i],
+            expt.specdata.z[i],
+            # state[:current_spec_x],
+            # state[:current_spec_y],
+            # state[:current_spec_z],
+            levels=state[:gui][][:contourlevels],
+            color=:grey50)
+        contour!(ax,
+            expt.specdata.x[i],
+            expt.specdata.y[i],
+            expt.specdata.zfit[][i],
+            levels=state[:gui][][:contourlevels],
+            color=:orangered)
+        scatter!(ax, state[:positions], markersize=10, marker=:x, color=:black)
+        text!(ax, state[:positions], text=state[:labels],
+                fontsize=14,
+                # font=:bold,
+                offset=(8,0),
+                align=(:left,:center),
+                color=:black)
+
+        save(joinpath(folder, "spectrum-fit-$i.pdf"), f)
+    end
+
+    GLMakie.activate!()
 end

@@ -178,52 +178,6 @@ function peakinfotext(expt::RelaxationExperiment, idx)
 end
 
 
-function completestate!(state, expt::RelaxationExperiment)
-    # add observables for plotting fits for the current peak
-    state[:peakplot_obs_xy] = lift(state[:current_peak]) do peak
-        if peak === nothing
-            return Point2f[]
-        else
-            x = expt.relaxationtimes
-            y = peak.parameters[:amp].value[]
-            return Point2f.(x, y)
-        end
-    end
-    state[:peakplot_obs_xye] = lift(state[:current_peak]) do peak
-        if peak === nothing
-            return [(0.,0.,0.)]
-        else
-            x = expt.relaxationtimes
-            y = peak.parameters[:amp].value[]
-            err = peak.parameters[:amp].uncertainty[]
-            return [(x[i], y[i], err[i]) for i=1:length(x)]
-        end
-    end
-    state[:peakplot_fit_xy] = lift(state[:current_peak]) do peak
-        if peak === nothing
-            return Point2f[]
-        else
-            t = expt.relaxationtimes
-            tpred = range(0, 1.1 * maximum(t), 100)
-
-            A = peak.postparameters[:amp].value[][1]
-            R = peak.postparameters[:relaxationrate].value[][1]
-            
-            ypred = A * exp.(-R * tpred)
-            return Point2f.(tpred, ypred)
-        end
-    end
-end
-
-
-function makepeakplot!(gui, state, ::RelaxationExperiment)
-    gui[:axpeakplot] = ax = Axis(gui[:panelpeakplot][1,1], xlabel="Relaxation time / s", ylabel="Amplitude")
-    hlines!(ax, [0], linewidth=0)
-    lines!(ax, state[:peakplot_fit_xy], label="Fit", color=:red)
-    errorbars!(ax, state[:peakplot_obs_xye], whiskerwidth=10)
-    scatter!(ax, state[:peakplot_obs_xy], label="Observed")
-    # axislegend(ax)
-end
 
 function experimentinfo(expt::RelaxationExperiment)
     "Analysis type: Relaxation experiment\n" *
@@ -231,4 +185,101 @@ function experimentinfo(expt::RelaxationExperiment)
     "Relaxation times: $(join(expt.relaxationtimes, ", ")) s\n" *
     "Number of peaks: $(length(expt.peaks[]))\n" *
     "Experiment title: $(expt.specdata.nmrdata[1][:title])\n"
+end
+
+
+
+function completestate!(state, expt::RelaxationExperiment)
+    # Set up observables for the GUI
+    state[:peakplot_obs_xy] = lift(state[:current_peak]) do peak
+        isnothing(peak) ? Point2f[] : peak_plot_data(peak, expt)[1]
+    end
+    
+    state[:peakplot_obs_xye] = lift(state[:current_peak]) do peak
+        isnothing(peak) ? [(0.,0.,0.)] : peak_plot_data(peak, expt)[2]
+    end
+    
+    state[:peakplot_fit_xy] = lift(state[:current_peak]) do peak
+        isnothing(peak) ? Point2f[] : peak_plot_data(peak, expt)[3]
+    end
+end
+
+
+"""
+    peak_plot_data(peak, expt::RelaxationExperiment)
+
+Extract plotting data for a single peak, returning observed points, error bars,
+and fit line data.
+"""
+function peak_plot_data(peak, expt::RelaxationExperiment)
+    # Calculate observed data points with errors
+    t = expt.relaxationtimes
+    y = peak.parameters[:amp].value[]
+    err = peak.parameters[:amp].uncertainty[]
+    obs_points = Point2f.(t, y)
+    obs_errors = [(t[i], y[i], err[i]) for i in 1:length(t)]
+    
+    # Calculate fit line
+    tpred = range(0, 1.1 * maximum(t), 100)
+    A = peak.postparameters[:amp].value[][1]
+    R = peak.postparameters[:relaxationrate].value[][1]
+    ypred = A * exp.(-R * tpred)
+    fit_points = Point2f.(tpred, ypred)
+    
+    return (obs_points, obs_errors, fit_points)
+end
+
+
+"""
+    plot_peak!(ax, peak, relaxationtimes)
+
+Plot a single peak's data and fit onto the given axis.
+"""
+function plot_peak!(ax, peak, expt::RelaxationExperiment)
+    obs_points, obs_errors, fit_points = peak_plot_data(peak, expt)
+    
+    hlines!(ax, [0], linewidth=0)
+    lines!(ax, fit_points, label="Fit", color=:red)
+    errorbars!(ax, obs_errors, whiskerwidth=10)
+    scatter!(ax, obs_points, label="Observed")
+end
+
+
+"""
+    makepeakplot!(gui, state, expt::RelaxationExperiment)
+
+Create interactive peak plot in GUI context.
+"""
+function makepeakplot!(gui, state, expt::RelaxationExperiment)
+    gui[:axpeakplot] = ax = Axis(gui[:panelpeakplot][1,1], 
+                                xlabel="Relaxation time / s", 
+                                ylabel="Amplitude")
+    
+    hlines!(ax, [0], linewidth=0)
+    lines!(ax, state[:peakplot_fit_xy], label="Fit", color=:red)
+    errorbars!(ax, state[:peakplot_obs_xye], whiskerwidth=10)
+    scatter!(ax, state[:peakplot_obs_xy], label="Observed")
+end
+
+
+"""
+    save_peak_plots(expt::RelaxationExperiment, folder::AbstractString)
+
+Save individual plots for each peak in the experiment to the specified folder.
+"""
+function save_peak_plots!(expt::RelaxationExperiment, folder::AbstractString)
+    CairoMakie.activate!()
+    for peak in expt.peaks[]
+        fig = Figure()
+        ax = Axis(fig[1,1], 
+                  xlabel="Relaxation time / s", 
+                  ylabel="Amplitude",
+                  title="$(peak.label[])")
+        
+        plot_peak!(ax, peak, expt)
+        # axislegend(ax)
+        
+        save(joinpath(folder, "peak_$(peak.label[]).pdf"), fig)
+    end
+    GLMakie.activate!()
 end

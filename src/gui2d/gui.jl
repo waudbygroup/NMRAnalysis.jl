@@ -1,4 +1,6 @@
 function gui!(expt::FixedPeakExperiment)
+    GLMakie.activate!()
+
     state = expt.state[]
 
     g = Dict{Symbol, Any}() # GUI state
@@ -36,7 +38,9 @@ function gui!(expt::FixedPeakExperiment)
     g[:logscale] = lift(r -> r .^ (0:10), g[:contourscale])
     g[:contourlevels] = lift((c0,arr) -> c0 * arr, g[:basecontour], g[:logscale])
 
-    g[:axcontour] = Axis(g[:panelcontour][1,1], xlabel="δX / ppm", ylabel="δy / ppm",
+    g[:axcontour] = Axis(g[:panelcontour][1,1],
+        xlabel="$(label(expt.specdata.nmrdata[1],F1Dim)) chemical shift (ppm)",
+        ylabel="$(label(expt.specdata.nmrdata[1],F2Dim)) chemical shift (ppm)",
         xreversed=true, yreversed=true)
     g[:pltmask] = heatmap!(g[:axcontour],
         state[:current_mask_x],

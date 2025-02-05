@@ -5,8 +5,9 @@
 [x] keyboard shortcut for slice
 [x] reset zoom button
 [x] fitting toggle
-[ ] fitting status background
-[ ] save output
-[ ] scale fitting by noise
-[ ] restrict fitting area to ROIs
+[x] fitting status background
+[x] save output
 [ ] figure out amplitudes / intensities
+[ ] scale fitting by noise
+[ ] accept spectrum planes as 
+[ ] restrict fitting area to ROIs
