@@ -4,9 +4,7 @@ function process_keyboardbutton(expt, state, event)
     if state[:mode][] == :normal && event.action == Keyboard.press
         if  ispressed(g[:fig], Keyboard.a)
             pos = mouseposition(g[:axcontour])
-            state[:total_peaks][] += 1
-            id = "X$(state[:total_peaks][])"
-            addpeak!(expt, Point2f(pos), id)
+            addpeak!(expt, Point2f(pos))
         elseif ispressed(g[:fig], Keyboard.d)
             idx = state[:current_peak_idx][]
             if idx > 0

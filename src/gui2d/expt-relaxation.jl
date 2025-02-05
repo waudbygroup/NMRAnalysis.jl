@@ -37,8 +37,12 @@ end
 
 
 # implementation requirements
-function addpeak!(expt::RelaxationExperiment, initialposition::Point2f, label,
+function addpeak!(expt::RelaxationExperiment, initialposition::Point2f, label="",
                     xradius=expt.xradius[], yradius=expt.yradius[])
+    expt.state[][:total_peaks][] += 1
+    if label == ""
+        label = "X$(expt.state[][:total_peaks][])"
+    end
     @debug "Add peak $label at $initialposition"
     newpeak = Peak(initialposition, label, xradius, yradius)
     # pars: R2x, R2y, amp
@@ -53,13 +57,13 @@ function addpeak!(expt::RelaxationExperiment, initialposition::Point2f, label,
         iy = findnearest(expt.specdata.y[i], y0)
         expt.specdata.z[i][ix, iy]
     end
-    amp = Parameter("amp", amp0)
+    amp = Parameter("Amplitude", amp0)
     newpeak.parameters[:R2x] = R2x
     newpeak.parameters[:R2y] = R2y
     newpeak.parameters[:amp] = amp
 
-    newpeak.postparameters[:amp] = Parameter("amp", maximum(amp0))
     newpeak.postparameters[:relaxationrate] = Parameter("Relaxation rate", 4/maximum(expt.relaxationtimes))
+    newpeak.postparameters[:amp] = Parameter("Amplitude", maximum(amp0))
 
     push!(expt.peaks[], newpeak)
     notify(expt.peaks)
@@ -219,4 +223,12 @@ function makepeakplot!(gui, state, ::RelaxationExperiment)
     errorbars!(ax, state[:peakplot_obs_xye], whiskerwidth=10)
     scatter!(ax, state[:peakplot_obs_xy], label="Observed")
     # axislegend(ax)
+end
+
+function experimentinfo(expt::RelaxationExperiment)
+    "Analysis type: Relaxation experiment\n" *
+    "Filename: $(expt.specdata.nmrdata[1][:filename])\n" *
+    "Relaxation times: $(join(expt.relaxationtimes, ", ")) s\n" *
+    "Number of peaks: $(length(expt.peaks[]))\n" *
+    "Experiment title: $(expt.specdata.nmrdata[1][:title])\n"
 end
