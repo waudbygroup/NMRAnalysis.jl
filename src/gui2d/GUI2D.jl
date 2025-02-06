@@ -27,5 +27,6 @@ include("files.jl")
 export MaybeVector
 export gui!
 export RelaxationExperiment
+export HetNOEExperiment
 
 end

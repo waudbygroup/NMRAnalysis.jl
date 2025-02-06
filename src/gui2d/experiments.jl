@@ -30,6 +30,7 @@ Expected fields:
 
 # implementations
 include("expt-relaxation.jl")
+include("expt-hetnoe.jl")
 
 # generic functions
 nslices(expt::Experiment) = length(expt.specdata.z)
@@ -266,6 +267,20 @@ function mask(cluster::Vector{Int}, expt::Experiment)
         mask!(z, expt.peaks[][i], expt)
     end
     reduce(vcat, vec.(z))
+end
+
+# generic masking method - can be specialised if needed
+function mask!(z, peak::Peak, expt::Experiment)
+    @debug "masking peak $(peak.label)" maxlog=10
+    n = length(z)
+    for i in 1:n
+        x = data(expt.specdata.nmrdata[i], F1Dim)
+        y = data(expt.specdata.nmrdata[i], F2Dim)
+        maskellipse!(z[i], x, y,
+            initialposition(peak)[][i][1],
+            initialposition(peak)[][i][2],
+            peak.xradius[], peak.yradius[])
+    end
 end
 
 function Base.show(io::IO, expt::Experiment)

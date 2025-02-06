@@ -6,7 +6,7 @@ function gui!(expt::FixedPeakExperiment)
     g = Dict{Symbol, Any}() # GUI state
     state[:gui] = g
 
-    g[:fig] = Figure(size=(1100,700))
+    g[:fig] = Figure(size=(1200,800))
     g[:paneltop] = g[:fig][1,1:2] = GridLayout()
     g[:panelcontour] = g[:fig][2:3,1] = GridLayout()
     g[:panelinfo] = g[:fig][2,2] = GridLayout()

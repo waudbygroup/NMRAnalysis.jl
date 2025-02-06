@@ -36,6 +36,31 @@ function RelaxationExperiment(inputfilename, taufilename)
 end
 
 
+
+# load the NMR data and prepare the SpecData object
+function preparespecdata(inputfilename, relaxationtimes, ::Type{RelaxationExperiment})
+    @debug "Preparing spec data for relaxation experiment: $inputfilename"
+    spec = loadnmr(inputfilename)
+    x = data(spec, F1Dim)
+    y = data(spec, F2Dim)
+    
+    dat = data(spec) / scale(spec)
+    σ = spec[:noise] / scale(spec)
+
+    z = eachslice(dat, dims=3)
+    zlabels = map(t -> "τ = $t", relaxationtimes)
+
+    SpecData(SingleElementVector(spec),
+        SingleElementVector(x),
+        SingleElementVector(y),
+        z ./ σ,
+        SingleElementVector(1),
+        zlabels)
+end
+
+
+
+
 # implementation requirements
 function addpeak!(expt::RelaxationExperiment, initialposition::Point2f, label="",
                     xradius=expt.xradius[], yradius=expt.yradius[])
@@ -96,39 +121,7 @@ function simulate!(z, peak::Peak, expt::RelaxationExperiment)
     end
 end
 
-function mask!(z, peak::Peak, expt::RelaxationExperiment)
-    @debug "masking peak $(peak.label)" maxlog=10
-    n = length(z)
-    for i in 1:n
-        x = data(expt.specdata.nmrdata[i], F1Dim)
-        y = data(expt.specdata.nmrdata[i], F2Dim)
-        maskellipse!(z[i], x, y,
-            initialposition(peak)[][i][1],
-            initialposition(peak)[][i][2],
-            peak.xradius[], peak.yradius[])
-    end
-end
 
-# load the NMR data and prepare the SpecData object
-function preparespecdata(inputfilename, relaxationtimes, ::Type{RelaxationExperiment})
-    @debug "Preparing spec data for relaxation experiment: $inputfilename"
-    spec = loadnmr(inputfilename)
-    x = data(spec, F1Dim)
-    y = data(spec, F2Dim)
-    
-    dat = data(spec) / scale(spec)
-    σ = spec[:noise] / scale(spec)
-
-    z = eachslice(dat, dims=3)
-    zlabels = map(t -> "τ = $t", relaxationtimes)
-
-    SpecData(SingleElementVector(spec),
-        SingleElementVector(x),
-        SingleElementVector(y),
-        z ./ σ,
-        SingleElementVector(1),
-        zlabels)
-end
 
 function postfit!(peak::Peak, expt::RelaxationExperiment)
     @debug "Post-fitting peak $(peak.label)" maxlog=10
@@ -172,7 +165,7 @@ function peakinfotext(expt::RelaxationExperiment, idx)
             "X Linewidth: $(peak.parameters[:R2x].value[][1] ± peak.parameters[:R2x].uncertainty[][1]) s⁻¹\n" *
             "Y Linewidth: $(peak.parameters[:R2y].value[][1] ± peak.parameters[:R2y].uncertainty[][1]) s⁻¹"
     else
-        return "Peak: $(peak.label)\n" *
+        return "Peak: $(peak.label[])\n" *
             "Not fitted"
     end
 end
