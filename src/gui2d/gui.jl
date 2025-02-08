@@ -1,66 +1,64 @@
 function gui!(expt::FixedPeakExperiment)
-    GLMakie.activate!(title="NMRAnalysis.jl (v$(string(pkgversion(GUI2D))))", focus_on_show=true)
+    GLMakie.activate!(; title="NMRAnalysis.jl (v$(string(pkgversion(GUI2D))))",
+                      focus_on_show=true)
 
     state = expt.state[]
 
-    g = Dict{Symbol, Any}() # GUI state
+    g = Dict{Symbol,Any}() # GUI state
     state[:gui] = g
 
-    g[:fig] = Figure(size=(1200,800))
-    g[:paneltop] = g[:fig][1,1:2] = GridLayout()
-    g[:panelcontour] = g[:fig][2:3,1] = GridLayout()
-    g[:panelinfo] = g[:fig][2,2] = GridLayout()
-    g[:panelpeakplot] = g[:fig][3,2] = GridLayout()
+    g[:fig] = Figure(; size=(1200, 800))
+    g[:paneltop] = g[:fig][1, 1:2] = GridLayout()
+    g[:panelcontour] = g[:fig][2:3, 1] = GridLayout()
+    g[:panelinfo] = g[:fig][2, 2] = GridLayout()
+    g[:panelpeakplot] = g[:fig][3, 2] = GridLayout()
     rowsize!(g[:fig].layout, 1, Auto(true))
-    rowsize!(g[:fig].layout, 2, Auto(false,1))
-    rowsize!(g[:fig].layout, 3, Auto(false,1))
-    colsize!(g[:fig].layout, 1, Auto(false,2))
-    colsize!(g[:fig].layout, 2, Auto(false,1))
-
+    rowsize!(g[:fig].layout, 2, Auto(false, 1))
+    rowsize!(g[:fig].layout, 3, Auto(false, 1))
+    colsize!(g[:fig].layout, 1, Auto(false, 2))
+    colsize!(g[:fig].layout, 2, Auto(false, 1))
 
     # top panel
-    g[:cmdcontourup] = Button(g[:paneltop][1,1], label="contour ↑")
-    g[:cmdcontourdown] = Button(g[:paneltop][1,2], label="contour ↓")
-    g[:cmdresetzoom] = Button(g[:paneltop][1,3], label="reset zoom")
-    g[:sliderslice] = Slider(g[:paneltop][1,4], range = 1:nslices(expt))
-    g[:cmdsliceleft] = Button(g[:paneltop][1,5], label="←")
-    g[:cmdsliceright] = Button(g[:paneltop][1,6], label="→")
-    g[:slicelabel] = Label(g[:paneltop][1,7], state[:current_slice_label])
-    g[:togglefit] = Toggle(g[:paneltop][1,8], active = true)
-    Label(g[:paneltop][1,9], "Fitting")
-    g[:cmdload] = Button(g[:paneltop][1,10], label="Load peak list")
-    g[:cmdsave] = Button(g[:paneltop][1,11], label="Save to folder")
-    
+    g[:cmdcontourup] = Button(g[:paneltop][1, 1]; label="contour ↑")
+    g[:cmdcontourdown] = Button(g[:paneltop][1, 2]; label="contour ↓")
+    g[:cmdresetzoom] = Button(g[:paneltop][1, 3]; label="reset zoom")
+    g[:sliderslice] = Slider(g[:paneltop][1, 4]; range=1:nslices(expt))
+    g[:cmdsliceleft] = Button(g[:paneltop][1, 5]; label="←")
+    g[:cmdsliceright] = Button(g[:paneltop][1, 6]; label="→")
+    g[:slicelabel] = Label(g[:paneltop][1, 7], state[:current_slice_label])
+    g[:togglefit] = Toggle(g[:paneltop][1, 8]; active=true)
+    Label(g[:paneltop][1, 9], "Fitting")
+    g[:cmdload] = Button(g[:paneltop][1, 10]; label="Load peak list")
+    g[:cmdsave] = Button(g[:paneltop][1, 11]; label="Save to folder")
 
     # create contour plot
     g[:basecontour] = Observable(10.0)
     g[:contourscale] = Observable(1.7)
     g[:logscale] = lift(r -> [r .^ (0:10); -1 * (r .^ (0:10))], g[:contourscale])
-    g[:contourlevels] = lift((c0,arr) -> c0 * arr, g[:basecontour], g[:logscale])
+    g[:contourlevels] = lift((c0, arr) -> c0 * arr, g[:basecontour], g[:logscale])
 
-    g[:axcontour] = Axis(g[:panelcontour][1,1],
-        xlabel="$(label(expt.specdata.nmrdata[1],F1Dim)) chemical shift (ppm)",
-        ylabel="$(label(expt.specdata.nmrdata[1],F2Dim)) chemical shift (ppm)",
-        xreversed=true, yreversed=true)
+    g[:axcontour] = Axis(g[:panelcontour][1, 1];
+                         xlabel="$(label(expt.specdata.nmrdata[1],F1Dim)) chemical shift (ppm)",
+                         ylabel="$(label(expt.specdata.nmrdata[1],F2Dim)) chemical shift (ppm)",
+                         xreversed=true, yreversed=true)
     g[:pltmask] = heatmap!(g[:axcontour],
-        state[:current_mask_x],
-        state[:current_mask_y],
-        state[:current_mask_z],
-        colormap=[:white,:lightgoldenrod1],
-        colorrange=(0,1),
-        )
+                           state[:current_mask_x],
+                           state[:current_mask_y],
+                           state[:current_mask_z];
+                           colormap=[:white, :lightgoldenrod1],
+                           colorrange=(0, 1))
     g[:pltcontour] = contour!(g[:axcontour],
-        state[:current_spec_x],
-        state[:current_spec_y],
-        state[:current_spec_z],
-        levels=g[:contourlevels],
-        color=bicolours(:grey50, :lightblue))
+                              state[:current_spec_x],
+                              state[:current_spec_y],
+                              state[:current_spec_z];
+                              levels=g[:contourlevels],
+                              color=bicolours(:grey50, :lightblue))
     g[:pltfit] = contour!(g[:axcontour],
-        state[:current_fit_x],
-        state[:current_fit_y],
-        state[:current_fit_z],
-        levels=g[:contourlevels],
-        color=bicolours(:orangered, :dodgerblue))
+                          state[:current_fit_x],
+                          state[:current_fit_y],
+                          state[:current_fit_z];
+                          levels=g[:contourlevels],
+                          color=bicolours(:orangered, :dodgerblue))
 
     # # create 3D plot
     # g[:ax3d] = Axis3(g[:panel3d][1,1], xlabel="δX / ppm", ylabel="δy / ppm", zlabel="Intensity",
@@ -77,28 +75,31 @@ function gui!(expt::FixedPeakExperiment)
     #     color=:orangered)
 
     # add the peak positions
-    g[:pltpeaks] = scatter!(g[:axcontour], state[:positions], markersize=10, marker=:x, color=state[:peakcolours])
-    g[:pltlabels] = text!(g[:axcontour], state[:positions], text=state[:labels],
-        fontsize=14,
-        font=:bold,
-        offset=(8,0),
-        align=(:left,:center),
-        color=:black)
-    g[:pltinitialpeaks] = scatter!(g[:axcontour], state[:initialpositions], markersize=15, color=state[:peakcolours])
+    g[:pltpeaks] = scatter!(g[:axcontour], state[:positions]; markersize=10, marker=:x,
+                            color=state[:peakcolours])
+    g[:pltlabels] = text!(g[:axcontour], state[:positions]; text=state[:labels],
+                          fontsize=14,
+                          font=:bold,
+                          offset=(8, 0),
+                          align=(:left, :center),
+                          color=:black)
+    g[:pltinitialpeaks] = scatter!(g[:axcontour], state[:initialpositions]; markersize=15,
+                                   color=state[:peakcolours])
 
     # peak info
-    g[:cmdrename] = Button(g[:panelinfo][1,1], label="(R)ename peak")
-    g[:cmddelete] = Button(g[:panelinfo][1,2], label="(D)elete peak")
-    Label(g[:panelinfo][2,1:2], "Press (A) to add new peak under mouse cursor", word_wrap=true)
-    g[:sgradii] = SliderGrid(
-        g[:panelinfo][3,1:2],
-        (label = "X radius", range = 0.02:0.005:0.1, format = "{:.3f} ppm", startvalue = expt.xradius[]),
-        (label = "Y radius", range = 0.1:0.02:0.5, format = "{:.2f} ppm", startvalue = expt.yradius[]),
-        ) # width = 350, tellheight = false)
+    g[:cmdrename] = Button(g[:panelinfo][1, 1]; label="(R)ename peak")
+    g[:cmddelete] = Button(g[:panelinfo][1, 2]; label="(D)elete peak")
+    Label(g[:panelinfo][2, 1:2], "Press (A) to add new peak under mouse cursor";
+          word_wrap=true)
+    g[:sgradii] = SliderGrid(g[:panelinfo][3, 1:2],
+                             (label="X radius", range=0.02:0.005:0.1, format="{:.3f} ppm",
+                              startvalue=expt.xradius[]),
+                             (label="Y radius", range=0.1:0.02:0.5, format="{:.2f} ppm",
+                              startvalue=expt.yradius[])) # width = 350, tellheight = false)
     g[:sliderxradius] = g[:sgradii].sliders[1].value
     g[:slideryradius] = g[:sgradii].sliders[2].value
 
-    g[:infotext] = Label(g[:panelinfo][4,1:2], state[:current_peak_info])
+    g[:infotext] = Label(g[:panelinfo][4, 1:2], state[:current_peak_info])
 
     # peak plot panel
     makepeakplot!(g, state, expt)
@@ -107,14 +108,13 @@ function gui!(expt::FixedPeakExperiment)
     addhanders!(g, state, expt)
 
     @debug "Showing figure"
-    g[:fig]
+    return g[:fig]
 end
-
 
 function addhanders!(g, state, expt::FixedPeakExperiment)
     g[:fig].scene.backgroundcolor = lift(state[:mode]) do mode
         if mode == :fitting
-            RGBAf(1., 0.63, 0.48, 1.0)      # :salmon
+            RGBAf(1.0, 0.63, 0.48, 1.0)      # :salmon
         elseif mode == :renaming || mode == :renamingstart
             RGBAf(0.75, 0.94, 1.0, 1.0)     # :lightblue
         elseif mode == :moving
@@ -216,15 +216,15 @@ function addhanders!(g, state, expt::FixedPeakExperiment)
         end
     end
     # mouse handling
-    on(events(g[:axcontour]).mousebutton, priority = 2) do event
+    on(events(g[:axcontour]).mousebutton; priority=2) do event
         process_mousebutton(expt, state, event)
     end
-    on(events(g[:axcontour]).mouseposition, priority = 2) do mousepos
+    on(events(g[:axcontour]).mouseposition; priority=2) do mousepos
         process_mouseposition(expt, state, mousepos)
     end
 
     # keyboard
-    on(events(g[:axcontour]).keyboardbutton, priority=2) do event
+    on(events(g[:axcontour]).keyboardbutton; priority=2) do event
         process_keyboardbutton(expt, state, event)
     end
     on(events(g[:fig]).unicode_input) do character
@@ -232,9 +232,7 @@ function addhanders!(g, state, expt::FixedPeakExperiment)
     end
 end
 
-
 makepeakplot!(panel, state, expt::Experiment) = nothing
-
 
 function renamepeak!(expt, state, initiator)
     @debug "Renaming peak"

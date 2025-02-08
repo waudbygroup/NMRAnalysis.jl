@@ -1,14 +1,14 @@
 function preparestate(expt::Experiment)
     @debug "Preparing state"
-    state = Dict{Symbol, Observable}()
+    state = Dict{Symbol,Observable}()
 
     state[:mode] = Observable(:normal) # options = :normal, :renaming, :renamingstart, :moving, :fitting
 
     state[:total_peaks] = Observable(length(expt.peaks[]))
 
     state[:current_slice] = Observable(1)
-    
-    state[:current_slice_label] = lift(idx->slicelabel(expt, idx), state[:current_slice])
+
+    state[:current_slice_label] = lift(idx -> slicelabel(expt, idx), state[:current_slice])
 
     state[:current_mask_x] = Observable(expt.specdata.x[1])
     state[:current_mask_y] = Observable(expt.specdata.y[1])
@@ -39,7 +39,7 @@ function preparestate(expt::Experiment)
 
     state[:current_peak_idx] = Observable(0)
     state[:current_peak] = Observable{Union{Peak,Nothing}}(nothing)
-    map!(state[:current_peak], expt.peaks, state[:current_peak_idx]) do peaks,idx
+    map!(state[:current_peak], expt.peaks, state[:current_peak_idx]) do peaks, idx
         if idx > 0 && idx <= length(peaks)
             peaks[idx]
         else
@@ -52,13 +52,11 @@ function preparestate(expt::Experiment)
         positions = [position(peak)[][idx] for peak in expt]
         labels = [peak.label[] for peak in expt]
         touched = [peak.touched[] for peak in expt]
-        d = Dict(
-            :initialpositions => initialpositions,
-            :positions => positions,
-            :labels => labels,
-            :touched => touched,
-        )
-        @debug "current_peaks lift" d
+        d = Dict(:initialpositions => initialpositions,
+                 :positions => positions,
+                 :labels => labels,
+                 :touched => touched)
+        @debug "current_peaks lift" d maxlog = 10
         d
     end
     state[:initialpositions] = Observable{Vector{Point2f}}([])
@@ -67,7 +65,7 @@ function preparestate(expt::Experiment)
     state[:oldlabel] = Observable("")
     state[:peakcolours] = Observable{Vector{Symbol}}([])
     on(state[:current_peaks]) do d
-    # onany(state[:current_peaks], state[:current_peak_idx]) do d, idx
+        # onany(state[:current_peaks], state[:current_peak_idx]) do d, idx
         @debug "current peaks changed"
         idx = state[:current_peak_idx][]
         cols = map(t -> t ? :red : :blue, d[:touched])
@@ -81,7 +79,7 @@ function preparestate(expt::Experiment)
         notify(state[:peakcolours])
         notify(state[:labels])
     end
-    
+
     on(state[:current_peak_idx]) do idx
         @debug "current peak index changed to $idx - updating colours"
         d = state[:current_peaks][]
@@ -91,8 +89,9 @@ function preparestate(expt::Experiment)
         end
         state[:peakcolours][] = cols
     end
-    
-    state[:current_peak_info] = lift(idx->peakinfotext(expt, idx), state[:current_peak_idx])
+
+    state[:current_peak_info] = lift(idx -> peakinfotext(expt, idx),
+                                     state[:current_peak_idx])
 
     completestate!(state, expt)
 

@@ -34,7 +34,19 @@ include("expt-hetnoe.jl")
 include("expt-pre.jl")
 
 # generic functions
+
+"""
+    nslices(expt::Experiment)
+
+Number of spectra in the experiment.
+"""
 nslices(expt::Experiment) = length(expt.specdata.z)
+
+"""
+    npeaks(expt::Experiment) 
+
+Number of peaks currently in the experiment.
+"""
 npeaks(expt::Experiment) = length(expt.peaks[])
 
 hasfixedpositions(expt::FixedPeakExperiment) = true
@@ -92,6 +104,11 @@ function setupexptobservables!(expt)
     expt
 end
 
+"""
+    movepeak!(expt, idx, newpos)
+
+Move peak `idx` to `newpos`. Updates clusters automatically.
+"""
 function movepeak!(expt, idx, newpos)
     # touch other peaks in the same cluster before moving and notifying
     clusteridx = findfirst(i -> idx in i, expt.clusters[])
@@ -107,6 +124,11 @@ function movepeak!(expt, idx, newpos)
     notify(expt.peaks)
 end
 
+"""
+    deletepeak!(expt, idx)
+
+Delete peak `idx`. Updates clusters automatically.
+"""
 function deletepeak!(expt, idx)
     # touch other peaks in the same cluster before deleting and notifying
     clusteridx = findfirst(i -> idx in i, expt.clusters[])
@@ -118,6 +140,11 @@ function deletepeak!(expt, idx)
     notify(expt.peaks)
 end
 
+"""
+    deleteallpeaks!(expt)
+
+Remove all peaks from the experiment.
+"""
 function deleteallpeaks!(expt)
     expt.state[][:current_peak_idx][] = 0
     # delete any existing peaks
@@ -126,6 +153,11 @@ function deleteallpeaks!(expt)
     end
 end
 
+"""
+    checktouched!(expt)
+
+Update which clusters have been modified.
+"""
 function checktouched!(expt)
     @debug "Checking touched clusters" #maxlog=10
     touched = map(expt.clusters[]) do cluster
@@ -134,6 +166,11 @@ function checktouched!(expt)
     expt.touched[] = touched
 end
 
+"""
+    fit!(expt::Experiment)
+
+Fit all touched peaks/clusters in the experiment.
+"""
 function fit!(expt::Experiment)
     @debug "Fitting experiment" #maxlog=10
     anythingchanged = false
@@ -175,10 +212,10 @@ function postfit!(cluster::Vector{Int}, expt::Experiment)
     end
 end
 
-"Additional fitting of peak following spectrum fit - defaults to no action"
+"""Additional fitting of peak following spectrum fit - defaults to no action"""
 postfit!(peak::Peak, expt::Experiment) = nothing
 
-"Global fitting of entire experiment following spectrum fit - defaults to no action"
+"""Global fitting of entire experiment following spectrum fit - defaults to no action"""
 postfitglobal!(expt::Experiment) = nothing
 
 function fit!(cluster::Vector{Int}, expt::Experiment)
@@ -233,7 +270,11 @@ function fit!(cluster::Vector{Int}, expt::Experiment)
     # N.B. the update to peaks[] will be notified in parent function once all fitting is complete
 end
 
+"""
+    simulate!(expt::Experiment)
 
+Simulate all peaks in the experiment and update specdata.
+"""
 function simulate!(expt::Experiment)
     @debug "Simulating experiment" #maxlog=10
     z = expt.specdata.zfit.val
@@ -258,7 +299,11 @@ function simulate!(z, cluster::Vector{Int}, expt::Experiment, xbounds=nothing, y
     end
 end
 
+"""
+    mask!(expt::Experiment)
 
+Calculate masks for all peaks and update specdata.
+"""
 function mask!(expt::Experiment)
     @debug "Masking experiment" #maxlog=10
     z = expt.specdata.mask.val
@@ -311,8 +356,8 @@ function mask!(z, peak::Peak, expt::Experiment)
     @debug "masking peak $(peak.label)" maxlog=10
     n = length(z)
     for i in 1:n
-        x = data(expt.specdata.nmrdata[i], F1Dim)
-        y = data(expt.specdata.nmrdata[i], F2Dim)
+        x = expt.specdata.x[i]
+        y = expt.specdata.y[i]
         maskellipse!(z[i], x, y,
             initialposition(peak)[][i][1],
             initialposition(peak)[][i][2],

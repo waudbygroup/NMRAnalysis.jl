@@ -1,44 +1,66 @@
+"""
+    PREExperiment
+
+Paramagnetic relaxation enhancement experiment.
+
+# Fields
+- `specdata`: Spectral data and metadata
+- `peaks`: Observable list of peaks  
+- `paramagnetic_concs`: Vector of paramagnetic agent concentrations
+- `expttype`: Either :hsqc or :hmqc
+- `Trelax`: Relaxation time
+"""
 struct PREExperiment <: FixedPeakExperiment
-    specdata
-    peaks
-    paramagnetic_concs
-    expttype
-    Trelax
+    specdata::Any
+    peaks::Any
+    paramagnetic_concs::Any
+    expttype::Any
+    Trelax::Any
 
-    clusters
-    touched
-    isfitting
+    clusters::Any
+    touched::Any
+    isfitting::Any
 
-    xradius
-    yradius
-    state
+    xradius::Any
+    yradius::Any
+    state::Any
 
-    PREExperiment(specdata, peaks, paramagnetic_concs, expttype, Trelax) = begin
+    function PREExperiment(specdata, peaks, paramagnetic_concs, expttype, Trelax)
         expt = new(specdata, peaks, paramagnetic_concs, expttype, Trelax,
-            Observable(Vector{Vector{Int}}()), # clusters
-            Observable(Vector{Bool}()), # touched
-            Observable(true), # isfitting
-            Observable(0.03, ignore_equal_values=true), # xradius
-            Observable(0.2, ignore_equal_values=true), # yradius
-            Observable{Dict}()
-            )
+                   Observable(Vector{Vector{Int}}()), # clusters
+                   Observable(Vector{Bool}()), # touched
+                   Observable(true), # isfitting
+                   Observable(0.03; ignore_equal_values=true), # xradius
+                   Observable(0.2; ignore_equal_values=true), # yradius
+                   Observable{Dict}())
         setupexptobservables!(expt)
         expt.state[] = preparestate(expt)
         expt
     end
 end
 
-# create a new relaxation experiment
+"""
+    PREExperiment(inputfilenames, paramagnetic_concs, expttype, Trelax)
+
+Create a PRE experiment from files and experimental parameters.
+`expttype` should be `:hsqc` or `:hmqc`. `Trelax` is the timing during which relaxation
+can occur during the sequence (magnetisation transfer delays etc) - this is specific to
+the pulse sequence used.
+
+Can be used to analyse solvent PREs, in which case concentrations should be specified -
+or to analyse protein PREs, in which case concentrations should be set to 0 and 1 for
+diamagnetic and paramagnetic states respectively.
+
+"""
 function PREExperiment(inputfilenames, paramagnetic_concs, exptexperimenttype, Trelax)
-    exptexperimenttype in [:hsqc, :hmqc] || throw(ArgumentError("Experiment type must be :hsqc or :hmqc"))
+    exptexperimenttype in [:hsqc, :hmqc] ||
+        throw(ArgumentError("Experiment type must be :hsqc or :hmqc"))
 
     specdata = preparespecdata(inputfilenames, paramagnetic_concs, PREExperiment)
     peaks = Observable(Vector{Peak}())
 
-    PREExperiment(specdata, peaks, paramagnetic_concs, exptexperimenttype, Trelax)
+    return PREExperiment(specdata, peaks, paramagnetic_concs, exptexperimenttype, Trelax)
 end
-
-
 
 # load the NMR data and prepare the SpecData object
 function preparespecdata(inputfilenames, paramagnetic_concs, ::Type{PREExperiment})
@@ -58,18 +80,15 @@ function preparespecdata(inputfilenames, paramagnetic_concs, ::Type{PREExperimen
         end
     end
 
-    SpecData(spectra, x, y,
-        z ./ σ[1],
-        σ ./ σ[1],
-        zlabels)
+    return SpecData(spectra, x, y,
+                    z ./ σ[1],
+                    σ ./ σ[1],
+                    zlabels)
 end
 
-
-
-
-# implementation requirements
+"""Add peak to experiment, setting up type-specific parameters."""
 function addpeak!(expt::PREExperiment, initialposition::Point2f, label="",
-                    xradius=expt.xradius[], yradius=expt.yradius[])
+                  xradius=expt.xradius[], yradius=expt.yradius[])
     expt.state[][:total_peaks][] += 1
     if label == ""
         label = "X$(expt.state[][:total_peaks][])"
@@ -78,10 +97,10 @@ function addpeak!(expt::PREExperiment, initialposition::Point2f, label="",
     newpeak = Peak(initialposition, label, xradius, yradius)
 
     # pars: R2x, R2y, amp
-    R2x0 = MaybeVector(30.)
-    R2y0 = MaybeVector(15.)
-    R2x = Parameter("R2x", R2x0, minvalue=1., maxvalue=100.)
-    R2y = Parameter("R2y", R2y0, minvalue=1., maxvalue=100.)
+    R2x0 = MaybeVector(30.0)
+    R2y0 = MaybeVector(15.0)
+    R2x = Parameter("R2x", R2x0; minvalue=1.0, maxvalue=100.0)
+    R2y = Parameter("R2y", R2y0; minvalue=1.0, maxvalue=100.0)
 
     # get initial values for amplitude
     x0, y0 = initialposition
@@ -92,7 +111,7 @@ function addpeak!(expt::PREExperiment, initialposition::Point2f, label="",
     amp = Parameter("Amplitude", amp0)
 
     # PRE
-    Γ = Parameter("PRE", MaybeVector(10.), minvalue=0., maxvalue=200.)
+    Γ = Parameter("PRE", MaybeVector(10.0); minvalue=0.0, maxvalue=200.0)
 
     newpeak.parameters[:R2x] = R2x
     newpeak.parameters[:R2y] = R2y
@@ -102,9 +121,10 @@ function addpeak!(expt::PREExperiment, initialposition::Point2f, label="",
     newpeak.postparameters[:PRE] = Parameter("PRE", 0.0)
 
     push!(expt.peaks[], newpeak)
-    notify(expt.peaks)
+    return notify(expt.peaks)
 end
 
+"""Simulate single peak according to experiment type."""
 function simulate!(z, peak::Peak, expt::PREExperiment, xbounds=nothing, ybounds=nothing)
     R2x0 = peak.parameters[:R2x].value[][1]
     R2y0 = peak.parameters[:R2y].value[][1]
@@ -137,24 +157,28 @@ function simulate!(z, peak::Peak, expt::PREExperiment, xbounds=nothing, ybounds=
         xs = x[xi]
         ys = y[yi]
         # NB. scale intensities by R2x and R2y to decouple amplitude estimation from linewidth
-        zx = NMRTools.NMRBase._lineshape(getω(xaxis, x0), R2x, getω(xaxis, xs), xaxis[:window], RealLineshape())
-        zy = (π^2 * amp * R2x0 * R2y0) * NMRTools.NMRBase._lineshape(getω(yaxis, y0), R2y, getω(yaxis, ys), yaxis[:window], RealLineshape())
+        zx = NMRTools.NMRBase._lineshape(getω(xaxis, x0), R2x, getω(xaxis, xs),
+                                         xaxis[:window], RealLineshape())
+        zy = (π^2 * amp * R2x0 * R2y0) *
+             NMRTools.NMRBase._lineshape(getω(yaxis, y0), R2y, getω(yaxis, ys),
+                                         yaxis[:window], RealLineshape())
         z[i][xi, yi] .+= zx .* zy'
     end
 end
 
-
-
+"""Calculate final parameters after fitting."""
 function postfit!(peak::Peak, expt::PREExperiment)
     peak.postparameters[:PRE].uncertainty[] .= peak.parameters[:PRE].uncertainty[]
     peak.postparameters[:PRE].value[] .= peak.parameters[:PRE].value[]
     peak.postfitted[] = true
 end
 
+"""Return descriptive text for slice idx."""
 function slicelabel(expt::PREExperiment, idx)
-    "$(expt.specdata.zlabels[idx]) ($idx of $(nslices(expt)))"
+    return "$(expt.specdata.zlabels[idx]) ($idx of $(nslices(expt)))"
 end
 
+"""Return formatted text describing peak idx."""
 function peakinfotext(expt::PREExperiment, idx)
     if idx == 0
         return "No peak selected"
@@ -162,36 +186,33 @@ function peakinfotext(expt::PREExperiment, idx)
     peak = expt.peaks[][idx]
     if peak.postfitted[]
         return "Peak: $(peak.label[])\n" *
-            "PRE: $(peak.parameters[:PRE].value[][1] ± peak.parameters[:PRE].uncertainty[][1]) s⁻¹ [conc⁻¹]\n" *
-            "\n" *
-            "δX: $(peak.parameters[:x].value[][1] ± peak.parameters[:x].uncertainty[][1]) ppm\n" *
-            "δY: $(peak.parameters[:y].value[][1] ± peak.parameters[:y].uncertainty[][1]) ppm\n" *
-            "Amplitude: $(peak.parameters[:amp].value[][1] ± peak.parameters[:amp].uncertainty[][1])\n" *
-            "X Linewidth: $(peak.parameters[:R2x].value[][1] ± peak.parameters[:R2x].uncertainty[][1]) s⁻¹\n" *
-            "Y Linewidth: $(peak.parameters[:R2y].value[][1] ± peak.parameters[:R2y].uncertainty[][1]) s⁻¹"
+               "PRE: $(peak.parameters[:PRE].value[][1] ± peak.parameters[:PRE].uncertainty[][1]) s⁻¹ [conc⁻¹]\n" *
+               "\n" *
+               "δX: $(peak.parameters[:x].value[][1] ± peak.parameters[:x].uncertainty[][1]) ppm\n" *
+               "δY: $(peak.parameters[:y].value[][1] ± peak.parameters[:y].uncertainty[][1]) ppm\n" *
+               "Amplitude: $(peak.parameters[:amp].value[][1] ± peak.parameters[:amp].uncertainty[][1])\n" *
+               "X Linewidth: $(peak.parameters[:R2x].value[][1] ± peak.parameters[:R2x].uncertainty[][1]) s⁻¹\n" *
+               "Y Linewidth: $(peak.parameters[:R2y].value[][1] ± peak.parameters[:R2y].uncertainty[][1]) s⁻¹"
     else
         return "Peak: $(peak.label[])\n" *
-            "Not fitted"
+               "Not fitted"
     end
 end
 
-
-
+"""Return formatted text describing experiment."""
 function experimentinfo(expt::PREExperiment)
-    "Analysis type: PRE experiment\n" *
-    "Filename: $(expt.specdata.nmrdata[1][:filename])\n" *
-    "PRE agent concs: $(join(expt.paramagnetic_concs, ", "))\n" *
-    "Experiment type: $(expt.expttype==:hsqc ? "HSQC" : "HMQC")\n" *
-    "Relaxation time: $(expt.Trelax)\n" *
-    "Number of peaks: $(length(expt.peaks[]))\n" *
-    "Experiment title: $(expt.specdata.nmrdata[1][:title])\n"
+    return "Analysis type: PRE experiment\n" *
+           "Filename: $(expt.specdata.nmrdata[1][:filename])\n" *
+           "PRE agent concs: $(join(expt.paramagnetic_concs, ", "))\n" *
+           "Experiment type: $(expt.expttype==:hsqc ? "HSQC" : "HMQC")\n" *
+           "Relaxation time: $(expt.Trelax)\n" *
+           "Number of peaks: $(length(expt.peaks[]))\n" *
+           "Experiment title: $(expt.specdata.nmrdata[1][:title])\n"
 end
-
-
 
 function completestate!(state, expt::PREExperiment)
     state[:peak_plot_data] = lift(peak -> peak_plot_data(peak, expt), state[:current_peak])
-    state[:peak_plot_data_xobs] = lift(d ->d[1], state[:peak_plot_data])
+    state[:peak_plot_data_xobs] = lift(d -> d[1], state[:peak_plot_data])
     state[:peak_plot_data_yobs] = lift(d -> d[2], state[:peak_plot_data])
     state[:peak_plot_data_xfit] = lift(d -> d[3], state[:peak_plot_data])
     state[:peak_plot_data_yfit] = lift(d -> d[4], state[:peak_plot_data])
@@ -199,16 +220,15 @@ end
 
 function flatten_with_nan_separator(vectors::Vector{Vector{Point2f}})
     isempty(vectors) && return Point2f[]
-    
+
     separator = Point2f(NaN, NaN)
     result = reduce(vectors[2:end]; init=vectors[1]) do acc, subvector
-        vcat(acc, [separator], subvector)
+        return vcat(acc, [separator], subvector)
     end
-    
-    # Remove the trailing separator if it exists
-    return length(result) > 0 ? result[1:end-1] : result
-end
 
+    # Remove the trailing separator if it exists
+    return length(result) > 0 ? result[1:(end - 1)] : result
+end
 
 """
     peak_plot_data(peak, expt::PREExperiment)
@@ -221,7 +241,7 @@ function peak_plot_data(peak, expt::PREExperiment)
     if isnothing(peak)
         return (Point2f[], Point2f[], Point2f[], Point2f[])
     end
-    
+
     # we want to plot x and y cross-sections of the observed and fitted spectra
     # i.e. a list with Vector{Point2f} cross-sections for each slice - xobs, yobs, xfit, yfit
     xobs = Vector{Point2f}[]
@@ -229,7 +249,7 @@ function peak_plot_data(peak, expt::PREExperiment)
     xfit = Vector{Point2f}[]
     yfit = Vector{Point2f}[]
 
-    for i=1:nslices(expt)
+    for i in 1:nslices(expt)
         x = expt.specdata.x[i]
         y = expt.specdata.y[i]
 
@@ -254,44 +274,34 @@ function peak_plot_data(peak, expt::PREExperiment)
         push!(xfit, xf)
         push!(yfit, yf)
     end
-    
+
     @debug "Peak plot data prepared"
     return (flatten_with_nan_separator(xobs),
-        flatten_with_nan_separator(yobs),
-        flatten_with_nan_separator(xfit),
-        flatten_with_nan_separator(yfit))
+            flatten_with_nan_separator(yobs),
+            flatten_with_nan_separator(xfit),
+            flatten_with_nan_separator(yfit))
 end
 
-
-"""
-    makepeakplot!(gui, state, expt::PREExperiment)
-
-Create interactive peak plot in GUI context.
-"""
+"""Set up GUI visualization."""
 function makepeakplot!(gui, state, expt::PREExperiment)
-    gui[:axpeakplotX] = axX = Axis(gui[:panelpeakplot][1,1], 
-                                xlabel="dX / ppm",
-                                xreversed=true,
-                                ylabel="")
-    gui[:axpeakplotY] = axY = Axis(gui[:panelpeakplot][1,2], 
-                                xlabel="dY / ppm", 
-                                xreversed=true,
-                                ylabel="")
-    
-    hlines!(axX, [0], linewidth=0)
+    gui[:axpeakplotX] = axX = Axis(gui[:panelpeakplot][1, 1];
+                                   xlabel="dX / ppm",
+                                   xreversed=true,
+                                   ylabel="")
+    gui[:axpeakplotY] = axY = Axis(gui[:panelpeakplot][1, 2];
+                                   xlabel="dY / ppm",
+                                   xreversed=true,
+                                   ylabel="")
+
+    hlines!(axX, [0]; linewidth=0)
     scatterlines!(axX, state[:peak_plot_data_xobs])
-    lines!(axX, state[:peak_plot_data_xfit], color=:red)
-    hlines!(axY, [0], linewidth=0)
+    lines!(axX, state[:peak_plot_data_xfit]; color=:red)
+    hlines!(axY, [0]; linewidth=0)
     scatterlines!(axY, state[:peak_plot_data_yobs])
-    lines!(axY, state[:peak_plot_data_yfit], color=:red)
+    lines!(axY, state[:peak_plot_data_yfit]; color=:red)
 end
 
-
-"""
-    save_peak_plots(expt::PREExperiment, folder::AbstractString)
-
-Save individual plots for each peak in the experiment to the specified folder.
-"""
+"""Save publication plots for all peaks."""
 function save_peak_plots!(expt::PREExperiment, folder::AbstractString)
     @debug "Saving peak plots to $folder"
     CairoMakie.activate!()
@@ -301,25 +311,25 @@ function save_peak_plots!(expt::PREExperiment, folder::AbstractString)
 
         fig = Figure()
 
-        axX = Axis(fig[1,1], 
-            xlabel="δX / ppm",
-            xreversed=true,
-            ylabel="")
-        axY = Axis(fig[1,2], 
-            xlabel="δY / ppm", 
-            xreversed=true,
-            ylabel="")
+        axX = Axis(fig[1, 1];
+                   xlabel="δX / ppm",
+                   xreversed=true,
+                   ylabel="")
+        axY = Axis(fig[1, 2];
+                   xlabel="δY / ppm",
+                   xreversed=true,
+                   ylabel="")
         @debug "Axes created"
         @debug "Plotting data" xobs yobs xfit yfit
 
-        hlines!(axX, [0], linewidth=0)
+        hlines!(axX, [0]; linewidth=0)
         scatterlines!(axX, xobs)
-        lines!(axX, xfit, color=:red)
-        hlines!(axY, [0], linewidth=0)
+        lines!(axX, xfit; color=:red)
+        hlines!(axY, [0]; linewidth=0)
         scatterlines!(axY, yobs)
-        lines!(axY, yfit, color=:red)
+        lines!(axY, yfit; color=:red)
         @debug "Data plotted"
-        
+
         save(joinpath(folder, "peak_$(peak.label[]).pdf"), fig)
     end
 

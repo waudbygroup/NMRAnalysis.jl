@@ -7,33 +7,38 @@ function Peak(initialposition, label, xradius=0.03, yradius=0.3)
         x = MaybeVector(x[1])
         y = MaybeVector(y[1])
     end
-    pars = OrderedDict{Symbol, Parameter}()
-    postpars = OrderedDict{Symbol, Parameter}()
+    pars = OrderedDict{Symbol,Parameter}()
+    postpars = OrderedDict{Symbol,Parameter}()
     pars[:x] = Parameter("δx", x)
     pars[:y] = Parameter("δy", y)
-    Peak(pars,
-        Observable(label),
-        Observable(true), # touched
-        Observable(xradius), # xradius
-        Observable(yradius), # yradius
-        postpars,
-        Observable(false)) # post-fitted
+    return Peak(pars,
+                Observable(label),
+                Observable(true), # touched
+                Observable(xradius), # xradius
+                Observable(yradius), # yradius
+                postpars,
+                Observable(false)) # post-fitted
 end
 
-position(peak::Peak) = lift((x,y)->MaybeVector(Point2f.(x,y)), peak.parameters[:x].value, peak.parameters[:y].value)
-initialposition(peak::Peak) = lift((x,y)->MaybeVector(Point2f.(x,y)), peak.parameters[:x].initialvalue, peak.parameters[:y].initialvalue)
-
+function position(peak::Peak)
+    return lift((x, y) -> MaybeVector(Point2f.(x, y)), peak.parameters[:x].value,
+                peak.parameters[:y].value)
+end
+function initialposition(peak::Peak)
+    return lift((x, y) -> MaybeVector(Point2f.(x, y)), peak.parameters[:x].initialvalue,
+                peak.parameters[:y].initialvalue)
+end
 
 # generic overlap function - can specialise for different experiments
 isoverlapping(peak1, peak2, ::Experiment) = isoverlapping(peak1, peak2)
 function isoverlapping(peak1, peak2)
     # Δδs will be a MaybeVector - could be a single element or a list of different shifts
     Δδs = MaybeVector(initialposition(peak1)[] .- initialposition(peak2)[])
-    any(Δδ -> begin
-        dX = Δδ[1] / (peak1.xradius[] + peak2.xradius[])
-        dY = Δδ[2] / (peak1.yradius[] + peak2.yradius[])
-        (dX^2 + dY^2) <= 1.0
-    end, Δδs)
+    return any(Δδ -> begin
+                   dX = Δδ[1] / (peak1.xradius[] + peak2.xradius[])
+                   dY = Δδ[2] / (peak1.yradius[] + peak2.yradius[])
+                   (dX^2 + dY^2) <= 1.0
+               end, Δδs)
 end
 
 function pack(peaks::Vector{Peak}, quantity=:value)
@@ -41,9 +46,8 @@ function pack(peaks::Vector{Peak}, quantity=:value)
     for peak in peaks
         pack!(p, peak, quantity)
     end
-    p
+    return p
 end
-
 
 "Create vector of parameters (options - :min, :max, :initial)"
 function pack!(p, peak::Peak, quantity=:value)
@@ -59,11 +63,11 @@ function pack!(p, peak::Peak, quantity=:value)
         pack!(p, par, quantity)
     end
 
-    p
+    return p
 end
 
 function unpack!(v, peaks::Vector{Peak}, quantity=:value)
-    @debug "Unpacking peaks" maxlog=10
+    @debug "Unpacking peaks" maxlog = 10
     for peak in peaks
         unpack!(v, peak, quantity)
     end
@@ -71,7 +75,7 @@ end
 
 "Unpack a parameter and pop from input vector. Quantity could also be :uncertainty"
 function unpack!(v, peak::Peak, quantity=:value)
-    @debug "Unpacking peak $(peak.label)" maxlog=10
+    @debug "Unpacking peak $(peak.label)" maxlog = 10
     d = peak.parameters
     for par in values(d)
         unpack!(v, par, quantity)
@@ -79,7 +83,7 @@ function unpack!(v, peak::Peak, quantity=:value)
 end
 
 function Base.show(io::IO, p::Peak)
-    print(io, "Peak($(p.label[]), position=$(position(p)[]))")
+    return print(io, "Peak($(p.label[]), position=$(position(p)[]))")
 end
 
 function Base.show(io::IO, mime::MIME"text/plain", p::Peak)
@@ -87,12 +91,12 @@ function Base.show(io::IO, mime::MIME"text/plain", p::Peak)
     println(io, "  initial position: $(initialposition(p)[])")
     println(io, "  radius: [$(p.xradius[]), $(p.yradius[])]")
     println(io, "  parameters:")
-    for (k,v) in p.parameters
+    for (k, v) in p.parameters
         println(io, "    $k: $(v.value[])")
     end
     if !isempty(p.postparameters)
         println(io, "  post-fit parameters:")
-        for (k,v) in p.postparameters
+        for (k, v) in p.postparameters
             println(io, "    $k: $(v.value[])")
         end
     end

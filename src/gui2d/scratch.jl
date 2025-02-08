@@ -6,10 +6,39 @@ using GLMakie
 ENV["JULIA_DEBUG"]=NMRAnalysis
 
 ##
-expt = RelaxationExperiment("/Users/chris/NMR/crick-950/kleo_CRT_CTD_relax_241218/11",
-    "/Users/chris/NMR/crick-950/kleo_CRT_CTD_relax_241218/11/lists/vd/t2-vd.cw")
+# expt = RelaxationExperiment("/Users/chris/NMR/crick-950/kleo_CRT_CTD_relax_241218/11",
+#     "/Users/chris/NMR/crick-950/kleo_CRT_CTD_relax_241218/11/lists/vd/t2-vd.cw")
+
+# t = [0.01568
+#     0.03136
+#     0.04704
+#     0.06272
+#     0.0784
+#     0.09408
+#     0.12544
+#     0.1568]
+# expt = RelaxationExperiment("/Users/chris/NMR/crick-950/kleo_CRT_CTD_relax_241218/11", t)
+
+# expt = RelaxationExperiment(
+#     ["/Users/chris/NMR/crick-950/kleo_CRT_CTD_relax_241218/11",
+#     "/Users/chris/NMR/crick-950/kleo_CRT_CTD_relax_241218/12"],
+#     ["/Users/chris/NMR/crick-950/kleo_CRT_CTD_relax_241218/11/lists/vd/t2-vd.cw",
+#     "/Users/chris/NMR/crick-950/kleo_CRT_CTD_relax_241218/12/lists/vd/t2-vd.cw"])
+
+expt = RelaxationExperiment(
+    ["/Users/chris/NMR/crick-950/kleo_CRT_CTD_relax_241218/11/pdata/231",
+     "/Users/chris/NMR/crick-950/kleo_CRT_CTD_relax_241218/11/pdata/232",
+     "/Users/chris/NMR/crick-950/kleo_CRT_CTD_relax_241218/11/pdata/233",
+     "/Users/chris/NMR/crick-950/kleo_CRT_CTD_relax_241218/11/pdata/234",
+     "/Users/chris/NMR/crick-950/kleo_CRT_CTD_relax_241218/11/pdata/235",
+     "/Users/chris/NMR/crick-950/kleo_CRT_CTD_relax_241218/11/pdata/236",
+     "/Users/chris/NMR/crick-950/kleo_CRT_CTD_relax_241218/11/pdata/237",
+     "/Users/chris/NMR/crick-950/kleo_CRT_CTD_relax_241218/11/pdata/238",
+    ], "/Users/chris/NMR/crick-950/kleo_CRT_CTD_relax_241218/11/lists/vd/t2-vd.cw")
+
 # expt = RelaxationExperiment("/Users/chris/NMR/crick-950/kleo_CRT_CTD_relax_241218/17",
 #     "/Users/chris/NMR/crick-950/kleo_CRT_CTD_relax_241218/17/lists/vd/t1.cw")
+
 
 gui!(expt)
 

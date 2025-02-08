@@ -1,8 +1,8 @@
 function process_mousebutton(expt, state, event)
     # consume input if in process of renaming a peak
-    
-    if state[:mode][] == :normal && event.button == Mouse.left && event.action == Mouse.press
-        @show propertynames(event)
+
+    if state[:mode][] == :normal && event.button == Mouse.left &&
+       event.action == Mouse.press
         pos = events(state[:gui][][:axcontour]).mouseposition[]
         pick_plt, pick_i = pick(state[:gui][][:axcontour], pos, 20)
         if pick_plt == state[:gui][][:pltinitialpeaks]
@@ -10,7 +10,8 @@ function process_mousebutton(expt, state, event)
             state[:mode][] = :moving
             return Consume(true)
         end
-    elseif state[:mode][] == :moving && event.button == Mouse.left && event.action == Mouse.release
+    elseif state[:mode][] == :moving && event.button == Mouse.left &&
+           event.action == Mouse.release
         @debug "event: stop dragging"
         state[:mode][] = :normal
         newpos = mouseposition(state[:gui][][:axcontour])
@@ -19,8 +20,6 @@ function process_mousebutton(expt, state, event)
     end
     return Consume(false)
 end
-
-
 
 function process_mouseposition(expt, state, mousepos)
     if state[:mode][] == :moving

@@ -10,13 +10,13 @@ function Parameter(label, initialvalue; minvalue=-Inf, maxvalue=Inf, uncertainty
     end
     uncertainty = MaybeVector(uncertainty)
 
-    Parameter(label, Observable(value),Observable(uncertainty),
-        Observable(initialvalue), Observable(minvalue), Observable(maxvalue))
+    return Parameter(label, Observable(value), Observable(uncertainty),
+                     Observable(initialvalue), Observable(minvalue), Observable(maxvalue))
 end
 
 "Return list with value(s) (or if :min or :max passed, their limits)"
 function pack!(p, par::Parameter, quantity=:value)
-    @debug "Packing parameter $(par.label) ($quantity)" maxlog=10
+    @debug "Packing parameter $(par.label) ($quantity)" maxlog = 10
     x = if quantity == :value
         par.value[]
     elseif quantity == :initial
@@ -39,7 +39,7 @@ function pack!(p, par::Parameter, quantity=:value)
         error("Unknown quantity: $quantity")
     end
 
-    append!(p, x)
+    return append!(p, x)
 end
 
 "Unpack a parameter and pop from input vector. Quantity could also be :uncertainty"
@@ -48,7 +48,7 @@ function unpack!(v, par::Parameter, quantity=:value)
     val = v[1:n]
     deleteat!(v, 1:n)
     # @debug "Unpacking parameter $(par.label) ($quantity): $(first(val))"
-        
+
     if quantity == :value
         par.value[] .= val
     elseif quantity == :uncertainty
@@ -57,7 +57,8 @@ function unpack!(v, par::Parameter, quantity=:value)
 end
 
 function Base.show(io::IO, p::Parameter)
-    print(io, "Parameter($(p.label), value=$(p.value[]), uncertainty=$(p.uncertainty[]))")
+    return print(io,
+                 "Parameter($(p.label), value=$(p.value[]), uncertainty=$(p.uncertainty[]))")
 end
 
 function Base.show(io::IO, mime::MIME"text/plain", p::Parameter)
@@ -65,5 +66,5 @@ function Base.show(io::IO, mime::MIME"text/plain", p::Parameter)
     println(io, "  value: $(p.value[])")
     println(io, "  uncertainty: $(p.uncertainty[])")
     println(io, "  initial value: $(p.initialvalue[])")
-    println(io, "  bounds: [$(p.minvalue[]), $(p.maxvalue[])]")
+    return println(io, "  bounds: [$(p.minvalue[]), $(p.maxvalue[])]")
 end

@@ -2,7 +2,7 @@ function process_keyboardbutton(expt, state, event)
     @debug "keyboard event: $event"
     g = state[:gui][]
     if state[:mode][] == :normal && event.action == Keyboard.press
-        if  ispressed(g[:fig], Keyboard.a)
+        if ispressed(g[:fig], Keyboard.a)
             pos = mouseposition(g[:axcontour])
             addpeak!(expt, Point2f(pos))
             state[:current_peak_idx][] = length(expt.peaks[]) # select the new peak
@@ -37,13 +37,13 @@ function process_keyboardbutton(expt, state, event)
         end
     elseif state[:mode][] == :renaming || state[:mode][] == :renamingstart
         if event.action == Keyboard.press && event.key == Keyboard.enter
-            state[:current_peak][].label[] = state[:current_peak][].label[][1:end-1]
+            state[:current_peak][].label[] = state[:current_peak][].label[][1:(end - 1)]
             state[:mode][] = :normal
             notify(expt.peaks)
             return Consume()
         elseif event.action == Keyboard.press && event.key == Keyboard.backspace
             if length(state[:current_peak][].label[]) > 1
-                state[:current_peak][].label[] = state[:current_peak][].label[][1:end-2] * "‸"
+                state[:current_peak][].label[] = state[:current_peak][].label[][1:(end - 2)] * "‸"
                 notify(expt.peaks)
                 return Consume()
             end
@@ -53,7 +53,7 @@ function process_keyboardbutton(expt, state, event)
             notify(expt.peaks)
 
             state[:mode][] = :normal
-            return(Consume())
+            return (Consume())
         end
         return Consume(false)
     end
@@ -69,7 +69,8 @@ function process_unicode_input(expt, state, character)
         end
     end
     if state[:mode][] == :renaming
-        state[:current_peak][].label[] = state[:current_peak][].label[][1:end-1] * character * "‸"
+        state[:current_peak][].label[] = state[:current_peak][].label[][1:(end - 1)] *
+                                         character * "‸"
         notify(expt.peaks)
         return Consume()
     end

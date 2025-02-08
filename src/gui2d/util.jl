@@ -1,5 +1,5 @@
-nearest(A::AbstractArray, t) = findmin(abs.(A.-t))[1]
-findnearest(A::AbstractArray, t) = findmin(abs.(A.-t))[2]
+nearest(A::AbstractArray, t) = findmin(abs.(A .- t))[1]
+findnearest(A::AbstractArray, t) = findmin(abs.(A .- t))[2]
 
 function choptitle(title, maxlength=30)
     if length(title) > maxlength
@@ -15,6 +15,6 @@ function maskellipse!(mask, x, y, x0, y0, xradius, yradius)
     y = y' .- y0
     fx = @. yradius^2 * x^2
     fy = @. xradius^2 * y^2
-    f = @. fx + fy - xradius^2*yradius^2
-    mask[f .≤ 0] .= true
+    f = @. fx + fy - xradius^2 * yradius^2
+    return mask[f .≤ 0] .= true
 end
