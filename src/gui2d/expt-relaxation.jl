@@ -47,13 +47,13 @@ function preparespecdata(inputfilename, relaxationtimes, ::Type{RelaxationExperi
     dat = data(spec) / scale(spec)
     σ = spec[:noise] / scale(spec)
 
-    z = eachslice(dat, dims=3)
+    z = eachslice(dat, dims=3) # slice up 3D array into list of 2D planes
     zlabels = map(t -> "τ = $t", relaxationtimes)
 
     SpecData(SingleElementVector(spec),
         SingleElementVector(x),
         SingleElementVector(y),
-        z ./ σ,
+        z ./ σ, # constant noise for all planes in pseudo3D
         SingleElementVector(1),
         zlabels)
 end
@@ -116,7 +116,7 @@ function simulate!(z, peak::Peak, expt::RelaxationExperiment)
         ys = y[yi]
         # NB. scale intensities by R2x and R2y to decouple amplitude estimation from linewidth
         zx = NMRTools.NMRBase._lineshape(getω(xaxis, x0), R2x, getω(xaxis, xs), xaxis[:window], RealLineshape())
-        zy = (amp * R2x * R2y) * NMRTools.NMRBase._lineshape(getω(yaxis, y0), R2y, getω(yaxis, ys), yaxis[:window], RealLineshape())
+        zy = (π^2 * amp * R2x * R2y) * NMRTools.NMRBase._lineshape(getω(yaxis, y0), R2y, getω(yaxis, ys), yaxis[:window], RealLineshape())
         z[i][xi, yi] .+= zx .* zy'
     end
 end

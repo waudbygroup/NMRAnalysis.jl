@@ -4,7 +4,7 @@
 # fields are: label, xposition, yposition,
 
 function loadpeaks!(expt)
-    file = pick_file(filterlist="peaks;peaks.old")
+    file = pick_file(filterlist="peaks;old")
     file == "" && return
 
     @info "Loading peak file $file"
@@ -12,6 +12,7 @@ function loadpeaks!(expt)
     if isfitting
         expt.isfitting[] = false
     end
+    deleteallpeaks!(expt)
     readpeaklist!(expt, file)
     expt.isfitting[] = isfitting
 end
@@ -406,9 +407,6 @@ function save_contour_plot!(expt, folder)
             expt.specdata.x[i],
             expt.specdata.y[i],
             expt.specdata.mask[][i],
-            # state[:current_mask_x],
-            # state[:current_mask_y],
-            # state[:current_mask_z],
             colormap=[:white,:lightgoldenrod1],
             colorrange=(0,1),
             )
@@ -416,17 +414,14 @@ function save_contour_plot!(expt, folder)
             expt.specdata.x[i],
             expt.specdata.y[i],
             expt.specdata.z[i],
-            # state[:current_spec_x],
-            # state[:current_spec_y],
-            # state[:current_spec_z],
             levels=state[:gui][][:contourlevels],
-            color=:grey50)
+            color=bicolours(:grey50, :lightblue))
         contour!(ax,
             expt.specdata.x[i],
             expt.specdata.y[i],
             expt.specdata.zfit[][i],
             levels=state[:gui][][:contourlevels],
-            color=:orangered)
+            color=bicolours(:orangered, :dodgerblue))
         scatter!(ax, state[:positions], markersize=10, marker=:x, color=:black)
         text!(ax, state[:positions], text=state[:labels],
                 fontsize=14,

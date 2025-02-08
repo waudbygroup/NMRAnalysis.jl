@@ -31,6 +31,7 @@ Expected fields:
 # implementations
 include("expt-relaxation.jl")
 include("expt-hetnoe.jl")
+include("expt-pre.jl")
 
 # generic functions
 nslices(expt::Experiment) = length(expt.specdata.z)
@@ -115,6 +116,14 @@ function deletepeak!(expt, idx)
     end
     deleteat!(expt.peaks[], idx)
     notify(expt.peaks)
+end
+
+function deleteallpeaks!(expt)
+    expt.state[][:current_peak_idx][] = 0
+    # delete any existing peaks
+    for i=length(expt.peaks[]):-1:1
+        deletepeak!(expt, i)
+    end
 end
 
 function checktouched!(expt)

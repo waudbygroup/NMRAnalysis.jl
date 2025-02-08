@@ -28,5 +28,6 @@ export MaybeVector
 export gui!
 export RelaxationExperiment
 export HetNOEExperiment
+export PREExperiment
 
 end

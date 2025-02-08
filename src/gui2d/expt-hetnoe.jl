@@ -111,7 +111,7 @@ function simulate!(z, peak::Peak, expt::HetNOEExperiment)
         ys = y[yi]
         # NB. scale intensities by R2x and R2y to decouple amplitude estimation from linewidth
         zx = NMRTools.NMRBase._lineshape(getω(xaxis, x0), R2x, getω(xaxis, xs), xaxis[:window], RealLineshape())
-        zy = (amp * R2x * R2y) * NMRTools.NMRBase._lineshape(getω(yaxis, y0), R2y, getω(yaxis, ys), yaxis[:window], RealLineshape())
+        zy = (π^2 * amp * R2x * R2y) * NMRTools.NMRBase._lineshape(getω(yaxis, y0), R2y, getω(yaxis, ys), yaxis[:window], RealLineshape())
         z[i][xi, yi] .+= zx .* zy'
     end
 end
@@ -298,6 +298,10 @@ function makepeakplot!(gui, state, expt::HetNOEExperiment)
     hlines!(ax, state[:peakplot_fit_y], linewidth=2, color=:red)
     errorbars!(ax, state[:peakplot_xye], whiskerwidth=10)
     barplot!(ax, state[:peakplot_x], state[:peakplot_y])
+
+    # on(state[:peakplot_xye]) do _
+    #     autolimits!(ax)
+    # end
 end
 
 

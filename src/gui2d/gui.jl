@@ -1,5 +1,5 @@
 function gui!(expt::FixedPeakExperiment)
-    GLMakie.activate!()
+    GLMakie.activate!(title="NMRAnalysis.jl (v$(string(pkgversion(GUI2D))))", focus_on_show=true)
 
     state = expt.state[]
 
@@ -35,7 +35,7 @@ function gui!(expt::FixedPeakExperiment)
     # create contour plot
     g[:basecontour] = Observable(10.0)
     g[:contourscale] = Observable(1.7)
-    g[:logscale] = lift(r -> r .^ (0:10), g[:contourscale])
+    g[:logscale] = lift(r -> [r .^ (0:10); -1 * (r .^ (0:10))], g[:contourscale])
     g[:contourlevels] = lift((c0,arr) -> c0 * arr, g[:basecontour], g[:logscale])
 
     g[:axcontour] = Axis(g[:panelcontour][1,1],
@@ -54,13 +54,13 @@ function gui!(expt::FixedPeakExperiment)
         state[:current_spec_y],
         state[:current_spec_z],
         levels=g[:contourlevels],
-        color=:grey50)
+        color=bicolours(:grey50, :lightblue))
     g[:pltfit] = contour!(g[:axcontour],
         state[:current_fit_x],
         state[:current_fit_y],
         state[:current_fit_z],
         levels=g[:contourlevels],
-        color=:orangered)
+        color=bicolours(:orangered, :dodgerblue))
 
     # # create 3D plot
     # g[:ax3d] = Axis3(g[:panel3d][1,1], xlabel="δX / ppm", ylabel="δy / ppm", zlabel="Intensity",
@@ -103,8 +103,10 @@ function gui!(expt::FixedPeakExperiment)
     # peak plot panel
     makepeakplot!(g, state, expt)
 
+    @debug "Adding handlers"
     addhanders!(g, state, expt)
 
+    @debug "Showing figure"
     g[:fig]
 end
 
@@ -198,11 +200,18 @@ function addhanders!(g, state, expt::FixedPeakExperiment)
 
     # peak hover
     onpick(g[:axcontour], g[:pltinitialpeaks]) do _, idx
-        if state[:current_peak_idx][] != idx && state[:mode][] == :normal
+        # if state[:current_peak_idx][] != idx && state[:mode][] == :normal
+        if state[:mode][] == :normal
             @debug "Setting current peak to $idx"
             state[:current_peak_idx][] = idx
             if haskey(g, :axpeakplot)
                 autolimits!(g[:axpeakplot])
+            end
+            if haskey(g, :axpeakplotX)
+                autolimits!(g[:axpeakplotX])
+            end
+            if haskey(g, :axpeakplotY)
+                autolimits!(g[:axpeakplotY])
             end
         end
     end
@@ -239,3 +248,5 @@ function renamepeak!(expt, state, initiator)
     state[:current_peak][].label[] = "‸"
     notify(expt.peaks)
 end
+
+bicolours(c1, c2) = [fill(c1, 11); fill(c2, 11)]
