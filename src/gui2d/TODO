@@ -1,0 +1,13 @@
+[x] name peaks
+[x] move peak
+[x] peak radii
+[x] keyboard shortcut for contours
+[x] keyboard shortcut for slice
+[x] reset zoom button
+[x] fitting toggle
+[x] fitting status background
+[x] save output
+[x] figure out amplitudes / intensities
+[x] performance - restrict fitting area to ROIs
+[ ] scale fitting by noise
+[ ] accept spectrum planes / multiple pseudo3Ds as input for relaxation
