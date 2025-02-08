@@ -89,15 +89,15 @@ function addpeak!(expt::HetNOEExperiment, initialposition::Point2f, label="",
     notify(expt.peaks)
 end
 
-function simulate!(z, peak::Peak, expt::HetNOEExperiment)
+function simulate!(z, peak::Peak, expt::HetNOEExperiment, xbounds=nothing, ybounds=nothing)
     n = length(z)
     for i in 1:n
         # get axis references for window functions
         xaxis = dims(expt.specdata.nmrdata[i], F1Dim)
         yaxis = dims(expt.specdata.nmrdata[i], F2Dim)
         # get axis shift values
-        x = data(xaxis)
-        y = data(yaxis)
+        x = isnothing(xbounds) ? expt.specdata.x[i] : expt.specdata.x[i][xbounds[i]]
+        y = isnothing(ybounds) ? expt.specdata.y[i] : expt.specdata.y[i][ybounds[i]]
 
         x0 = peak.parameters[:x].value[][i]
         y0 = peak.parameters[:y].value[][i]

@@ -186,16 +186,26 @@ function fit!(cluster::Vector{Int}, expt::Experiment)
     peaks = [expt.peaks[][i] for i in cluster]
 
     # TODO - adjust to work with smaller area of spectra
-
+    
     # initial parameters
     p0 = pack(peaks, :initial)
     pmin = pack(peaks, :min)
     pmax = pack(peaks, :max)
 
+    # get mask and bounds
     m = mask(cluster, expt)
-    zobs = reduce(vcat, vec.(expt.specdata.z))[m]
-    
-    zsim = [similar(zi) for zi in expt.specdata.z]
+    xbounds, ybounds = bounds(m)
+    smallmask = [m[i][xbounds[i], ybounds[i]] for i in 1:length(m)]
+    bigmask = reduce(vcat, vec.(m))
+    smallmask = reduce(vcat, vec.(smallmask))
+    zobs = reduce(vcat, vec.(expt.specdata.z))[bigmask]
+    @debug "zobs" zobs maxlog=10
+
+    @debug "pre-allocating zsim" maxlog=10
+    zsim = map(1:nslices(expt)) do i
+        similar(expt.specdata.z[i][xbounds[i], ybounds[i]])
+    end
+    @debug "zsim" zsim maxlog=10
     zsimm = similar(zobs)
     # create residual function
     function resid(p)
@@ -204,8 +214,8 @@ function fit!(cluster::Vector{Int}, expt::Experiment)
         for i=1:nslices(expt)
             fill!(zsim[i], 0.0)
         end
-        simulate!(zsim, cluster, expt)
-        zsimm .= reduce(vcat, vec.(zsim))[m]
+        simulate!(zsim, cluster, expt, xbounds, ybounds)
+        zsimm .= reduce(vcat, vec.(zsim))[smallmask]
         zobs - zsimm
     end
     @debug "running fit" maxlog=10
@@ -241,10 +251,10 @@ function simulate!(z, expt::Experiment)
     end
 end
 
-function simulate!(z, cluster::Vector{Int}, expt::Experiment)
+function simulate!(z, cluster::Vector{Int}, expt::Experiment, xbounds=nothing, ybounds=nothing)
     @debug "Simulating cluster $cluster" maxlog=10
     for i in cluster
-        simulate!(z, expt.peaks[][i], expt)
+        simulate!(z, expt.peaks[][i], expt, xbounds, ybounds)
     end
 end
 
@@ -275,8 +285,26 @@ function mask(cluster::Vector{Int}, expt::Experiment)
     for i in cluster
         mask!(z, expt.peaks[][i], expt)
     end
-    reduce(vcat, vec.(z))
+    z
 end
+
+function bounds(mask)
+    @debug "Generating cluster bounds from mask" maxlog=10
+    b = map(mask) do m
+        # m is a matrix of booleans
+        # get projections ix and iy where any value is true
+        ix = any(m, dims=2) |> vec
+        iy = any(m, dims=1) |> vec
+        [ix, iy]
+    end
+    # reshape into list of ix, and list of iy
+    ix = [b[i][1] for i in 1:length(b)]
+    iy = [b[i][2] for i in 1:length(b)]
+    @debug "bounds" sum.(ix) sum.(iy) maxlog=10
+
+    return ix, iy
+end
+
 
 # generic masking method - can be specialised if needed
 function mask!(z, peak::Peak, expt::Experiment)

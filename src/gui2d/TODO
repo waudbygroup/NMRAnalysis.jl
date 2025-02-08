@@ -8,6 +8,6 @@
 [x] fitting status background
 [x] save output
 [x] figure out amplitudes / intensities
+[x] performance - restrict fitting area to ROIs
 [ ] scale fitting by noise
 [ ] accept spectrum planes / multiple pseudo3Ds as input for relaxation
-[ ] performance - restrict fitting area to ROIs
