@@ -1,4 +1,38 @@
 """
+    relaxation2d(experimentfiles, relaxationtimes)
+
+Start interactive GUI for analyzing 2D NMR relaxation data.
+
+# Arguments
+- `experimentfiles`: NMR data in any of these formats:
+    * Single experiment directory (e.g. ".../11")
+    * List of multiple experiment directories
+    * List of processed data directories (e.g. ".../pdata/231")
+- `relaxationtimes`: Relaxation delays in any of these formats:
+    * Path to text file with times (in seconds)
+    * List of delay times (in seconds)
+    * List of text files (one per experiment)
+
+# Example:
+
+## Single pseudo-3d experiment with vd-list
+```julia
+relaxation2d("path/to/expno", "path/to/expno/lists/vd/t2-vd.cw")
+```
+## Multiple experiments from processed data
+```julia
+relaxation2d(
+    ["path/to/pdata/231", "path/to/pdata/232"],
+    [0.01568, 0.03136]
+)
+```
+"""
+function relaxation2d(experimentfiles, relaxationtimes)
+    expt = RelaxationExperiment(experimentfiles, relaxationtimes)
+    gui!(expt)
+end
+
+"""
     RelaxationExperiment
 
 NMR relaxation experiment with multiple time points.

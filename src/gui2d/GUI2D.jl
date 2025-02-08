@@ -26,8 +26,13 @@ include("files.jl")
 
 export MaybeVector
 export gui!
+
 export RelaxationExperiment
+export relaxation2d
+
 export HetNOEExperiment
+export hetnoe2d
+
 export PREExperiment
 
 end

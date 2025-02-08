@@ -23,12 +23,15 @@ export diffusion
 
 # @reexport using .GUI: view2d, peakfit2dseries
 @reexport using .GUI2D: MaybeVector, gui!
-@reexport using .GUI2D: RelaxationExperiment, HetNOEExperiment, PREExperiment
+@reexport using .GUI2D: RelaxationExperiment, relaxation2d
+@reexport using .GUI2D: HetNOEExperiment, hetnoe2d
+# @reexport using .GUI2D: PREExperiment
 
 @info """
-NMRAnalysis.jl
+NMRAnalysis.jl (v$(pkgversion(NMRAnalysis)))
 
-Usage:
+# 1D Experiment Analysis
+
 - set your working directory to a convenient location, e.g.
   cd("/Users/chris/NMR/crick-702/my_experiment_directory")
 - call the desired analysis routine
@@ -36,6 +39,12 @@ Usage:
 Available analysis routines:
 - tract()
 - diffusion()
+
+# 2D Experiment Analysis
+
+Available interfaces:
+- relaxation2d()
+- hetnoe2d()
 
 Current working directory: $(pwd())
 """

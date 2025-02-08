@@ -1,4 +1,31 @@
 """
+    hetnoe2d(planefilenames, saturation)
+
+Start interactive GUI for analyzing 2D heteronuclear NOE data.
+
+# Arguments
+- `planefilenames`: List of NMR data files as processed data directories
+- `saturation`: List of boolean flags indicating which spectra are saturated (true) or reference (false)
+
+The lists must be paired - each reference spectrum should be followed by its saturated counterpart.
+
+# Example:
+```julia
+hetnoe2d([
+    "path/to/expno1/pdata/231",  # reference
+    "path/to/expno1/pdata/232",  # saturated
+    "path/to/expno2/pdata/231",  # reference
+    "path/to/expno2/pdata/232",  # saturated
+], [false, true, false, true])
+```
+"""
+function hetnoe2d(planefilenames, saturation)
+    expt = HetNOEExperiment(planefilenames, saturation)
+    gui!(expt)
+end
+
+
+"""
     HetNOEExperiment
 
 Heteronuclear NOE experiment with reference and saturated spectra.
