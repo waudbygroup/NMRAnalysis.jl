@@ -1,20 +1,26 @@
-using Documenter, NMRTools, Plots
+using Documenter#, NMRAnalysis
 ENV["GKSwstype"] = "100" # https://github.com/jheinen/GR.jl/issues/278
 
+# DocMeta.setdocmeta!(NMRTools, :DocTestSetup, :(using NMRAnalysis); recursive=true)
+
 makedocs(;
-    modules=[NMRTools],
+    modules=[NMRAnalysis],
     format=Documenter.HTML(),
     pages=[
         "Home" => "index.md",
-        "Examples" => "examples.md",
-        "Metadata" => "metadata.md",
+        "Reference guide" => [
+            "Creating new experiments" => "experiments.md",
+        ],
+        "API" => "api.md",
+        "Index" => "indexes.md",
     ],
-    # repo="https://github.com/waudbygroup/NMRTools.jl/blob/{commit}{path}#L{line}",
-    sitename="NMRTools.jl",
+    sitename="NMRAnalysis.jl",
     authors="Chris Waudby",
     assets=String[],
+    warnonly = [:missing_docs],
 )
 
 deploydocs(;
-    repo="github.com/waudbygroup/NMRTools.jl.git",
+    repo="github.com/waudbygroup/NMRAnalysis.jl.git",
+    versions = ["stable" => "v^", "v#.#", "dev" => "main"],
 )
