@@ -30,8 +30,8 @@ jobs:
           cd docs;
           DISPLAY=:0 xvfb-run -s '-screen 0 1024x768x24'
           julia --color=yes make.jl
-      - name: Upload site as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: Docs build
-          path: ./docs/build
+      # - name: Upload site as artifact
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: Docs build
+      #     path: ./docs/build
