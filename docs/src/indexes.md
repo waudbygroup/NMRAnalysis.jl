@@ -1,13 +1,13 @@
 # Index
 
-## NMRAnalysis
+<!-- ## NMRAnalysis -->
 
 ```@index
 Modules = [NMRAnalysis]
 ```
 
-## GUI2D
+<!-- ## GUI2D
 
 ```@index
 Modules = [NMRAnalysis.GUI2D]
-```
+``` -->

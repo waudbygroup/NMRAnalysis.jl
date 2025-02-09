@@ -1,13 +1,13 @@
 # API
 
-## NMRAnalysis
+<!-- ## NMRAnalysis -->
 
 ```@autodocs
 Modules = [NMRAnalysis]
 ```
 
-## GUI2D
+<!-- ## GUI2D
 
 ```@autodocs
 Modules = [NMRAnalysis.GUI2D]
-```
+``` -->
