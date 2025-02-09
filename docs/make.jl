@@ -20,7 +20,6 @@ makedocs(;
     ],
     sitename="NMRAnalysis.jl",
     authors="Chris Waudby",
-    assets=String[],
     warnonly = [:missing_docs],
 )
 
