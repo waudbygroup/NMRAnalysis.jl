@@ -2,7 +2,7 @@ using Pkg
 Pkg.activate(@__DIR__)  # Activate the docs environment
 Pkg.instantiate()       # Install all dependencies
 
-using Documenter#, NMRAnalysis
+using Documenter, NMRAnalysis
 ENV["GKSwstype"] = "100" # https://github.com/jheinen/GR.jl/issues/278
 
 # DocMeta.setdocmeta!(NMRTools, :DocTestSetup, :(using NMRAnalysis); recursive=true)
