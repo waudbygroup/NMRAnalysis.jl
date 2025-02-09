@@ -1,3 +1,5 @@
+using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()
+
 using Documenter#, NMRAnalysis
 ENV["GKSwstype"] = "100" # https://github.com/jheinen/GR.jl/issues/278
 
