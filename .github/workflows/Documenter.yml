@@ -7,9 +7,16 @@ on:
   pull_request:
 jobs:
   build:
-    runs-on: macOS-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v4
+      # NOTE: Python is necessary for the pre-rendering (minification) step
+      - name: Install python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.8'
+      - name: Install binary dependencies
+        run: sudo apt-get update && sudo apt-get install -y xorg-dev mesa-utils xvfb libgl1 freeglut3-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libxext-dev
       - uses: julia-actions/setup-julia@latest
         with:
           version: '1.11'
@@ -23,3 +30,8 @@ jobs:
           cd docs;
           DISPLAY=:0 xvfb-run -s '-screen 0 1024x768x24'
           julia --color=yes makedocs.jl
+      - name: Upload site as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Docs build
+          path: ./docs/build
