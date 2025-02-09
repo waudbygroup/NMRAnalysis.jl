@@ -1,4 +1,5 @@
 name = "NMRAnalysisDocs"
+uuid = "3fabba9d-b1cf-44bc-b947-afbc15d78f7e"
 authors = ["Chris Waudby <c.waudby@ucl.ac.uk>"]
 
 [deps]
