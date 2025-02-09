@@ -31,7 +31,7 @@ Expected fields:
 # implementations
 include("expt-relaxation.jl")
 include("expt-hetnoe.jl")
-include("expt-pre.jl")
+include("expt-PRE.jl")
 
 # generic functions
 
