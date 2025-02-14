@@ -1,21 +1,44 @@
 """
-    PREExperiment
+    intensities2d(inputfilenames)
 
-Paramagnetic relaxation enhancement experiment.
+Start interactive GUI for analyzing 2D NMR intensity data.
+
+# Arguments
+- `inputfilenames`: NMR data in any of these formats:
+    * Single experiment directory (e.g. ".../11")
+    * List of multiple experiment directories
+    * List of processed data directories (e.g. ".../pdata/231")
+
+# Example:
+
+## Single pseudo-3d experiment
+```julia
+intensities2d("path/to/expno")
+```
+## Multiple experiments from processed data
+```julia
+intensities2d(
+    ["path/to/expno/pdata/231", "path/to/expno/pdata/232"]
+)
+```
+"""
+function intensities2d(inputfilenames)
+    expt = IntensityExperiment(inputfilenames)
+    gui!(expt)
+end
+
+"""
+    IntensityExperiment <: FixedPeakExperiment
+
+Generic experiment for measurement of intensity modulations across 2D spectra.
 
 # Fields
 - `specdata`: Spectral data and metadata
 - `peaks`: Observable list of peaks  
-- `paramagnetic_concs`: Vector of paramagnetic agent concentrations
-- `expttype`: Either :hsqc or :hmqc
-- `Trelax`: Relaxation time
 """
-struct PREExperiment <: FixedPeakExperiment
+struct IntensityExperiment <: FixedPeakExperiment
     specdata::Any
     peaks::Any
-    paramagnetic_concs::Any
-    expttype::Any
-    Trelax::Any
 
     clusters::Any
     touched::Any
@@ -25,8 +48,8 @@ struct PREExperiment <: FixedPeakExperiment
     yradius::Any
     state::Any
 
-    function PREExperiment(specdata, peaks, paramagnetic_concs, expttype, Trelax)
-        expt = new(specdata, peaks, paramagnetic_concs, expttype, Trelax,
+    function IntensityExperiment(specdata, peaks)
+        expt = new(specdata, peaks,
                    Observable(Vector{Vector{Int}}()), # clusters
                    Observable(Vector{Bool}()), # touched
                    Observable(true), # isfitting
@@ -40,54 +63,79 @@ struct PREExperiment <: FixedPeakExperiment
 end
 
 """
-    PREExperiment(inputfilenames, paramagnetic_concs, expttype, Trelax)
+    IntensityExperiment(inputfilenames)
 
-Create a PRE experiment from files and experimental parameters.
-`expttype` should be `:hsqc` or `:hmqc`. `Trelax` is the timing during which relaxation
-can occur during the sequence (magnetisation transfer delays etc) - this is specific to
-the pulse sequence used.
-
-Can be used to analyse solvent PREs, in which case concentrations should be specified -
-or to analyse protein PREs, in which case concentrations should be set to 0 and 1 for
-diamagnetic and paramagnetic states respectively.
-
+Create a generic experiment for measuring 2D intensity changes from a list of 2D files or pseudo-3D spectrum.
 """
-function PREExperiment(inputfilenames, paramagnetic_concs, exptexperimenttype, Trelax)
-    exptexperimenttype in [:hsqc, :hmqc] ||
-        throw(ArgumentError("Experiment type must be :hsqc or :hmqc"))
-
-    specdata = preparespecdata(inputfilenames, paramagnetic_concs, PREExperiment)
+function IntensityExperiment(inputfilenames)
+    specdata = preparespecdata(inputfilenames, IntensityExperiment)
     peaks = Observable(Vector{Peak}())
 
-    return PREExperiment(specdata, peaks, paramagnetic_concs, exptexperimenttype, Trelax)
+    return IntensityExperiment(specdata, peaks)
 end
 
 # load the NMR data and prepare the SpecData object
-function preparespecdata(inputfilenames, paramagnetic_concs, ::Type{PREExperiment})
+function preparespecdata(inputfilenames, ::Type{IntensityExperiment})
     @debug "Preparing spec data for relaxation experiment: $inputfilenames"
 
-    spectra = map(loadnmr, inputfilenames)
-    x = map(spec -> data(spec, F1Dim), spectra)
-    y = map(spec -> data(spec, F2Dim), spectra)
-    z = map(spec -> data(spec) / scale(spec), spectra)
-    σ = map(spec -> spec[:noise] / scale(spec), spectra)
-
-    zlabels = map(paramagnetic_concs) do conc
-        if conc == 0
-            "Diamagnetic"
-        else
-            "Paramagnetic (conc = $conc)"
+    spec, x, y, z, σ = if inputfilenames isa String
+        # load a single file
+        spec, x, y, z, σ = loadspecdata(inputfilenames, IntensityExperiment)
+        (SingleElementVector(spec), SingleElementVector(x), SingleElementVector(y), z ./ σ,
+         SingleElementVector(1))
+    elseif inputfilenames isa Vector{String}
+        # load multiple files
+        tmp = loadspecdata.(inputfilenames, IntensityExperiment)
+        spec = []
+        x = []
+        y = []
+        z = []
+        σ = []
+        for t in tmp
+            n = length(t[4])
+            if n == 1 # z is a single slice
+                push!(spec, t[1])
+                push!(x, t[2])
+                push!(y, t[3])
+                push!(z, t[4][1])
+                push!(σ, t[5])
+            else
+                append!(spec, fill(t[1], n))
+                append!(x, fill(t[2], n))
+                append!(y, fill(t[3], n))
+                append!(z, t[4])
+                append!(σ, fill(t[5], n))
+            end
         end
+        map(MaybeVector, (spec, x, y, z ./ σ[1], σ))
     end
 
-    return SpecData(spectra, x, y,
-                    z ./ σ[1],
-                    σ ./ σ[1],
-                    zlabels)
+    zlabels = choptitle.(map(label, spec))
+
+    return SpecData(spec, x, y, z, σ, zlabels)
+end
+
+# load the NMR data and prepare the SpecData object
+function loadspecdata(inputfilename, ::Type{IntensityExperiment})
+    @debug "Loading spec data for intensity experiment: $inputfilename"
+    spec = loadnmr(inputfilename)
+    x = data(spec, F1Dim)
+    y = data(spec, F2Dim)
+
+    dat = data(spec) / scale(spec)
+    σ = spec[:noise] / scale(spec)
+
+    z = if ndims(spec) == 3
+        eachslice(dat; dims=3)
+    else
+        [dat]
+    end
+
+    return spec, x, y, z, σ
 end
 
 """Add peak to experiment, setting up type-specific parameters."""
-function addpeak!(expt::PREExperiment, initialposition::Point2f, label="",
+function addpeak!(expt::IntensityExperiment, initialposition::Point2f, label="",
                   xradius=expt.xradius[], yradius=expt.yradius[])
     expt.state[][:total_peaks][] += 1
     if label == ""
@@ -106,30 +154,26 @@ function addpeak!(expt::PREExperiment, initialposition::Point2f, label="",
     x0, y0 = initialposition
     ix = findnearest(expt.specdata.x[1], x0)
     iy = findnearest(expt.specdata.y[1], y0)
-    amp0 = expt.specdata.z[1][ix, iy]
-    amp0 = MaybeVector(amp0)
+    amp0 = map(1:nslices(expt)) do i
+        ix = findnearest(expt.specdata.x[i], x0)
+        iy = findnearest(expt.specdata.y[i], y0)
+        return expt.specdata.z[i][ix, iy]
+    end
     amp = Parameter("Amplitude", amp0)
-
-    # PRE
-    Γ = Parameter("PRE", MaybeVector(10.0); minvalue=0.0, maxvalue=200.0)
-
+    
     newpeak.parameters[:R2x] = R2x
     newpeak.parameters[:R2y] = R2y
     newpeak.parameters[:amp] = amp
-    newpeak.parameters[:PRE] = Γ
-
-    newpeak.postparameters[:PRE] = Parameter("PRE", 0.0)
 
     push!(expt.peaks[], newpeak)
     return notify(expt.peaks)
 end
 
 """Simulate single peak according to experiment type."""
-function simulate!(z, peak::Peak, expt::PREExperiment, xbounds=nothing, ybounds=nothing)
+function simulate!(z, peak::Peak, expt::IntensityExperiment, xbounds=nothing, ybounds=nothing)
     R2x0 = peak.parameters[:R2x].value[][1]
     R2y0 = peak.parameters[:R2y].value[][1]
     amp0 = peak.parameters[:amp].value[][1]
-    PRE = peak.parameters[:PRE].value[][1]
 
     for i in 1:nslices(expt)
         # get axis references for window functions
@@ -141,15 +185,9 @@ function simulate!(z, peak::Peak, expt::PREExperiment, xbounds=nothing, ybounds=
 
         x0 = peak.parameters[:x].value[][i]
         y0 = peak.parameters[:y].value[][i]
-
-        # apply PRE to linewidths and amplitude
-        R2x = R2x0 + PRE * expt.paramagnetic_concs[i]
-        if expt.expttype == :hmqc
-            R2y = R2y0 + PRE * expt.paramagnetic_concs[i]
-        else
-            R2y = R2y0
-        end
-        amp = amp0 * exp(-PRE * expt.paramagnetic_concs[i] * expt.Trelax)
+        R2x = peak.parameters[:R2x].value[][i]
+        R2y = peak.parameters[:R2y].value[][i]
+        amp = peak.parameters[:amp].value[][i]
 
         # find indices of x and y axes within peak radius of peak position
         xi = x0 .- peak.xradius[] .≤ x .≤ x0 .+ peak.xradius[]
@@ -167,26 +205,23 @@ function simulate!(z, peak::Peak, expt::PREExperiment, xbounds=nothing, ybounds=
 end
 
 """Calculate final parameters after fitting."""
-function postfit!(peak::Peak, expt::PREExperiment)
-    peak.postparameters[:PRE].uncertainty[] .= peak.parameters[:PRE].uncertainty[]
-    peak.postparameters[:PRE].value[] .= peak.parameters[:PRE].value[]
+function postfit!(peak::Peak, expt::IntensityExperiment)
     peak.postfitted[] = true
 end
 
 """Return descriptive text for slice idx."""
-function slicelabel(expt::PREExperiment, idx)
+function slicelabel(expt::IntensityExperiment, idx)
     return "$(expt.specdata.zlabels[idx]) ($idx of $(nslices(expt)))"
 end
 
 """Return formatted text describing peak idx."""
-function peakinfotext(expt::PREExperiment, idx)
+function peakinfotext(expt::IntensityExperiment, idx)
     if idx == 0
         return "No peak selected"
     end
     peak = expt.peaks[][idx]
     if peak.postfitted[]
         return "Peak: $(peak.label[])\n" *
-               "PRE: $(peak.parameters[:PRE].value[][1] ± peak.parameters[:PRE].uncertainty[][1]) s⁻¹ [conc⁻¹]\n" *
                "\n" *
                "δX: $(peak.parameters[:x].value[][1] ± peak.parameters[:x].uncertainty[][1]) ppm\n" *
                "δY: $(peak.parameters[:y].value[][1] ± peak.parameters[:y].uncertainty[][1]) ppm\n" *
@@ -200,17 +235,14 @@ function peakinfotext(expt::PREExperiment, idx)
 end
 
 """Return formatted text describing experiment."""
-function experimentinfo(expt::PREExperiment)
+function experimentinfo(expt::IntensityExperiment)
     return "Analysis type: PRE experiment\n" *
            "Filename: $(expt.specdata.nmrdata[1][:filename])\n" *
-           "PRE agent concs: $(join(expt.paramagnetic_concs, ", "))\n" *
-           "Experiment type: $(expt.expttype==:hsqc ? "HSQC" : "HMQC")\n" *
-           "Relaxation time: $(expt.Trelax)\n" *
            "Number of peaks: $(length(expt.peaks[]))\n" *
            "Experiment title: $(expt.specdata.nmrdata[1][:title])\n"
 end
 
-function completestate!(state, expt::PREExperiment)
+function completestate!(state, expt::IntensityExperiment)
     state[:peak_plot_data] = lift(peak -> peak_plot_data(peak, expt), state[:current_peak])
     state[:peak_plot_data_xobs] = lift(d -> d[1], state[:peak_plot_data])
     state[:peak_plot_data_yobs] = lift(d -> d[2], state[:peak_plot_data])
@@ -218,13 +250,12 @@ function completestate!(state, expt::PREExperiment)
     state[:peak_plot_data_yfit] = lift(d -> d[4], state[:peak_plot_data])
 end
 
-
 """
-    peak_plot_data(peak, expt::PREExperiment)
+    peak_plot_data(peak, expt::IntensityExperiment)
 
 Extract plotting data for a single peak.
 """
-function peak_plot_data(peak, expt::PREExperiment)
+function peak_plot_data(peak, expt::IntensityExperiment)
     @debug "Preparing peak plot data"
 
     if isnothing(peak)
@@ -272,7 +303,7 @@ function peak_plot_data(peak, expt::PREExperiment)
 end
 
 """Set up GUI visualization."""
-function makepeakplot!(gui, state, expt::PREExperiment)
+function makepeakplot!(gui, state, expt::IntensityExperiment)
     gui[:axpeakplotX] = axX = Axis(gui[:panelpeakplot][1, 1];
                                    xlabel="dX / ppm",
                                    xreversed=true,
@@ -291,7 +322,7 @@ function makepeakplot!(gui, state, expt::PREExperiment)
 end
 
 """Save publication plots for all peaks."""
-function save_peak_plots!(expt::PREExperiment, folder::AbstractString)
+function save_peak_plots!(expt::IntensityExperiment, folder::AbstractString)
     @debug "Saving peak plots to $folder"
     CairoMakie.activate!()
 

@@ -33,6 +33,9 @@ export relaxation2d
 export HetNOEExperiment
 export hetnoe2d
 
+export IntensityExperiment
+export intensities2d
+
 export PREExperiment
 
 end
