@@ -76,13 +76,17 @@ end
 
 # load the NMR data and prepare the SpecData object
 function preparespecdata(inputfilenames, ::Type{IntensityExperiment})
-    @debug "Preparing spec data for relaxation experiment: $inputfilenames"
+    @debug "Preparing spec data for intensity experiment: $inputfilenames"
 
-    spec, x, y, z, σ = if inputfilenames isa String
+    spec, x, y, z, σ, zlabels = if inputfilenames isa String
         # load a single file
         spec, x, y, z, σ = loadspecdata(inputfilenames, IntensityExperiment)
-        (SingleElementVector(spec), SingleElementVector(x), SingleElementVector(y), z ./ σ,
-         SingleElementVector(1))
+        (SingleElementVector(spec),
+            SingleElementVector(x),
+            SingleElementVector(y),
+            z ./ σ,
+            SingleElementVector(1),
+            SingleElementVector(choptitle(label(spec))))
     elseif inputfilenames isa Vector{String}
         # load multiple files
         tmp = loadspecdata.(inputfilenames, IntensityExperiment)
@@ -91,6 +95,7 @@ function preparespecdata(inputfilenames, ::Type{IntensityExperiment})
         y = []
         z = []
         σ = []
+        zlabels = []
         for t in tmp
             n = length(t[4])
             if n == 1 # z is a single slice
@@ -99,18 +104,18 @@ function preparespecdata(inputfilenames, ::Type{IntensityExperiment})
                 push!(y, t[3])
                 push!(z, t[4][1])
                 push!(σ, t[5])
+                push!(zlabels, choptitle(label(t[1])))
             else
                 append!(spec, fill(t[1], n))
                 append!(x, fill(t[2], n))
                 append!(y, fill(t[3], n))
                 append!(z, t[4])
                 append!(σ, fill(t[5], n))
+                append!(zlabels, fill(choptitle(label(t[1])), n))
             end
         end
-        map(MaybeVector, (spec, x, y, z ./ σ[1], σ))
+        map(MaybeVector, (spec, x, y, z ./ σ[1], σ, zlabels))
     end
-
-    zlabels = choptitle.(map(label, spec))
 
     return SpecData(spec, x, y, z, σ, zlabels)
 end
