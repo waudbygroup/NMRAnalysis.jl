@@ -23,6 +23,7 @@ include("gui.jl")
 include("mouse.jl")
 include("keyboard.jl")
 include("files.jl")
+include("visualisation.jl")
 
 export MaybeVector
 export gui!

@@ -10,9 +10,9 @@
 [x] figure out amplitudes / intensities
 [x] performance - restrict fitting area to ROIs
 [x] accept spectrum planes / multiple pseudo3Ds as input for relaxation
+[ ] implement generic model fitting for intensities
 [ ] scale fitting by noise
 [ ] simulate across full regions of interest to avoid truncation
 [ ] refactor generic intensity analysis code
-[ ] implement generic model fitting for intensities
 [ ] re-implement relaxation fitting as special case of generic intensity fitting
 [ ] limit fitting run-time / reduce convergence criteria

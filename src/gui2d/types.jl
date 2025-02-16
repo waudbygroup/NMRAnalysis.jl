@@ -38,3 +38,8 @@ struct Peak
     postparameters::OrderedDict{Symbol,Parameter}
     postfitted::Observable{Bool}
 end
+
+abstract type VisualisationStrategy end
+
+struct CrossSectionVisualisation <: VisualisationStrategy end
+struct ModelFitVisualisation <: VisualisationStrategy end 

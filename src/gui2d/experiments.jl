@@ -214,7 +214,9 @@ function postfit!(cluster::Vector{Int}, expt::Experiment)
 end
 
 """Additional fitting of peak following spectrum fit - defaults to no action"""
-postfit!(peak::Peak, expt::Experiment) = nothing
+function postfit!(peak::Peak, expt::Experiment)
+    peak.postfitted[] = true
+end
 
 """Global fitting of entire experiment following spectrum fit - defaults to no action"""
 postfitglobal!(expt::Experiment) = nothing

@@ -72,6 +72,8 @@ struct RelaxationExperiment <: FixedPeakExperiment
     end
 end
 
+visualisationtype(::Type{<:RelaxationExperiment}) = ModelFitVisualisation()
+
 """
     RelaxationExperiment(experimentfiles, relaxationtimes)
 
@@ -276,85 +278,31 @@ function experimentinfo(expt::RelaxationExperiment)
            "Experiment title: $(expt.specdata.nmrdata[1][:title])\n"
 end
 
-function completestate!(state, expt::RelaxationExperiment)
-    # Set up observables for the GUI
-    state[:peakplot_obs_xy] = lift(state[:current_peak]) do peak
-        return isnothing(peak) ? Point2f[] : peak_plot_data(peak, expt)[1]
+
+function get_model_data(peak, expt::RelaxationExperiment)
+    if isnothing(peak)
+        obspoints = Point2f[]
+        obserrors = [(0.0, 0.0, 0.0)]
+        fitpoints = Point2f[]
+        return (obspoints, obserrors, fitpoints)
     end
 
-    state[:peakplot_obs_xye] = lift(state[:current_peak]) do peak
-        return isnothing(peak) ? [(0.0, 0.0, 0.0)] : peak_plot_data(peak, expt)[2]
-    end
-
-    state[:peakplot_fit_xy] = lift(state[:current_peak]) do peak
-        return isnothing(peak) ? Point2f[] : peak_plot_data(peak, expt)[3]
-    end
-end
-
-"""
-    peak_plot_data(peak, expt::RelaxationExperiment)
-
-Extract plotting data for a single peak, returning observed points, error bars,
-and fit line data.
-"""
-function peak_plot_data(peak, expt::RelaxationExperiment)
-    # Calculate observed data points with errors
     t = expt.relaxationtimes
     y = peak.parameters[:amp].value[]
     err = peak.parameters[:amp].uncertainty[]
+    
     obs_points = Point2f.(t, y)
     obs_errors = [(t[i], y[i], err[i]) for i in 1:length(t)]
-
+    
     # Calculate fit line
     tpred = range(0, 1.1 * maximum(t), 100)
     A = peak.postparameters[:amp].value[][1]
     R = peak.postparameters[:relaxationrate].value[][1]
     ypred = A * exp.(-R * tpred)
     fit_points = Point2f.(tpred, ypred)
-
+    
     return (obs_points, obs_errors, fit_points)
 end
 
-"""
-    plot_peak!(ax, peak, relaxationtimes)
-
-Plot a single peak's data and fit onto the given axis.
-"""
-function plot_peak!(ax, peak, expt::RelaxationExperiment)
-    obs_points, obs_errors, fit_points = peak_plot_data(peak, expt)
-
-    hlines!(ax, [0]; linewidth=0)
-    lines!(ax, fit_points; label="Fit", color=:red)
-    errorbars!(ax, obs_errors; whiskerwidth=10)
-    return scatter!(ax, obs_points; label="Observed")
-end
-
-"""Set up GUI visualization."""
-function makepeakplot!(gui, state, expt::RelaxationExperiment)
-    gui[:axpeakplot] = ax = Axis(gui[:panelpeakplot][1, 1];
-                                 xlabel="Relaxation time / s",
-                                 ylabel="Amplitude")
-
-    hlines!(ax, [0]; linewidth=0)
-    lines!(ax, state[:peakplot_fit_xy]; label="Fit", color=:red)
-    errorbars!(ax, state[:peakplot_obs_xye]; whiskerwidth=10)
-    return scatter!(ax, state[:peakplot_obs_xy]; label="Observed")
-end
-
-"""Save publication plots for all peaks."""
-function save_peak_plots!(expt::RelaxationExperiment, folder::AbstractString)
-    CairoMakie.activate!()
-    for peak in expt.peaks[]
-        fig = Figure()
-        ax = Axis(fig[1, 1];
-                  xlabel="Relaxation time / s",
-                  ylabel="Amplitude",
-                  title="$(peak.label[])")
-
-        plot_peak!(ax, peak, expt)
-        # axislegend(ax)
-
-        save(joinpath(folder, "peak_$(peak.label[]).pdf"), fig)
-    end
-    return GLMakie.activate!()
-end
+get_model_xlabel(::RelaxationExperiment) = "Relaxation time / s"
+get_model_ylabel(::RelaxationExperiment) = "Peak amplitude"

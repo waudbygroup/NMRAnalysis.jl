@@ -25,6 +25,7 @@ function hetnoe2d(planefilenames, saturation)
 end
 
 
+
 """
     HetNOEExperiment
 
@@ -61,6 +62,10 @@ struct HetNOEExperiment <: FixedPeakExperiment
         expt
     end
 end
+
+struct HetNOEVisualisation <: VisualisationStrategy end
+visualisationtype(::Type{<:HetNOEExperiment}) = HetNOEVisualisation()
+
 
 """
     HetNOEExperiment(planefilenames, saturation)
@@ -214,106 +219,63 @@ function experimentinfo(expt::HetNOEExperiment)
            "Experiment title: $(expt.specdata.nmrdata[1][:title])\n"
 end
 
-function completestate!(state, expt::HetNOEExperiment)
-    # Set up observables for the GUI
-    state[:peakplot_x] = 1:nslices(expt)
 
-    state[:peakplot_y] = lift(state[:current_peak]) do peak
-        if isnothing(peak)
-            [0.0 for i in 1:nslices(expt)]
-        else
-            Iref = peak.postparameters[:amp].value[][1]
-            [peak.parameters[:amp].value[][i] / Iref for i in 1:nslices(expt)]
-        end
-    end
-
-    state[:peakplot_xye] = lift(state[:current_peak]) do peak
-        if isnothing(peak)
-            [(1.0 * i, 0.0, 0.0) for i in 1:nslices(expt)]
-        else
-            Iref = peak.postparameters[:amp].value[][1]
-            [(1.0 * i,
-              peak.parameters[:amp].value[][i] / Iref,
-              peak.parameters[:amp].uncertainty[][i] / Iref)
-             for i in 1:nslices(expt)]
-        end
-    end
-
-    state[:peakplot_fit_y] = lift(state[:current_peak]) do peak
-        if isnothing(peak)
-            [0.0]
-        else
-            hetnoe = peak.postparameters[:hetnoe].value[][1]
-            [1, hetnoe]
-        end
-    end
-end
-
-"""
-    plot_peak!(ax, peak, saturation)
-
-Plot a single peak's data and fit onto the given axis.
-"""
-function plot_peak!(panel, peak, expt::HetNOEExperiment)
+## visualisation
+function get_hetnoe_data(peak, expt::HetNOEExperiment)
     x = 1:nslices(expt)
 
-    y = if isnothing(peak)
-        [0.0 for i in 1:nslices(expt)]
-    else
-        Iref = peak.postparameters[:amp].value[][1]
-        [peak.parameters[:amp].value[][i] / Iref for i in 1:nslices(expt)]
+    if isnothing(peak)
+        y = fill(0.0, nslices(expt))
+        err = [(1.0 * i, 0.0, 0.0) for i in 1:nslices(expt)]
+        fit = [0.0]
+        return (x, y, err, fit)
     end
 
-    xye = if isnothing(peak)
-        [(1.0 * i, 0.0, 0.0) for i in 1:nslices(expt)]
-    else
-        Iref = peak.postparameters[:amp].value[][1]
-        [(1.0 * i,
+    Iref = peak.postparameters[:amp].value[][1]
+    hetnoe = peak.postparameters[:hetnoe].value[][1]
+
+    y = [peak.parameters[:amp].value[][i] / Iref for i in 1:nslices(expt)]
+    err = [(1.0 * i,
           peak.parameters[:amp].value[][i] / Iref,
           peak.parameters[:amp].uncertainty[][i] / Iref)
          for i in 1:nslices(expt)]
-    end
+    fit = [1, hetnoe]
+    
+    return (x, y, err, fit)
+end
 
-    fit_y = if isnothing(peak)
-        [0.0]
-    else
-        hetnoe = peak.postparameters[:hetnoe].value[][1]
-        [1, hetnoe]
-    end
+function completestate!(state, expt, ::HetNOEVisualisation)
+    @debug "completing state for hetNOE visualisation"
+    state[:peak_plot_data] = lift(peak -> get_hetnoe_data(peak, expt), state[:current_peak])
+    state[:peak_plot_x] = lift(d -> d[1], state[:peak_plot_data])
+    state[:peak_plot_y] = lift(d -> d[2], state[:peak_plot_data])
+    state[:peak_plot_err] = lift(d -> d[3], state[:peak_plot_data])
+    state[:peak_plot_fit] = lift(d -> d[4], state[:peak_plot_data])
+end
 
-    ax = Axis(panel[1, 1];
+function plot_peak!(panel, peak, expt, ::HetNOEVisualisation) 
+    x, y, err, fit = get_hetnoe_data(peak, expt)
+    
+    ax = Axis(panel[1, 1],
               xlabel="Experiment",
               ylabel="Relative amplitude",
-              xticks=(1:nslices(expt), expt.specdata.zlabels),
-              title="$(peak.label[])")
-
+              xticks=(1:nslices(expt), expt.specdata.zlabels))
+              
     hlines!(ax, [0]; linewidth=0)
-    hlines!(ax, fit_y; linewidth=2, color=:red)
-    errorbars!(ax, xye; whiskerwidth=10)
+    hlines!(ax, fit; linewidth=2, color=:red)
+    errorbars!(ax, err; whiskerwidth=10)
     barplot!(ax, x, y)
 end
 
-"""Set up GUI visualization."""
-function makepeakplot!(gui, state, expt::HetNOEExperiment)
+function makepeakplot!(gui, state, expt, ::HetNOEVisualisation)
+    @debug "making peak plot for hetNOE visualisation"
     gui[:axpeakplot] = ax = Axis(gui[:panelpeakplot][1, 1];
-                                 xlabel="Experiment",
-                                 ylabel="Relative amplitude",
-                                 xticks=(1:nslices(expt), expt.specdata.zlabels))
+                                xlabel="Experiment",
+                                ylabel="Relative amplitude",
+                                xticks=(1:nslices(expt), expt.specdata.zlabels))
 
     hlines!(ax, [0]; linewidth=0)
-    hlines!(ax, state[:peakplot_fit_y]; linewidth=2, color=:red)
-    errorbars!(ax, state[:peakplot_xye]; whiskerwidth=10)
-    barplot!(ax, state[:peakplot_x], state[:peakplot_y])
-end
-
-"""Save publication plots for all peaks."""
-function save_peak_plots!(expt::HetNOEExperiment, folder::AbstractString)
-    CairoMakie.activate!()
-    for peak in expt.peaks[]
-        fig = Figure()
-        plot_peak!(fig, peak, expt)
-
-        save(joinpath(folder, "peak_$(peak.label[]).pdf"), fig)
-    end
-    GLMakie.activate!()
+    hlines!(ax, state[:peak_plot_fit]; linewidth=2, color=:red)
+    errorbars!(ax, state[:peak_plot_err]; whiskerwidth=10)
+    barplot!(ax, state[:peak_plot_x], state[:peak_plot_y])
 end

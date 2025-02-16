@@ -232,8 +232,6 @@ function addhanders!(g, state, expt::FixedPeakExperiment)
     end
 end
 
-makepeakplot!(panel, state, expt::Experiment) = nothing
-
 function renamepeak!(expt, state, initiator)
     @debug "Renaming peak"
     if initiator == :keyboard
