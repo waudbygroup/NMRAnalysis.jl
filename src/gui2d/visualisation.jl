@@ -1,17 +1,17 @@
 # Default trait - all experiments use cross sections unless specified
-visualisationtype(::Type{<:Experiment}) = CrossSectionVisualisation()
+visualisationtype(::Experiment) = CrossSectionVisualisation()
 
 # Plotting functions dispatch on the visualization trait
-function plot_peak!(panel, peak, expt::E) where E <: Experiment
-    plot_peak!(panel, peak, expt, visualisationtype(E))
+function plot_peak!(panel, peak, expt::Experiment)
+    plot_peak!(panel, peak, expt, visualisationtype(expt))
 end
 
-function makepeakplot!(gui, state, expt::E) where E <: Experiment
-    makepeakplot!(gui, state, expt, visualisationtype(E))
+function makepeakplot!(gui, state, expt::Experiment)
+    makepeakplot!(gui, state, expt, visualisationtype(expt))
 end
 
-function completestate!(state, expt::E) where E <: Experiment
-    completestate!(state, expt, visualisationtype(E))
+function completestate!(state, expt::Experiment)
+    completestate!(state, expt, visualisationtype(expt))
 end
 
 function get_model_data(peak, expt::Experiment)

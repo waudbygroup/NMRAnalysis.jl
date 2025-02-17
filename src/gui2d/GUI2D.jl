@@ -13,6 +13,7 @@ using OrderedCollections
 include("util.jl")
 include("maybevector.jl")
 include("types.jl")
+include("models.jl")
 include("parameters.jl")
 include("specdata.jl")
 include("peaks.jl")
@@ -28,14 +29,15 @@ include("visualisation.jl")
 export MaybeVector
 export gui!
 
-export RelaxationExperiment
-export relaxation2d
-
-export HetNOEExperiment
-export hetnoe2d
 
 export IntensityExperiment
 export intensities2d
+export relaxation2d
+export recovery2d
+export modelfit2d
+
+export HetNOEExperiment
+export hetnoe2d
 
 export PREExperiment
 

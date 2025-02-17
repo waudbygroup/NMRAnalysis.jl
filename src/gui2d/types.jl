@@ -9,6 +9,11 @@ abstract type Experiment end
 abstract type FixedPeakExperiment <: Experiment end
 abstract type MovingPeakExperiment <: Experiment end
 
+abstract type FittingModel end
+struct NoFitting <: FittingModel end
+abstract type ParametricModel <: FittingModel end
+
+
 struct SpecData
     nmrdata
     x

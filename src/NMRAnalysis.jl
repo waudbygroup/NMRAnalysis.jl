@@ -23,9 +23,8 @@ export diffusion
 
 # @reexport using .GUI: view2d, peakfit2dseries
 @reexport using .GUI2D: MaybeVector, gui!
-@reexport using .GUI2D: RelaxationExperiment, relaxation2d
+@reexport using .GUI2D: IntensityExperiment, intensities2d, relaxation2d, recovery2d, modelfit2d
 @reexport using .GUI2D: HetNOEExperiment, hetnoe2d
-@reexport using .GUI2D: IntensityExperiment, intensities2d
 # @reexport using .GUI2D: PREExperiment
 
 @info """

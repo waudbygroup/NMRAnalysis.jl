@@ -64,7 +64,7 @@ struct HetNOEExperiment <: FixedPeakExperiment
 end
 
 struct HetNOEVisualisation <: VisualisationStrategy end
-visualisationtype(::Type{<:HetNOEExperiment}) = HetNOEVisualisation()
+visualisationtype(::HetNOEExperiment) = HetNOEVisualisation()
 
 
 """
