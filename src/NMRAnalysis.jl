@@ -43,7 +43,10 @@ Available analysis routines:
 # 2D Experiment Analysis
 
 Available interfaces:
+- intensities2d()
 - relaxation2d()
+- recovery2d()
+- modelfit2d()
 - hetnoe2d()
 
 Current working directory: $(pwd())
