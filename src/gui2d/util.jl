@@ -18,3 +18,15 @@ function maskellipse!(mask, x, y, x0, y0, xradius, yradius)
     f = @. fx + fy - xradius^2 * yradius^2
     return mask[f .≤ 0] .= true
 end
+
+function flatten_with_nan_separator(vectors::Vector{Vector{Point2f}})
+    isempty(vectors) && return Point2f[]
+
+    separator = Point2f(NaN, NaN)
+    result = reduce(vectors[2:end]; init=vectors[1]) do acc, subvector
+        return vcat(acc, [separator], subvector)
+    end
+
+    # Remove the trailing separator if it exists
+    return length(result) > 0 ? result[1:(end - 1)] : result
+end

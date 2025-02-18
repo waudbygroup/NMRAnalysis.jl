@@ -29,7 +29,7 @@ Expected fields:
 """
 
 # implementations
-include("expt-relaxation.jl")
+include("expt-intensitybased.jl")
 include("expt-hetnoe.jl")
 include("expt-PRE.jl")
 
@@ -213,7 +213,9 @@ function postfit!(cluster::Vector{Int}, expt::Experiment)
 end
 
 """Additional fitting of peak following spectrum fit - defaults to no action"""
-postfit!(peak::Peak, expt::Experiment) = nothing
+function postfit!(peak::Peak, expt::Experiment)
+    peak.postfitted[] = true
+end
 
 """Global fitting of entire experiment following spectrum fit - defaults to no action"""
 postfitglobal!(expt::Experiment) = nothing
@@ -222,8 +224,6 @@ function fit!(cluster::Vector{Int}, expt::Experiment)
     @debug "Fitting cluster $cluster" #maxlog=10
     peaks = [expt.peaks[][i] for i in cluster]
 
-    # TODO - adjust to work with smaller area of spectra
-    
     # initial parameters
     p0 = pack(peaks, :initial)
     pmin = pack(peaks, :min)

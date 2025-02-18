@@ -1,4 +1,21 @@
 """
+    pre2d(inputfilenames, paramagnetic_concs, expttype, Trelax)
+
+Create a PRE experiment from files and experimental parameters and launch analysis interface.
+`expttype` should be `:hsqc` or `:hmqc`. `Trelax` is the timing during which relaxation
+can occur during the sequence (magnetisation transfer delays etc) - this is specific to
+the pulse sequence used.
+
+Can be used to analyse solvent PREs, in which case concentrations should be specified -
+or to analyse protein PREs, in which case concentrations should be set to 0 and 1 for
+diamagnetic and paramagnetic states respectively.
+"""
+function pre2d(inputfilenames, paramagnetic_concs, expttype, Trelax)
+    expt = PREExperiment(inputfilenames, paramagnetic_concs, expttype, Trelax)
+    gui!(expt)
+end
+
+"""
     PREExperiment
 
 Paramagnetic relaxation enhancement experiment.
@@ -50,7 +67,6 @@ the pulse sequence used.
 Can be used to analyse solvent PREs, in which case concentrations should be specified -
 or to analyse protein PREs, in which case concentrations should be set to 0 and 1 for
 diamagnetic and paramagnetic states respectively.
-
 """
 function PREExperiment(inputfilenames, paramagnetic_concs, exptexperimenttype, Trelax)
     exptexperimenttype in [:hsqc, :hmqc] ||
@@ -167,7 +183,7 @@ function simulate!(z, peak::Peak, expt::PREExperiment, xbounds=nothing, ybounds=
 end
 
 """Calculate final parameters after fitting."""
-function postfit!(peak::Peak, expt::PREExperiment)
+function postfit!(peak::Peak, ::PREExperiment)
     peak.postparameters[:PRE].uncertainty[] .= peak.parameters[:PRE].uncertainty[]
     peak.postparameters[:PRE].value[] .= peak.parameters[:PRE].value[]
     peak.postfitted[] = true
@@ -208,130 +224,4 @@ function experimentinfo(expt::PREExperiment)
            "Relaxation time: $(expt.Trelax)\n" *
            "Number of peaks: $(length(expt.peaks[]))\n" *
            "Experiment title: $(expt.specdata.nmrdata[1][:title])\n"
-end
-
-function completestate!(state, expt::PREExperiment)
-    state[:peak_plot_data] = lift(peak -> peak_plot_data(peak, expt), state[:current_peak])
-    state[:peak_plot_data_xobs] = lift(d -> d[1], state[:peak_plot_data])
-    state[:peak_plot_data_yobs] = lift(d -> d[2], state[:peak_plot_data])
-    state[:peak_plot_data_xfit] = lift(d -> d[3], state[:peak_plot_data])
-    state[:peak_plot_data_yfit] = lift(d -> d[4], state[:peak_plot_data])
-end
-
-function flatten_with_nan_separator(vectors::Vector{Vector{Point2f}})
-    isempty(vectors) && return Point2f[]
-
-    separator = Point2f(NaN, NaN)
-    result = reduce(vectors[2:end]; init=vectors[1]) do acc, subvector
-        return vcat(acc, [separator], subvector)
-    end
-
-    # Remove the trailing separator if it exists
-    return length(result) > 0 ? result[1:(end - 1)] : result
-end
-
-"""
-    peak_plot_data(peak, expt::PREExperiment)
-
-Extract plotting data for a single peak.
-"""
-function peak_plot_data(peak, expt::PREExperiment)
-    @debug "Preparing peak plot data"
-
-    if isnothing(peak)
-        return (Point2f[], Point2f[], Point2f[], Point2f[])
-    end
-
-    # we want to plot x and y cross-sections of the observed and fitted spectra
-    # i.e. a list with Vector{Point2f} cross-sections for each slice - xobs, yobs, xfit, yfit
-    xobs = Vector{Point2f}[]
-    yobs = Vector{Point2f}[]
-    xfit = Vector{Point2f}[]
-    yfit = Vector{Point2f}[]
-
-    for i in 1:nslices(expt)
-        x = expt.specdata.x[i]
-        y = expt.specdata.y[i]
-
-        x0 = peak.parameters[:x].value[][i]
-        y0 = peak.parameters[:y].value[][i]
-
-        # find indices of x and y axes within peak radius of peak position
-        ix = x0 .- peak.xradius[] .≤ x .≤ x0 .+ peak.xradius[]
-        iy = y0 .- peak.yradius[] .≤ y .≤ y0 .+ peak.yradius[]
-        ix0 = findnearest(x, x0)
-        iy0 = findnearest(y, y0)
-        xs = x[ix]
-        ys = y[iy]
-
-        xo = Point2f.(xs, expt.specdata.z[i][ix, iy0])
-        yo = Point2f.(ys, expt.specdata.z[i][ix0, iy])
-        xf = Point2f.(xs, expt.specdata.zfit[][i][ix, iy0])
-        yf = Point2f.(ys, expt.specdata.zfit[][i][ix0, iy])
-
-        push!(xobs, xo)
-        push!(yobs, yo)
-        push!(xfit, xf)
-        push!(yfit, yf)
-    end
-
-    @debug "Peak plot data prepared"
-    return (flatten_with_nan_separator(xobs),
-            flatten_with_nan_separator(yobs),
-            flatten_with_nan_separator(xfit),
-            flatten_with_nan_separator(yfit))
-end
-
-"""Set up GUI visualization."""
-function makepeakplot!(gui, state, expt::PREExperiment)
-    gui[:axpeakplotX] = axX = Axis(gui[:panelpeakplot][1, 1];
-                                   xlabel="dX / ppm",
-                                   xreversed=true,
-                                   ylabel="")
-    gui[:axpeakplotY] = axY = Axis(gui[:panelpeakplot][1, 2];
-                                   xlabel="dY / ppm",
-                                   xreversed=true,
-                                   ylabel="")
-
-    hlines!(axX, [0]; linewidth=0)
-    scatterlines!(axX, state[:peak_plot_data_xobs])
-    lines!(axX, state[:peak_plot_data_xfit]; color=:red)
-    hlines!(axY, [0]; linewidth=0)
-    scatterlines!(axY, state[:peak_plot_data_yobs])
-    lines!(axY, state[:peak_plot_data_yfit]; color=:red)
-end
-
-"""Save publication plots for all peaks."""
-function save_peak_plots!(expt::PREExperiment, folder::AbstractString)
-    @debug "Saving peak plots to $folder"
-    CairoMakie.activate!()
-
-    for peak in expt.peaks[]
-        xobs, yobs, xfit, yfit = peak_plot_data(peak, expt)
-
-        fig = Figure()
-
-        axX = Axis(fig[1, 1];
-                   xlabel="δX / ppm",
-                   xreversed=true,
-                   ylabel="")
-        axY = Axis(fig[1, 2];
-                   xlabel="δY / ppm",
-                   xreversed=true,
-                   ylabel="")
-        @debug "Axes created"
-        @debug "Plotting data" xobs yobs xfit yfit
-
-        hlines!(axX, [0]; linewidth=0)
-        scatterlines!(axX, xobs)
-        lines!(axX, xfit; color=:red)
-        hlines!(axY, [0]; linewidth=0)
-        scatterlines!(axY, yobs)
-        lines!(axY, yfit; color=:red)
-        @debug "Data plotted"
-
-        save(joinpath(folder, "peak_$(peak.label[]).pdf"), fig)
-    end
-
-    GLMakie.activate!()
 end

@@ -98,8 +98,6 @@ function preparestate(expt::Experiment)
     return state
 end
 
-completestate!(state, expt::Experiment) = nothing
-
 "Generic label for spectum slices"
 slicelabel(expt::Experiment, idx) = "Slice $idx of $(nslices(expt))"
 
