@@ -1,4 +1,21 @@
 """
+    pre2d(inputfilenames, paramagnetic_concs, expttype, Trelax)
+
+Create a PRE experiment from files and experimental parameters and launch analysis interface.
+`expttype` should be `:hsqc` or `:hmqc`. `Trelax` is the timing during which relaxation
+can occur during the sequence (magnetisation transfer delays etc) - this is specific to
+the pulse sequence used.
+
+Can be used to analyse solvent PREs, in which case concentrations should be specified -
+or to analyse protein PREs, in which case concentrations should be set to 0 and 1 for
+diamagnetic and paramagnetic states respectively.
+"""
+function pre2d(inputfilenames, paramagnetic_concs, expttype, Trelax)
+    expt = PREExperiment(inputfilenames, paramagnetic_concs, expttype, Trelax)
+    gui!(expt)
+end
+
+"""
     PREExperiment
 
 Paramagnetic relaxation enhancement experiment.
@@ -50,7 +67,6 @@ the pulse sequence used.
 Can be used to analyse solvent PREs, in which case concentrations should be specified -
 or to analyse protein PREs, in which case concentrations should be set to 0 and 1 for
 diamagnetic and paramagnetic states respectively.
-
 """
 function PREExperiment(inputfilenames, paramagnetic_concs, exptexperimenttype, Trelax)
     exptexperimenttype in [:hsqc, :hmqc] ||
@@ -167,7 +183,7 @@ function simulate!(z, peak::Peak, expt::PREExperiment, xbounds=nothing, ybounds=
 end
 
 """Calculate final parameters after fitting."""
-function postfit!(peak::Peak, expt::PREExperiment)
+function postfit!(peak::Peak, ::PREExperiment)
     peak.postparameters[:PRE].uncertainty[] .= peak.parameters[:PRE].uncertainty[]
     peak.postparameters[:PRE].value[] .= peak.parameters[:PRE].value[]
     peak.postfitted[] = true

@@ -224,8 +224,6 @@ function fit!(cluster::Vector{Int}, expt::Experiment)
     @debug "Fitting cluster $cluster" #maxlog=10
     peaks = [expt.peaks[][i] for i in cluster]
 
-    # TODO - adjust to work with smaller area of spectra
-    
     # initial parameters
     p0 = pack(peaks, :initial)
     pmin = pack(peaks, :min)

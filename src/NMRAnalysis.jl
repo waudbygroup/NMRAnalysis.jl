@@ -21,11 +21,10 @@ export viscosity
 export tract
 export diffusion
 
-# @reexport using .GUI: view2d, peakfit2dseries
-@reexport using .GUI2D: MaybeVector, gui!
-@reexport using .GUI2D: IntensityExperiment, intensities2d, relaxation2d, recovery2d, modelfit2d
-@reexport using .GUI2D: HetNOEExperiment, hetnoe2d
-# @reexport using .GUI2D: PREExperiment
+@reexport using .GUI2D: MaybeVector
+@reexport using .GUI2D: intensities2d, relaxation2d, recovery2d, modelfit2d # IntensityExperiment
+@reexport using .GUI2D: hetnoe2d # HetNOEExperiment
+@reexport using .GUI2D: pre2d # PREExperiment
 
 @info """
 NMRAnalysis.jl (v$(pkgversion(NMRAnalysis)))

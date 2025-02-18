@@ -40,8 +40,6 @@ relaxation2d("/Users/chris/NMR/crick-950/kleo_CRT_CTD_relax_241218/11",
 #     "/Users/chris/NMR/crick-950/kleo_CRT_CTD_relax_241218/17/lists/vd/t1.cw")
 
 
-# gui!(expt)
-
 ##
 hetnoe2d([
         "/Users/chris/NMR/crick-950/kleo_CRT_CTD_relax_241218/21/pdata/231",
@@ -54,7 +52,7 @@ hetnoe2d([
 
 
 ##
-expt = PREExperiment([
+pre2d([
         "/Users/chris/NMR/crick-800/chris_hewl_231106/18/",
         "/Users/chris/NMR/crick-800/chris_hewl_231106/44/",
         "/Users/chris/NMR/crick-800/chris_hewl_231106/34/",
@@ -63,5 +61,3 @@ expt = PREExperiment([
     [0., 1., 2., 5.],
     :hmqc,
     0.015)
-
-gui!(expt)
