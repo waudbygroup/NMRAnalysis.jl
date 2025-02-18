@@ -180,7 +180,7 @@ function writeheader!(io, value_type, expt::FixedPeakExperiment)
         println(io, "# ", line)
     end
 
-    header = ["label", "x", "y", "R2x", "R2y"]
+    header = ["label", "residue", "x", "y", "R2x", "R2y"]
     append!(header, ["amp$i" for i in 1:nslices(expt)])
 
     if value_type == :value
@@ -218,8 +218,18 @@ Write peaks for fixed peak experiments, including all amplitudes in one file.
 function writepeaks!(io, peaks, slice, value_type, expt::FixedPeakExperiment)
     basic_params = [:x, :y, :R2x, :R2y]
 
-    for peak in peaks[]
-        values = [peak.label[]]
+    # Convert peaks to array and sort
+    sorted_peaks = sort(collect(peaks[]), by = peak -> begin
+        residue_num = extract_residue_number(peak.label[])
+        # Use a tuple for sorting: (is_zero_or_negative, absolute_value)
+        # This ensures positive numbers come first, then zeros and negatives
+        (residue_num ≤ 0, abs(residue_num))
+    end)
+
+    for peak in sorted_peaks
+        label = peak.label[]
+        residue_num = extract_residue_number(label)
+        values = [label, string(residue_num)]
 
         # Basic parameters
         append!(values,
@@ -350,13 +360,21 @@ function writefitresults!(expt, folder)
     filepath = joinpath(folder, "fit-results.txt")
     backup_file(filepath)
 
+    # Sort peaks by residue number, putting positive numbers first
+    sorted_peaks = sort(collect(expt.peaks[]), by = peak -> begin
+        residue_num = extract_residue_number(peak.label[])
+        # Use a tuple for sorting: (is_negative, absolute_value)
+        # This ensures positive numbers come first, then sorted by magnitude
+        (residue_num <= 0, abs(residue_num))
+    end)
+
     open(filepath, "w") do f
         for line in split(experimentinfo(expt), '\n')
             println(f, "# ", line)
         end
 
         # Write header
-        header = ["label"]
+        header = ["label", "residue_number"]  # Added residue_number column
         param_names = collect(keys(first(expt.peaks[]).postparameters))
         for param in values(first(expt.peaks[]).postparameters)
             param_label = replace(param.label, " " => "_")
@@ -365,8 +383,10 @@ function writefitresults!(expt, folder)
         println(f, "# ", join(header, "\t"))
 
         # Write one line per peak with all parameters
-        for peak in expt.peaks[]
-            values = [peak.label[]]
+        for peak in sorted_peaks
+            label = peak.label[]
+            residue_num = extract_residue_number(label)
+            values = [label, string(residue_num)]
             for param in param_names
                 push!(values, string(peak.postparameters[param].value[][1]))
                 push!(values, string(peak.postparameters[param].uncertainty[][1]))
