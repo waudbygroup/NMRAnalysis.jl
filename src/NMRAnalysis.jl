@@ -10,6 +10,7 @@ using Statistics
 include("viscosity.jl")
 include("diffusion.jl")
 include("tract.jl")
+include("1d_integration.jl")
 
 include("gui2d/GUI2D.jl")
 using .GUI2D
@@ -20,6 +21,7 @@ include("precompile.jl")
 export viscosity
 export tract
 export diffusion
+export integrate
 
 @reexport using .GUI2D: MaybeVector
 @reexport using .GUI2D: intensities2d, relaxation2d, recovery2d, modelfit2d # IntensityExperiment
