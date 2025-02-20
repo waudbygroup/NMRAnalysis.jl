@@ -3,6 +3,7 @@ module NMRAnalysis
 using LsqFit
 using Measurements
 using NMRTools
+using Peaks
 using Plots
 using Reexport
 using Statistics
