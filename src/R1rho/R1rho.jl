@@ -1,6 +1,7 @@
 module R1rho
 
 using CairoMakie
+using Distributions
 using GLMakie
 using LinearAlgebra
 using LsqFit

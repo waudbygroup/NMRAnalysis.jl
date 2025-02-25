@@ -1,7 +1,7 @@
 function gui!(state)
     state[:gui] = Dict{Symbol, Any}()
     gui = state[:gui]
-    fig = Figure(size=(1200,800))
+    fig = Figure(size=(1200,900))
 
     c1 = Makie.wong_colors()[1]
     c2 = Makie.wong_colors()[2]
@@ -117,10 +117,14 @@ function gui!(state)
         )
     errorbars!(ax_fit, state[:currenterror])
     scatter!(ax_fit, state[:currentscatter], label = "Observed")
-    lines!(ax_fit, state[:currentfit], label = "Global fit")
-    lines!(ax_fit, state[:currentexpfit], label = "Exponential fit")
+    lines!(ax_fit, state[:currentfit], label = "Global fit", color=c1)
+    lines!(ax_fit, state[:currentfit_null], label = "No exchange model", color=c3, linestyle=:dash)
+    lines!(ax_fit, state[:currentexpfit], label = "Exponential fit", color=c2)
     errorbars!(ax_fit, state[:residualerror], color=c4)
     scatter!(ax_fit, state[:residualpoints], color=c4, label = "Residuals")
+    errorbars!(ax_fit, state[:residualerror_null], color=c5)
+    scatter!(ax_fit, state[:residualpoints_null], color=c5, label = "Residuals (no exchange)")
+
     axislegend(ax_fit, position=:rt)
 
     ax_fit_R1rho = Axis(bottom_panel[1,2],
@@ -131,23 +135,68 @@ function gui!(state)
     hlines!(ax_fit_R1rho, [0], linewidth=0)
     errorbars!(ax_fit_R1rho, state[:expfiterror], color=c2)
     scatter!(ax_fit_R1rho, state[:expfitpoints], label = "Exponential fits", color=c2)
-    lines!(ax_fit_R1rho, state[:fitR1rho], label = "Global fit")
+    lines!(ax_fit_R1rho, state[:fitR1rho], label = "Global fit", color=c1)
+    lines!(ax_fit_R1rho, state[:fitR1rho_null], label = "No exchange model", color=c3, linestyle=:dash)
     axislegend(ax_fit_R1rho, position=:rt)
 
+    gui[:results_text] = lift(state[:ftest]) do ftest
+        I0 = state[:fitI0][]
+        R20 = state[:fitR20][]
+        Rex = state[:fitRex][]
+        lnk = state[:fitlnk][]
+        R20_null = state[:fitR20_null][]
+
+        f_stat, p_value = ftest
+
+        # Format full model results
+        full_model = [
+        "Exchange model results:",
+        "I₀ = $I0",
+        "R₂₀ = $R20 s⁻¹",
+        "Rₑₓ = $Rex s⁻¹",
+        "kₑₓ = $(exp(lnk)) s⁻¹"
+        ]
+
+        # Format null model results
+        null_model = [
+        "No-exchange model results:",
+        "R₂₀ = $R20_null s⁻¹"
+        ]
+
+        # Model comparison statistics
+        comparison = [
+        "Model comparison:",
+        "F-statistic = $(round(f_stat, digits=2)); p-value = $(round(p_value, digits=4))"
+        ]
+
+        # Add significance interpretation
+        if p_value < 0.05
+            push!(comparison, "Exchange is statistically significant (p < 0.05)")
+        else
+            # push!(comparison, "Exchange is not statistically significant (p ≥ 0.05)")
+        end
+
+        # Combine all sections with blank lines between them
+        all_text = vcat(full_model, [""], null_model, [""], comparison)
+
+        join(all_text, "\n")
+    end
+
+
     results_panel = right_panel[2,1] = GridLayout(tellheight=false)
-    Label(results_panel[1,1:2], "Fit results:", font=:bold)
-    Label(results_panel[2,1:2], lift(x->"I0: $x", state[:fitI0]))
-    Label(results_panel[3,1:2], lift(x->"R2,0 (s⁻¹): $x", state[:fitR20]))
-    Label(results_panel[4,1:2], lift(x->"Rex (s⁻¹): $x", state[:fitRex]))
-    Label(results_panel[5,1:2], lift(x->"kex (s⁻¹): $(exp(x))", state[:fitlnk]))
-    results_panel[6,1:2] = Label(fig, "Working directory:\n$(pwd())")
-    results_panel[7,1] = Label(fig, "Output folder:")
-    text_out = results_panel[7,2] = Textbox(fig, stored_string="out", width=150)
+    Label(results_panel[1,1:2], gui[:results_text])
+    # Label(results_panel[2,1:2], lift(x->"I0: $x", state[:fitI0]))
+    # Label(results_panel[3,1:2], lift(x->"R2,0 (s⁻¹): $x", state[:fitR20]))
+    # Label(results_panel[4,1:2], lift(x->"Rex (s⁻¹): $x", state[:fitRex]))
+    # Label(results_panel[5,1:2], lift(x->"kex (s⁻¹): $(exp(x))", state[:fitlnk]))
+    results_panel[2,1:2] = Label(fig, "Working directory:\n$(pwd())")
+    results_panel[3,1] = Label(fig, "Output folder:")
+    text_out = results_panel[3,2] = Textbox(fig, stored_string="out", width=150)
     gui[:text_out] = text_out
     on(text_out.stored_string) do s
         state[:outputdir][] = s
     end
-    button_save = results_panel[8,1:2] = Button(fig, label="Save results")
+    button_save = results_panel[4,1:2] = Button(fig, label="Save results")
     on(button_save.clicks) do _
         savefig!(state)
     end

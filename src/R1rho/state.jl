@@ -79,6 +79,36 @@ function initialisestate(dataset)
             [fitexp(dataset.TSLs[state[:series][i]], state[:intensities][][state[:series][i]], p) for i in 1:state[:nseries]]
         end
 
+        # null fit
+        state[:fit_null] = lift(state[:isfitting], state[:initialpars], state[:intensities]) do isfitting, p0, _
+            fit_onres_null(state, p0[1:2])
+        end
+        state[:fitpars_null] = lift(coef, state[:fit_null])
+        state[:fiterrs_null] = lift(state[:fit_null]) do fit
+            try
+                stderror(fit)
+            catch
+                [0.1, 0.1]
+            end
+        end
+        state[:fitI0_null] = lift((p,e)->p[1] ± e[1], state[:fitpars_null], state[:fiterrs_null])
+        state[:fitR20_null] = lift((p,e)->p[2] ± e[2], state[:fitpars_null], state[:fiterrs_null])
+
+        # Model comparison statistics
+        state[:ftest] = lift(state[:fit], state[:fit_null], state[:intensities]) do full_fit, null_fit, intensities
+            n = length(intensities)
+            p_full = 4  # Parameters in full model
+            p_null = 2  # Parameters in null model
+            
+            rss_full = sum(abs2, full_fit.resid)
+            rss_null = sum(abs2, null_fit.resid)
+            
+            f_stat = ((rss_null - rss_full)/(p_full - p_null)) / (rss_full/(n - p_full))
+            p_value = 1 - cdf(FDist(p_full - p_null, n - p_full), f_stat)
+            
+            (f_stat, p_value)
+        end
+
         # fit plotting
         state[:fitseries] = lift(state[:fitpars]) do p
             ts = range(0, 1.1*maximum(TSL(dataset)), 100)
@@ -115,6 +145,32 @@ function initialisestate(dataset)
             y = I[state[:series][i]]
             ye = σ
             yfit = model_I_onres(t, νSL(dataset)[i], p)
+            tuple.(1000 * t, y - yfit, ye)
+        end
+
+        # null fit plotting
+        state[:fitseries_null] = lift(state[:fitpars_null]) do p
+            ts = range(0, 1.1*maximum(TSL(dataset)), 100)
+            [Point2f.(1000 * ts, model_I_onres_null(ts, νSL(dataset)[i], p)) for i in 1:state[:nseries]]
+        end
+        state[:currentfit_null] = lift(state[:currentseries], state[:fitseries_null]) do i, points
+            points[i]
+        end
+        state[:fitR1rho_null] = lift(state[:fitpars_null]) do p
+            xs = range(0, 1.1*maximum(νSL(dataset)), 100)
+            Point2f.(0.001 * xs, model_R1rho_onres_null(xs, p))
+        end
+        state[:residualpoints_null] = lift(state[:currentseries], state[:intensities], state[:fitpars_null]) do i, I, p
+            t = dataset.TSLs[state[:series][i]]
+            y = I[state[:series][i]]
+            yfit = model_I_onres_null(t, νSL(dataset)[i], p)
+            Point2f.(1000 * t, y - yfit)
+        end
+        state[:residualerror_null] = lift(state[:currentseries], state[:intensities], state[:noise], state[:fitpars_null]) do i, I, σ, p
+            t = dataset.TSLs[state[:series][i]]
+            y = I[state[:series][i]]
+            ye = σ
+            yfit = model_I_onres_null(t, νSL(dataset)[i], p)
             tuple.(1000 * t, y - yfit, ye)
         end
     end

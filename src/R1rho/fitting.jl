@@ -14,6 +14,25 @@ function fit_onres(state, p0)
     return fit
 end
 
+# Null model for R1rho (no exchange)
+model_R1rho_onres_null(νSL, p) = @. p[2]  # Only R2,0 term, no Rex contribution
+model_I_onres_null(TSL, νSL, p) = p[1] * exp.(-TSL .* model_R1rho_onres_null(νSL, p))
+model_I_onres_null(x, p) = model_I_onres_null(x[:,1], x[:,2], p)
+
+# p0 = [I0, R2,0]
+function fit_onres_null(state, p0)
+    dataset = state[:dataset]
+
+    x = hcat(dataset.TSLs, dataset.νSLs)
+    intensities = state[:intensities][]
+    
+    @debug "running null model fit..." p0
+    # Only need parameters p[1] (I0) and p[2] (R2,0)
+    fit = LsqFit.curve_fit(model_I_onres_null, x, intensities, p0)
+    @debug fit.param fit.converged
+    return fit
+end
+
 function fitexp(t, I, p)
     I0 = p[1]
     R0 = p[3] / 2
