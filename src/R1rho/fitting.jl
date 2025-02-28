@@ -1,4 +1,12 @@
 model_R1rho_onres(νSL, p) = @. p[2] + p[3] * exp(2p[4]) / (exp(2p[4]) + (2π * νSL)^2)
+# function model_R1rho_onres(νSL, p)
+#     R20 = p[2]
+#     @show Dw = exp(p[3])
+#     @show koff = exp(p[4])
+#     pB = 0.01
+#     @. R20 + pB*koff*Dw^2 / (koff^2 + Dw^2 + (2π*νSL)^2)
+# end
+
 model_I_onres(TSL, νSL, p) = p[1] * exp.(-TSL .* model_R1rho_onres(νSL, p))
 model_I_onres(x, p) = model_I_onres(x[:,1], x[:,2], p)
 
