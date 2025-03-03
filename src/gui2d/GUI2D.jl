@@ -4,11 +4,13 @@ using CairoMakie
 using DelimitedFiles
 using GLMakie
 using LightGraphs
-using LsqFit
 using Measurements
 using NativeFileDialog
 using NMRTools
 using OrderedCollections
+
+import ..leastsquaresfit
+import ..curvefit
 
 include("util.jl")
 include("maybevector.jl")

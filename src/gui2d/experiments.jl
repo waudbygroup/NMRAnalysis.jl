@@ -243,22 +243,24 @@ function fit!(cluster::Vector{Int}, expt::Experiment)
         similar(expt.specdata.z[i][xbounds[i], ybounds[i]])
     end
     @debug "zsim" zsim maxlog=10
-    zsimm = similar(zobs)
+    resid_vec = similar(zobs)
     # create residual function
-    function resid(p)
-        @debug "resid (start)" maxlog=10
+    function resid!(r, p, _)
+        @debug "resid! (start)" maxlog=10
         unpack!(copy(p), peaks, :value)
         for i=1:nslices(expt)
             fill!(zsim[i], 0.0)
         end
         simulate!(zsim, cluster, expt, xbounds, ybounds)
-        zsimm .= reduce(vcat, vec.(zsim))[smallmask]
-        zobs - zsimm
+        r .= zobs
+        r .-= reduce(vcat, vec.(zsim))[smallmask]
+        @show sum(abs2, r)
+        r
     end
+    resid!(resid_vec, p0, nothing)
+    @debug "resid_vec" resid_vec maxlog=10
     @debug "running fit" maxlog=10
-    sol = LsqFit.lmfit(resid, p0, Float64[])
-    pfit = coef(sol)
-    perr = stderror(sol)
+    pfit, perr = nonlinearfit(resid!, resid_vec, p0)
     @debug "fit complete" pfit maxlog=10
     unpack!(pfit, peaks, :value)
     unpack!(perr, peaks, :uncertainty)

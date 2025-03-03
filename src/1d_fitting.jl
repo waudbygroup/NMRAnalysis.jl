@@ -48,17 +48,17 @@ function fit_diffusion(spec::NMRData{T,2}, selectors::Vector{Selector}, plotrang
 	model(g, p) = p[1] * exp.(-(γ*δ*σ*g).^2 .* (Δ - δ/3) .* p[2] .* 1e-10)
     p0 = [1.0, 1.0] # rough guess of scaled diffusion coefficient
 	fits = map(integrals) do y
-		curve_fit(model, g, y / maximum(y), p0)
+		curvefit(model, g, y / maximum(y), p0)
 	end
-	pars = map(coef, fits)
-	errs = map(stderror, fits)
+	pars = map(first, fits)
+	# errs = map(x->x[2], fits)
 	D = map(fits) do fit
-		(coef(fit)[2] ± stderror(fit)[2]) * 1e-10
+		(fit[1][2] ± fit[2][2]) * 1e-10
 	end
 
 	# plot results
 	x = LinRange(0, maximum(g)*1.1, 50)
-    yfits = map(fit -> model(x, fit), fits)
+    yfits = map(p -> model(x, p), pars)
 
     p1 = plot(frame=:box,
 			xlabel="G / T m-1",

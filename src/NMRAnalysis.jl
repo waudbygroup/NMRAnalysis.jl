@@ -1,12 +1,15 @@
 module NMRAnalysis
 
-using LsqFit
+using ForwardDiff
+using LinearAlgebra
 using Measurements
 using NMRTools
+using NonlinearSolve
 using Plots
 using Reexport
 using Statistics
 
+include("nonlinearfit.jl")
 include("viscosity.jl")
 include("diffusion.jl")
 include("tract.jl")
@@ -20,6 +23,7 @@ include("precompile.jl")
 export viscosity
 export tract
 export diffusion
+export leastsquaresfit, curvefit
 
 @reexport using .GUI2D: MaybeVector
 @reexport using .GUI2D: intensities2d, relaxation2d, recovery2d, modelfit2d # IntensityExperiment

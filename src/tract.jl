@@ -110,14 +110,14 @@ function tract(trosy::NMRData{T,2}, antitrosy::NMRData{T,2}) where {T}
     # 5. fit region
     model(t, p) = p[1] * exp.(-p[2] * t)
     p0 = [1.0, 5.0] # initial guesses for amplitude, R2
-    trosyfit = curve_fit(model, trosytau, trosyintegrals, p0)
-    antitrosyfit = curve_fit(model, antitrosytau, antitrosyintegrals, p0)
-    trosypars = coef(trosyfit) .± stderror(trosyfit)
-    antitrosypars = coef(antitrosyfit) .± stderror(antitrosyfit)
+    trosyfit, trosyfiterr = curvefit(model, trosytau, trosyintegrals, p0)
+    antitrosyfit, antitrosyfiterr = curvefit(model, antitrosytau, antitrosyintegrals, p0)
+    trosypars = trosyfit .± trosyfiterr
+    antitrosypars = antitrosyfit .± antitrosyfiterr
     trosyR2 = trosypars[2]
     antitrosyR2 = antitrosypars[2]
-    trosyI0 = coef(trosyfit)[1]
-    antitrosyI0 = coef(antitrosyfit)[1]
+    trosyI0 = trosyfit[1]
+    antitrosyI0 = antitrosyfit[1]
 
     # 6. calculate τc
     ΔR = antitrosyR2 - trosyR2
@@ -136,8 +136,8 @@ function tract(trosy::NMRData{T,2}, antitrosy::NMRData{T,2}) where {T}
     # 7. plot fitted region
     maxt = max(maximum(trosytau), maximum(antitrosytau))
     t = LinRange(0, maxt * 1.1, 100)
-    yfit1 = model(t, coef(trosyfit))
-    yfit2 = model(t, coef(antitrosyfit))
+    yfit1 = model(t, trosyfit)
+    yfit2 = model(t, antitrosyfit)
 
     p1 = scatter(1000trosytau, (trosyintegrals .± trosynoise) / trosyI0; label="TROSY",
                  frame=:box,

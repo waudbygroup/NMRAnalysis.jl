@@ -148,15 +148,15 @@ function diffusion(spec::NMRData{T,2}, coherence=SQ(H1)) where {T}
     model(g, p) = p[1] * exp.(-(γ * δ * σ * g * Gmax) .^ 2 .* (Δ - δ / 3) .* p[2] .* 1e-10)
 
     p0 = [1.0, 1.0] # initial guesses for amplitude, D
-    fit = curve_fit(model, g, integrals, p0)
-    pars = coef(fit) .± stderror(fit)
-    I0 = coef(fit)[1]
+    pfit, perr = curvefit(model, g, integrals, p0)
+    pars = pfit .± perr
+    I0 = pfit[1]
     D = pars[2] * 1e-10
 
     # 7. plot fitted region
     maxg = maximum(g)
     x = LinRange(0, maxg * 1.1, 100)
-    yfit = model(x, coef(fit))
+    yfit = model(x, pfit)
 
     p1 = scatter(g * Gmax, (integrals .± noise) / I0; label="observed",
                  frame=:box,
