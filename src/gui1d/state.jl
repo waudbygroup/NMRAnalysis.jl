@@ -1,11 +1,11 @@
 """
-    preparestate(expt::Experiment1D)
+    preparestate(expt::Experiment)
 
 Initialize the state dictionary for an experiment.
 """
-function preparestate(expt::Experiment1D)
+function preparestate!(expt::Experiment)
     @debug "Preparing state"
-    state = Dict{Symbol,Observable}()
+    state = expt.state
 
     # Mode can be :normal, :renaming, :renamingstart, :moving, :resizing, :fitting
     state[:mode] = Observable(:normal)
@@ -35,22 +35,10 @@ function preparestate(expt::Experiment1D)
     end
     
     # Region info text
-    state[:current_region_info] = lift(idx -> regioninfotext(expt, idx), state[:current_region_idx])
+    state[:current_region_info] = lift(idx -> regioninfo(expt, idx), state[:current_region_idx])
     
     # When renaming, store the old label
     state[:oldlabel] = Observable("")
-    
-    # Information about plot limits
-    state[:x_lims] = Observable((0.0, 10.0))
-    state[:y_lims] = Observable((0.0, 1.0))
-    
-    # Mouse position for drag operations
-    state[:mouse_start_pos] = Observable((0.0, 0.0))
-    state[:mouse_current_pos] = Observable((0.0, 0.0))
-    
-    # Drag operation details
-    state[:drag_region_idx] = Observable(0)
-    state[:drag_edge] = Observable(:none)  # :none, :left, :right, :both
     
     # Initialize GUI reference
     state[:gui] = Observable{Dict{Symbol,Any}}(Dict{Symbol,Any}())
@@ -58,15 +46,15 @@ function preparestate(expt::Experiment1D)
     # Add experiment-specific state
     completestate!(state, expt)
     
-    return state
+    return expt
 end
 
 """
-    completestate!(state, expt::Experiment1D)
+    completestate!(state, expt::Experiment)
 
 Complete initialization of state with experiment-specific observables.
 """
-function completestate!(state, expt::Experiment1D)
+function completestate!(state, ::Experiment)
     # Default implementation - no additional state needed
     return state
 end

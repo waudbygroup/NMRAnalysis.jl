@@ -1,31 +1,64 @@
 """
     Experiment
 
-An abstract type representing a type of experimental analysis.
+An abstract type representing an NMR experimental analysis workflow.
 
-# Implementation Requirements
+# Interface Requirements for Concrete Subtypes
 
 Concrete subtypes must implement:
-- `hasfixedpositions(expt)`: Check if the experiment has fixed peak positions between spectra
-- `addpeak!(expt, position)`: Add a peak to the experiment
-- `simulate!(z, peak, expt)`: Simulate a single peak
-- `mask!(z, peak, expt)`: Get the mask for a single peak
 
-Expected fields:
-- `peaks`: A list of peaks in the experiment
-- `specdata`: A SpecData object representing the observed and simulated data plus mask
-- `clusters`: An Observable list of clusters of peaks
-- `touched`: An Observable list of touched clusters
-- `isfitting`: An Observable boolean indicating if real-time fitting is active
+## Required Methods
+- `hasfixedpositions(expt::ConcreteExperiment)::Bool`: Indicates if peak positions are fixed across spectra
+- `addpeak!(expt::ConcreteExperiment, position::Point2f, [label::String], [xradius::Float64], [yradius::Float64])`: Add a peak at specified position
+- `simulate!(z, peak::Peak, expt::ConcreteExperiment, [xbounds], [ybounds])`: Simulate a single peak
+- `mask!(z, peak::Peak, expt::ConcreteExperiment)`: Generate mask for a single peak
+- `peakinfotext(expt::ConcreteExperiment, idx::Int)::String`: Return formatted text describing peak at index
+- `experimentinfo(expt::ConcreteExperiment)::String`: Return formatted text describing experiment
+- `slicelabel(expt::ConcreteExperiment, idx::Int)::String`: Return description for slice at index
+- `postfit!(peak::Peak, expt::ConcreteExperiment)`: Calculate derived parameters after spectrum fitting
 
-# Functions handled by the abstract type
+## Required Fields
+- `peaks::Observable{Vector{Peak}}`: List of peaks in the experiment
+- `specdata::SpecData`: Observed and simulated spectral data plus masks
+- `clusters::Observable{Vector{Vector{Int}}}`: Groups of overlapping peaks
+- `touched::Observable{Vector{Bool}}`: Which clusters have been modified
+- `isfitting::Observable{Bool}`: Whether real-time fitting is active
+- `xradius::Observable{Float64}`: Default X-radius for new peaks
+- `yradius::Observable{Float64}`: Default Y-radius for new peaks
+- `state::Observable{Dict}`: UI and program state
 
-- `nslices(expt)`: Get the number of slices in the experiment
-- `npeaks(expt)`: Get the number of peaks in the experiment
-- `mask!([z], [peaks], expt)`: Calculate peak masks and update internal specdata
-- `simulate!([z], [peaks], expt)`: Simulate the experiment and update internal specdata
-- `fit!(expt)`: Fit the peaks in the experiment
+# Generic Functionality (Provided by Abstract Base)
 
+The following methods are implemented for all experiment types:
+
+## Measurement and Access
+- `nslices(expt)`: Number of spectra in the experiment
+- `npeaks(expt)`: Number of peaks currently in the experiment
+- `visualisationtype(expt)`: Returns the visualization strategy for the experiment (can be overridden)
+
+## Peak Manipulation
+- `movepeak!(expt, idx, newpos)`: Move peak at index to new position
+- `deletepeak!(expt, idx)`: Delete peak at specified index
+- `deleteallpeaks!(expt)`: Remove all peaks from experiment
+
+## Clustering and Fitting
+- `cluster!(expt)`: Update experiment with non-overlapping clusters for fitting
+- `checktouched!(expt)`: Update which clusters have been modified
+- `fit!(expt)`: Fit all touched peaks/clusters in experiment
+- `fit!(cluster::Vector{Int}, expt)`: Fit a specific cluster of peaks
+
+## Simulation and Masking
+- `simulate!(expt)`: Simulate all peaks and update internal specdata
+- `simulate!(z, expt)`: Simulate all peaks into provided array
+- `simulate!(z, cluster::Vector{Int}, expt, [xbounds], [ybounds])`: Simulate specific cluster
+- `mask!(expt)`: Calculate masks for all peaks and update internal specdata
+- `mask!(z, expt)`: Calculate masks for all peaks into provided array
+- `mask(cluster::Vector{Int}, expt)`: Generate mask for a cluster
+- `bounds(mask)`: Generate X and Y bounds from a mask
+
+# Useful Subtypes
+- `FixedPeakExperiment`: Peaks have identical positions in all slices
+- `MovingPeakExperiment`: Peaks can have different positions in each slice    
 """
 
 # implementations

@@ -7,24 +7,29 @@ using Plots
 using Reexport
 using Statistics
 
+include("util/util.jl")
+using .Util
+@reexport using .Util: MaybeVector
+
 include("viscosity.jl")
-include("diffusion.jl")
-include("tract.jl")
+export viscosity
+
+include("gui1d/GUI1D.jl")
+using .GUI1D
+
+# @reexport using .GUI1D: diffusion1d, relaxation1d, modelfit1d
 
 include("gui2d/GUI2D.jl")
 using .GUI2D
 
-using PrecompileTools
-include("precompile.jl")
-
-export viscosity
-export tract
-export diffusion
-
-@reexport using .GUI2D: MaybeVector
 @reexport using .GUI2D: intensities2d, relaxation2d, recovery2d, modelfit2d # IntensityExperiment
 @reexport using .GUI2D: hetnoe2d # HetNOEExperiment
 @reexport using .GUI2D: pre2d # PREExperiment
+
+using PrecompileTools
+include("precompile.jl")
+
+
 
 @info """
 NMRAnalysis.jl (v$(pkgversion(NMRAnalysis)))
@@ -35,13 +40,15 @@ NMRAnalysis.jl (v$(pkgversion(NMRAnalysis)))
   cd("/Users/chris/NMR/crick-702/my_experiment_directory")
 - call the desired analysis routine
 
-Available analysis routines:
-- tract()
-- diffusion()
+# 1D experiments
 
-# 2D Experiment Analysis
+- tract1d()
+- diffusion1d()
+- relaxation1d()
+- modelfit1d()
 
-Available interfaces:
+# 2D experiments
+
 - intensities2d()
 - relaxation2d()
 - recovery2d()

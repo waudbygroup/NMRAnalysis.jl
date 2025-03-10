@@ -1,278 +1,70 @@
 """
-    Experiment1D
+    Experiment
 
-An abstract type representing a type of 1D experimental analysis.
+An abstract type representing a 1D experimental analysis.
 
-# Implementation Requirements
+# Interface Requirements for Concrete Subtypes
 
 Concrete subtypes must implement:
-- `integrate!(region::Region, expt)`: Calculate integral for a region
-- `fit!(region::Region, expt)`: Fit the region data
-- `postfit!(region::Region, expt)`: Perform post-fitting calculations
 
-Expected fields:
-- `specdata`: A SpecData1D object representing the observed data
-- `regions`: An Observable list of integration regions
-- `isfitting`: An Observable boolean indicating if real-time fitting is active
-- `state`: An Observable dictionary of state variables
-- `colors`: A vector of colors for regions
-"""
+## Required Methods
+- `fit(integrals, expt)`: Calculate derived parameters after integration
+- `experimentinfo(expt)`: Return formatted text describing experiment
+- `regioninfo(expt, idx)`: Return formatted text describing region at index
+- `sliceinfo(expt, idx)`: Return description for slice at index
 
-"""
-    nslices(expt::Experiment1D)
+## Required Fields
+- `regions::Observable{Vector{Region}}`: List of regions in the experiment
+- `specdata::SpecData`: Observed spectral data
+- `state::Dict{Symbol,Observable}`: UI and program state
 
-Number of spectra in the experiment.
-"""
-nslices(expt::Experiment1D) = length(expt.specdata.y)
+# Generic Functionality (Provided by Abstract Base)
 
-"""
-    nregions(expt::Experiment1D) 
-
-Number of regions currently in the experiment.
-"""
-nregions(expt::Experiment1D) = length(expt.regions[])
-
-"""
-    setupexptobservables!(expt)
-
-Set up observables and callbacks for the experiment.
-"""
-function setupexptobservables!(expt)
-    on(expt.regions) do _
-        @debug "Regions changed"
-        checktouched!(expt)
-    end
+The following methods are implemented for all experiment types:
     
-    on(expt.isfitting) do _
-        @debug "Fitting status changed"
-        if expt.isfitting[]
-            fit!(expt)
-        end
-    end
+## Measurement and Access
+- `nslices(expt)`: Number of spectra in the experiment
+- `nregions(expt)`: Number of regions currently in the experiment
+- `visualisationtype(expt)`: Returns the visualization strategy for the experiment (can be overridden)
     
-    return expt
-end
-
+## Region Manipulation
+- `addregion!(expt, x1, x2, [label::String])`: Add an integration region at specified position
+- `deleteregion!(expt, idx)`: Delete region at specified index
+- `deleteallregions!(expt)`: Remove all regions from experiment
 """
-    checktouched!(expt)
 
-Update which regions have been modified.
-"""
-function checktouched!(expt::Experiment1D)
-    @debug "Checking touched regions" 
-    
-    # Check if any region is touched and needs fitting
-    if expt.isfitting[]
-        anytouched = any(region -> region.touched[], expt.regions[])
-        if anytouched
-            fit!(expt)
-        end
+nslices(expt::Experiment) = length(expt.specdata.z)
+nregions(expt::Experiment) = length(expt.regions[])
+visualisationtype(::Experiment) = SimpleVisualisation()
+setupexptobservables!(::Experiment) = nothing
+fit(_, ::Experiment) = Dict{Symbol, Parameter}()
+
+function integrate(x1, x2, expt::Experiment)
+    xl = min(x1, x2)
+    xh = max(x1, x2)
+    sd = expt.specdata
+    map(1:nslices(expt)) do i
+        sum(sd.y[i][findall(x -> xl <= x <= xh, sd.x[i]),:], dims=1)
     end
 end
 
-"""
-    preparespecdata(inputfilenames, ::Type{E}) where E <: Experiment1D
-
-Load NMR data and prepare the SpecData1D object.
-"""
-function preparespecdata(inputfilenames, ::Type{E}) where E <: Experiment1D
-    @debug "Preparing spec data for experiment: $inputfilenames"
-    
-    # Handle single file case
-    if inputfilenames isa String
-        return loadsingleexperiment(inputfilenames, E)
-    end
-    
-    # Handle multiple files case
-    if inputfilenames isa Vector{String}
-        return loadmultipleexperiments(inputfilenames, E)
-    end
-    
-    error("Unsupported input format")
+function addregion!(expt, x1, x2, label="")
+    push!(expt.regions[], Region(x1, x2, label, expt))
+    expt.state[:current_peak_idx][] = length(expt.regions[])
 end
 
-"""
-    loadsingleexperiment(inputfilename, ::Type{E}) where E <: Experiment1D
-
-Load a single NMR experiment and prepare SpecData1D.
-"""
-function loadsingleexperiment(inputfilename, ::Type{E}) where E <: Experiment1D
-    @debug "Loading single experiment: $inputfilename"
-    
-    # Load NMR data
-    nmrdata = loadnmr(inputfilename)
-    
-    # Extract data
-    if ndims(nmrdata) == 2  # Pseudo-2D
-        # Get axis data
-        x = data(nmrdata, F1Dim)
-        
-        # Get intensity data for each slice
-        y = [data(nmrdata, i) for i in 1:size(nmrdata, 2)]
-        
-        # Estimate noise for each slice
-        σ = [nmrdata[:noise] for _ in 1:length(y)]
-        
-        # Create slice labels
-        zlabels = ["Slice $i" for i in 1:length(y)]
-    else  # 1D
-        # Get axis data
-        x = [data(nmrdata, F1Dim)]
-        
-        # Get intensity data
-        y = [data(nmrdata)]
-        
-        # Estimate noise
-        σ = [nmrdata[:noise]]
-        
-        # Create slice label
-        zlabels = ["Spectrum"]
+function deleteregion!(expt, idx)
+    # update current peak index if necessary
+    if expt.state[:current_peak_idx][] == idx
+        expt.state[:current_peak_idx][] = 0
+    elseif expt.state[:current_peak_idx][] > idx
+        expt.state[:current_peak_idx][] -= 1
     end
-    
-    # Create observables for plotting
-    xplot = Observable(x[1])
-    yplot = Observable(y[1])
-    
-    return SpecData1D(nmrdata, x, y, σ, zlabels, xplot, yplot)
+    # delete row idx from regions matrix
+    expt.regions[] = vcat(expt.regions[][1:idx-1, :], expt.regions[][idx+1:end, :])
 end
 
-"""
-    loadmultipleexperiments(inputfilenames, ::Type{E}) where E <: Experiment1D
-
-Load multiple NMR experiments and prepare SpecData1D.
-"""
-function loadmultipleexperiments(inputfilenames, ::Type{E}) where E <: Experiment1D
-    @debug "Loading multiple experiments: $inputfilenames"
-    
-    # Load all NMR data
-    nmrdata_list = map(loadnmr, inputfilenames)
-    
-    # Extract data
-    x = map(nmr -> data(nmr, F1Dim), nmrdata_list)
-    y = map(data, nmrdata_list)
-    σ = map(nmr -> nmr[:noise], nmrdata_list)
-    
-    # Create slice labels from filenames
-    zlabels = map(nmr -> basename(nmr[:filename]), nmrdata_list)
-    
-    # Create observables for plotting
-    xplot = Observable(x[1])
-    yplot = Observable(y[1])
-    
-    return SpecData1D(nmrdata_list, x, y, σ, zlabels, xplot, yplot)
-end
-
-"""
-    Base.show(io::IO, expt::Experiment1D)
-
-Display basic information about the experiment.
-"""
-function Base.show(io::IO, expt::Experiment1D)
-    print(io, "$(typeof(expt))($(nregions(expt)) regions, $(nslices(expt)) slices)")
-end
-
-"""
-    Base.show(io::IO, mime::MIME"text/plain", expt::Experiment1D)
-
-Display detailed information about the experiment.
-"""
-function Base.show(io::IO, mime::MIME"text/plain", expt::Experiment1D)
-    println(io, "$(typeof(expt))")
-    println(io, "  $(nregions(expt)) regions")
-    println(io, "  $(nslices(expt)) slices")
-    println(io, "  fitting: $(expt.isfitting[])")
-end
-
-"""
-    renameregion!(expt, state, initiator)
-
-Start the process of renaming a region.
-"""
-function renameregion!(expt, state, initiator)
-    @debug "Renaming region"
-    
-    if initiator == :keyboard
-        state[:mode][] = :renamingstart
-    else
-        state[:mode][] = :renaming
-    end
-    
-    state[:oldlabel][] = state[:current_region][].label[]
-    state[:current_region][].label[] = "‸"
-    notify(expt.regions)
-end
-
-"""
-    experimentinfo(expt::Experiment1D)
-
-Return formatted text describing the experiment.
-"""
-function experimentinfo(expt::Experiment1D)
-    return "Analysis type: $(typeof(expt))\n" *
-           "Number of regions: $(nregions(expt))\n" *
-           "Number of slices: $(nslices(expt))"
-end
-
-"""
-    slicelabel(expt::Experiment1D, idx)
-
-Return descriptive text for slice idx.
-"""
-function slicelabel(expt::Experiment1D, idx)
-    if idx > 0 && idx <= length(expt.specdata.zlabels)
-        return "$(expt.specdata.zlabels[idx]) ($idx of $(nslices(expt)))"
-    else
-        return "Invalid slice index: $idx"
-    end
-end
-
-"""
-    regioninfotext(expt::Experiment1D, idx)
-
-Return formatted text describing region idx.
-"""
-function regioninfotext(expt::Experiment1D, idx)
-    if idx == 0
-        return "No region selected"
-    end
-    
-    region = expt.regions[][idx]
-    
-    if !region.postfitted[]
-        return "Region: $(region.label[])\nNot fitted"
-    end
-    
-    # Common region information
-    info = [
-        "Region: $(region.label[])",
-        "Range: $(round(region.xstart[], digits=3)) - $(round(region.xend[], digits=3)) ppm",
-        "Width: $(round(width(region), digits=3)) ppm"
-    ]
-    
-    # Add model-specific parameters if any
-    if !isempty(region.postparameters)
-        push!(info, "")
-        push!(info, "Fitted parameters:")
-        for (_, param) in region.postparameters
-            push!(info, "$(param.label): $(param.value[][1]) ± $(param.uncertainty[][1])")
-        end
-    end
-    
-    return join(info, "\n")
-end
-
-"""
-    update_specdata_display!(expt::Experiment1D)
-
-Update the displayed spectrum data.
-"""
-function update_specdata_display!(expt::Experiment1D)
-    # Get current slice
-    slice_idx = expt.state[][:current_slice][]
-    
-    # Update x and y data
-    if slice_idx > 0 && slice_idx <= nslices(expt)
-        expt.specdata.xplot[] = expt.specdata.x[slice_idx]
-        expt.specdata.yplot[] = expt.specdata.y[slice_idx]
-    end
+function deleteallregions!(expt)
+    expt.state[:current_peak_idx][] = 0
+    expt.regions[] = zeros(0, 2)
 end

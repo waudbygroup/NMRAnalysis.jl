@@ -10,8 +10,9 @@ using NativeFileDialog
 using NMRTools
 using OrderedCollections
 
+using ..Util
+
 include("util.jl")
-include("maybevector.jl")
 include("types.jl")
 include("parameters.jl")
 include("specdata.jl")
@@ -26,20 +27,11 @@ include("keyboard.jl")
 include("files.jl")
 include("visualisation.jl")
 
-export MaybeVector
-# export gui!
-
-
-# export IntensityExperiment
 export intensities2d
 export relaxation2d
 export recovery2d
 export modelfit2d
-
-# export HetNOEExperiment
 export hetnoe2d
-
-# export PREExperiment
 export pre2d
 
 end
