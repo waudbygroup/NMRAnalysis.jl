@@ -32,6 +32,7 @@ Expected fields:
 include("expt-intensitybased.jl")
 include("expt-hetnoe.jl")
 include("expt-PRE.jl")
+include("expt-cest.jl")
 
 # generic functions
 

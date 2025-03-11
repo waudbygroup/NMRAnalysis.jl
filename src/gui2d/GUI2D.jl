@@ -39,6 +39,9 @@ export modelfit2d
 # export HetNOEExperiment
 export hetnoe2d
 
+# export CESTExperiment
+export cest2d
+
 # export PREExperiment
 export pre2d
 
