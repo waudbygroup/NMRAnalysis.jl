@@ -54,6 +54,10 @@ hasfixedpositions(expt::FixedPeakExperiment) = true
 hasfixedpositions(expt::MovingPeakExperiment) = false
 
 function setupexptobservables!(expt)
+    xres = abs(expt.specdata.x[1][2] - expt.specdata.x[1][1])
+    yres = abs(expt.specdata.y[1][2] - expt.specdata.y[1][1])
+    expt.xradius[] = clamp(4*xres, 0.04, 0.1)
+    expt.yradius[] = clamp(4*yres, 0.1, 0.8)
     on(expt.peaks) do _
         @debug "Peaks changed"
         mask!(expt)

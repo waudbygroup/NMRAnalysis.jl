@@ -88,22 +88,22 @@ end
 function postfit!(peak::Peak, expt::IntensityExperiment, model::ParametricModel)
     @debug "Post-fitting model"
     x = expt.x
-    @show y = peak.parameters[:amp].value[]
+    y = peak.parameters[:amp].value[]
     
     # Initial parameter estimates
-    @show p0 = collect(values(estimate_parameters(x, y, model)))
+    p0 = collect(values(estimate_parameters(x, y, model)))
     
     # Fit the model
     fit = curve_fit(model.func, x, y, p0)
     pfit = coef(fit)
-    @show perr = stderror(fit)
+    perr = stderror(fit)
     
     # Update post-parameters with fitted values
     for (i, name) in enumerate(model.param_names)
-        @show i, name
-        @show param = peak.postparameters[Symbol(name)]
-        @show param.value[] .= pfit[i]
-        @show param.uncertainty[] .= perr[i]
+        i, name
+        param = peak.postparameters[Symbol(name)]
+        param.value[] .= pfit[i]
+        param.uncertainty[] .= perr[i]
     end
     
     @debug "Fitted parameters: $(peak.postparameters)"

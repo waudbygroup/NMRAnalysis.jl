@@ -94,7 +94,7 @@ function gui!(expt::FixedPeakExperiment)
     g[:sgradii] = SliderGrid(g[:panelinfo][3, 1:2],
                              (label="X radius", range=0.02:0.005:0.1, format="{:.3f} ppm",
                               startvalue=expt.xradius[]),
-                             (label="Y radius", range=0.1:0.02:0.5, format="{:.2f} ppm",
+                             (label="Y radius", range=0.1:0.02:0.8, format="{:.2f} ppm",
                               startvalue=expt.yradius[])) # width = 350, tellheight = false)
     g[:sliderxradius] = g[:sgradii].sliders[1].value
     g[:slideryradius] = g[:sgradii].sliders[2].value

@@ -7,14 +7,16 @@ Start interactive GUI for analyzing 2D CEST (Chemical Exchange Saturation Transf
 - `inputfilename`: NMR data file as a processed data directory containing pseudo-3D data
                    where the first plane is the reference spectrum and subsequent planes
                    are the saturation spectra
+- `B1`: Saturation power in Hz
+- `Tsat`: Saturation time in seconds
 
 # Example:
 ```julia
-cest2d("path/to/expno/pdata/1")
+cest2d("path/to/expno/pdata/1", 15, 0.3)
 ```
 """
-function cest2d(inputfilename)
-    expt = CESTExperiment(inputfilename)
+function cest2d(inputfilename, B1, Tsat)
+    expt = CESTExperiment(inputfilename, B1, Tsat)
     gui!(expt)
 end
 
@@ -32,6 +34,8 @@ struct CESTExperiment <: FixedPeakExperiment
     specdata::Any
     peaks::Any
     frequencies::Vector{Float64}
+    B1::Float64
+    Tsat::Float64
 
     clusters::Any
     touched::Any
@@ -41,8 +45,8 @@ struct CESTExperiment <: FixedPeakExperiment
     yradius::Any
     state::Any
 
-    function CESTExperiment(specdata, peaks, frequencies)
-        expt = new(specdata, peaks, frequencies,
+    function CESTExperiment(specdata, peaks, frequencies, B1, Tsat)
+        expt = new(specdata, peaks, frequencies, B1, Tsat,
                    Observable(Vector{Vector{Int}}()), # clusters
                    Observable(Vector{Bool}()), # touched
                    Observable(true), # isfitting
@@ -64,7 +68,8 @@ visualisationtype(::CESTExperiment) = CESTVisualisation()
 Create CEST experiment from a pseudo-3D input file where the first plane is the reference
 and the remaining planes are saturation spectra at different frequencies.
 """
-function CESTExperiment(inputfilename)
+function CESTExperiment(inputfilename, B1, Tsat)
+    @debug "Creating CEST experiment from $inputfilename with B1=$B1 Hz and Tsat=$Tsat s"
     spec = loadnmr(inputfilename)
     
     # Extract saturation frequencies from fq3list using proper NMRTools methods
@@ -81,7 +86,7 @@ function CESTExperiment(inputfilename)
     specdata = preparespecdata(inputfilename, frequencies, CESTExperiment)
     peaks = Observable(Vector{Peak}())
 
-    return CESTExperiment(specdata, peaks, frequencies)
+    return CESTExperiment(specdata, peaks, frequencies, B1, Tsat)
 end
 
 # Load the NMR data and prepare the SpecData object
@@ -142,9 +147,8 @@ function addpeak!(expt::CESTExperiment, initialposition::Point2f, label="",
     newpeak.parameters[:amp] = amp
 
     # Add post-parameters for CEST analysis
-    newpeak.postparameters[:ref_amp] = Parameter("Reference Amplitude", 0.0)
-    newpeak.postparameters[:min_intensity] = Parameter("Minimum Intensity", 0.0)
-    newpeak.postparameters[:min_frequency] = Parameter("Minimum Frequency", 0.0)
+    newpeak.postparameters[:R1] = Parameter("R1", 0.0)
+    newpeak.postparameters[:R2] = Parameter("R2", 0.0)
     
     push!(expt.peaks[], newpeak)
     notify(expt.peaks)
@@ -185,28 +189,32 @@ end
 function postfit!(peak::Peak, expt::CESTExperiment)
     @debug "Post-fitting peak $(peak.label)" maxlog = 10
     
-    # Get amplitudes with uncertainties
-    A = peak.parameters[:amp].value[] .± peak.parameters[:amp].uncertainty[]
+    δsat = expt.frequencies[2:end]
+    δ0 = peak.parameters[:y].value[][1]
+    R20 = peak.parameters[:R2y].value[][1]
+    v0 = δ0 * expt.specdata.nmrdata[1][2, :bf]
+    vsat = δsat .* expt.specdata.nmrdata[1][2, :bf]
+    Tsat = expt.Tsat
+    v1 = expt.B1
     
-    # Reference amplitude is the first plane
-    ref_amp = A[1]
+    zspecobs = peak.parameters[:amp].value[][2:end] ./ peak.parameters[:amp].value[][1]
+    p0 = [1.5, R20] # R1, R2 
     
-    # Calculate relative intensities (I/I0)
-    rel_intensities = A ./ ref_amp
+    # Fit the model
+    model(x,p) = Z(x, v0, v1, Tsat, p[1], p[2])
+    fit = curve_fit(model, vsat, zspecobs, p0)
+    pfit = coef(fit)
+    perr = stderror(fit)
+    # pfit = p0
+    # perr = [0.1, 0.1]
     
-    # Store reference amplitude
-    peak.postparameters[:ref_amp].value[] .= Measurements.value(ref_amp)
-    peak.postparameters[:ref_amp].uncertainty[] .= Measurements.uncertainty(ref_amp)
+    # Update post-parameters with fitted values
+    peak.postparameters[:R1].value[] .= pfit[1]
+    peak.postparameters[:R1].uncertainty[] .= perr[1]
+    peak.postparameters[:R2].value[] .= pfit[2]
+    peak.postparameters[:R2].uncertainty[] .= perr[2]
     
-    # Find minimum intensity and corresponding frequency
-    min_idx = findmin(Measurements.value.(rel_intensities[2:end]))[2] + 1  # +1 because we skipped first element
-    min_intensity = rel_intensities[min_idx]
-    min_frequency = expt.frequencies[min_idx]
-    
-    peak.postparameters[:min_intensity].value[] .= Measurements.value(min_intensity)
-    peak.postparameters[:min_intensity].uncertainty[] .= Measurements.uncertainty(min_intensity)
-    peak.postparameters[:min_frequency].value[] .= min_frequency
-    
+    @debug "Fitted parameters: $(peak.postparameters)"
     peak.postfitted[] = true
 end
 
@@ -228,12 +236,11 @@ function peakinfotext(expt::CESTExperiment, idx)
     peak = expt.peaks[][idx]
     if peak.postfitted[]
         return "Peak: $(peak.label[])\n" *
-               "Min Intensity: $(peak.postparameters[:min_intensity].value[][1] ± peak.postparameters[:min_intensity].uncertainty[][1])\n" *
-               "Min Frequency: $(peak.postparameters[:min_frequency].value[][1]) ppm\n" *
+               "R1: $(peak.postparameters[:R1].value[][1] ± peak.postparameters[:R1].uncertainty[][1]) s⁻¹\n" *
+               "R2: $(peak.postparameters[:R2].value[][1] ± peak.postparameters[:R2].uncertainty[][1]) s⁻¹\n" *
                "\n" *
                "δX: $(peak.parameters[:x].value[][1] ± peak.parameters[:x].uncertainty[][1]) ppm\n" *
                "δY: $(peak.parameters[:y].value[][1] ± peak.parameters[:y].uncertainty[][1]) ppm\n" *
-               "Reference Amplitude: $(peak.postparameters[:ref_amp].value[][1] ± peak.postparameters[:ref_amp].uncertainty[][1])\n" *
                "X Linewidth: $(peak.parameters[:R2x].value[][1] ± peak.parameters[:R2x].uncertainty[][1]) s⁻¹\n" *
                "Y Linewidth: $(peak.parameters[:R2y].value[][1] ± peak.parameters[:R2y].uncertainty[][1]) s⁻¹"
     else
@@ -254,7 +261,7 @@ end
 ## Visualisation
 function get_cest_data(peak, expt::CESTExperiment)
     @debug "getting CEST data"
-    isnothing(peak) && return (Float64[], Point2f[], [(0.0, 0.0, 0.0)], 0.0)
+    isnothing(peak) && return (Point2f[], [(0.0, 0.0, 0.0)], 0.0, Point2f[])
 
     # X-axis will be frequency values
     x = expt.frequencies[2:end]
@@ -263,7 +270,7 @@ function get_cest_data(peak, expt::CESTExperiment)
     amp = peak.parameters[:amp].value[]
     amp_err = peak.parameters[:amp].uncertainty[]
     ref_amp = 1.0  # Reference amplitude is always 1.0
-    ref_err = amp[1] > 0 ? amp_err[1] / amp[1] : 0.0
+    ref_err = amp[1] > 0 ? amp_err[1] / amp[1] : 0.1
     
     # Calculate relative intensities
     y = amp[2:end] ./ amp[1]
@@ -274,45 +281,51 @@ function get_cest_data(peak, expt::CESTExperiment)
     # Create error tuples for plotting (without propagating reference uncertainty)
     obs_points = Point2f.(x, y)
     obs_err = collect(zip(x, y, yerr))
+
+    # Calculate fit line if peak has been fitted
+    if peak.postfitted[]
+        δ0 = peak.parameters[:y].value[][1]
+        v0 = δ0 * expt.specdata.nmrdata[1][2, :bf]
+        vsat = x * expt.specdata.nmrdata[1][2, :bf]
+        Tsat = expt.Tsat
+        v1 = expt.B1
+        R1 = peak.postparameters[:R1].value[][1]
+        R2 = peak.postparameters[:R2].value[][1]
     
-    return (x, obs_points, obs_err, ref_err)
+        ypred = Z.(vsat, v0, v1, Tsat, R1, R2)
+        fit_points = Point2f.(x, ypred)
+    else
+        fit_points = Point2f[]
+    end
+    
+    return (obs_points, obs_err, ref_err, fit_points)
 end
 
 function completestate!(state, expt, ::CESTVisualisation)
     @debug "completing state for CEST visualisation"
     state[:peak_plot_data] = lift(peak -> get_cest_data(peak, expt), state[:current_peak])
-    state[:peak_plot_x] = lift(d -> d[1], state[:peak_plot_data])
-    state[:peak_plot_obs] = lift(d -> d[2], state[:peak_plot_data])
-    state[:peak_plot_err] = lift(d -> d[3], state[:peak_plot_data])
-    state[:peak_plot_ref_err] = lift(d -> d[4], state[:peak_plot_data])
+    # state[:peak_plot_x] = lift(d -> d[1], state[:peak_plot_data])
+    state[:peak_plot_obs] = lift(d -> d[1], state[:peak_plot_data])
+    state[:peak_plot_err] = lift(d -> d[2], state[:peak_plot_data])
+    state[:peak_plot_ref_err] = lift(d -> d[3], state[:peak_plot_data])
+    state[:peak_plot_fit] = lift(d -> d[4], state[:peak_plot_data])
 end
 
 function plot_peak!(panel, peak, expt, ::CESTVisualisation)
     @debug "plotting peak for CEST visualisation"
 
-    x, obs_points, obs_err, ref_err = get_cest_data(peak, expt)
+    obs_points, obs_err, ref_err, fit_points = get_cest_data(peak, expt)
     
     ax = Axis(panel[1, 1],
               xlabel="Saturation frequency (ppm)",
               ylabel="Relative intensity (I/I₀)")
               
-    # Add reference line at y=1
-    hlines!(ax, [1.0]; linewidth=1, color=:gray, linestyle=:dash)
-    
-    # Plot uncertainty of reference as a shaded band
-    if ref_err > 0
-        band!(ax, x, fill(1.0 + ref_err, length(x)), fill(1.0 - ref_err, length(x)), 
-              color=(:gray, 0.2))
-    end
-    
-    # Plot data points with error bars
+    hlines!(ax, [0.0]; linewidth=0, color=:black) # sneaky way to ensure axis goes to zero
+    hlines!(ax, [1.0]; linewidth=1, color=:gray, linestyle=:dash) # Add reference line at y=1
+    hspan!(ax, 1-ref_err, 1+ref_err, color=(:gray, 0.2))
     errorbars!(ax, obs_err; whiskerwidth=10)
-    
-    # Plot data points
     scatter!(ax, obs_points)
-    
-    # Connect data points with a line
-    lines!(ax, obs_points)
+    lines!(ax, fit_points; color=:red)
 end
 
 function makepeakplot!(gui, state, expt, ::CESTVisualisation)
@@ -322,17 +335,36 @@ function makepeakplot!(gui, state, expt, ::CESTVisualisation)
                                 ylabel="Relative intensity (I/I₀)",
                                 title="CEST Profile")
     
-    # Add reference line at y=1
+    hlines!(ax, [0.0]; linewidth=0, color=:black) # sneaky way to ensure axis goes to zero
     hlines!(ax, [1.0]; linewidth=1, color=:gray, linestyle=:dash)
-    
-    # Plot uncertainty of reference as a shaded band
-    band!(ax, state[:peak_plot_x][], 
-          fill(1.0 + state[:peak_plot_ref_err][], length(state[:peak_plot_x][])), 
-          fill(1.0 - state[:peak_plot_ref_err][], length(state[:peak_plot_x][])), 
-          color=(:gray, 0.2))
-    
-    
+    hspan!(ax, lift(e -> 1-e, state[:peak_plot_ref_err]),
+               lift(e -> 1+e, state[:peak_plot_ref_err]),
+               color=(:gray, 0.2))
     errorbars!(ax, state[:peak_plot_err]; whiskerwidth=10)
     scatter!(ax, state[:peak_plot_obs])
-    lines!(ax, state[:peak_plot_obs])
+    lines!(ax, state[:peak_plot_fit]; color=:red)
+end
+
+
+
+## CEST fitting (exchange free)
+function Z(vsat, v0, v1, Tsat, R1, R2)
+    # https://iopscience.iop.org/article/10.1088/0031-9155/58/22/R221
+
+    ωsat = 2π * vsat # s-1
+    ω0 = 2π * v0 # s-1
+    ω1 = 2π * v1 # s-1
+    Δω = ω0 .- ωsat
+
+    cosθ = @. Δω / sqrt(ω1^2 + Δω^2)
+    R1res = cosθ * R1
+    Pz = cosθ
+    Pzeff = cosθ
+
+    Reff = @. (R2-R1) * ω1^2 / (ω1^2 + Δω^2)
+
+    Zss = @. Pz*R1res / Reff
+    Z = @. (Zss + (Pzeff*Pz - Zss) * exp(-Tsat * Reff)) * exp(-Tsat * R1)
+
+    return Z
 end
