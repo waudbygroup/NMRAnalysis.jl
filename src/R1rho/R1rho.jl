@@ -7,9 +7,11 @@ using LinearAlgebra
 using LsqFit
 using Measurements
 using NMRTools
+using Printf
+using Random
 using Statistics
 
-export r1rho
+export r1rho, setupR1rhopowers
 using ..NMRAnalysis: select_expts
 
 include("dataset.jl")
@@ -18,6 +20,7 @@ include("experiments.jl")
 include("fitting.jl")
 include("state.jl")
 include("gui.jl")
+include("calibrations.jl")
 
 function r1rho(directory_path="")
     @info "Select a numbered experiment folder or parent directory"

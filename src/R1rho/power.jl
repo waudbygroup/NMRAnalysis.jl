@@ -23,11 +23,26 @@ function convert_dB_to_Hz(dB, expt)
     
     # Get the reference pulse length
     p1 = acqus(expt, :p, 1) * 1e-6 # p1 in seconds 
-    νref = 1/(4*p1) # p1 in seconds 
 
-    # Apply the conversion to the input power
+    # Apply the conversion to the input power(s)
+    return convert_dB_to_Hz.(dB, dBref, p1)
+end
+
+function convert_dB_to_Hz(dB, dBref, pref)
+    νref = 1/(4*pref) # pulse length in seconds 
     ΔdB = dB .- dBref
     return @. νref * 10^(-ΔdB / 20)
+end
+
+function convert_Hz_to_dB(νHz, dBref, pref)
+    νref = 1/(4*pref)
+    ratio = νHz / νref
+        
+    # Calculate delta_dB
+    delta_dB = log10(ratio) * -20
+    
+    # Calculate the final power
+    return dBref + delta_dB
 end
 
 convert_W_to_Hz(plW, expt) = convert_dB_to_Hz(convert_W_to_dB(plW), expt)
