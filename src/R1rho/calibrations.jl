@@ -32,15 +32,19 @@ function setupR1rhopowers()
     # Calculate the final powers
     final_powers = convert_Hz_to_dB.(target_spinlock_strengths, pldb1, p1)
     
-    # Shuffle the final powers list
-    shuffle!(final_powers)
+    # Shuffle the final powers list and the corresponding spinlock strengths
+    shuffled_indices = shuffle(1:length(final_powers))
+    shuffled_final_powers = final_powers[shuffled_indices]
+    shuffled_spinlock_strengths = target_spinlock_strengths[shuffled_indices]
     
     # Print the final powers in the specified format
+    println()
+    println("The default spinlock strengths are:", shuffled_spinlock_strengths)
     println()
     println("Copy & paste the list provided between the dashed lines.")
     println(line_break)
     println("dB")
-    for power in final_powers
+    for power in shuffled_final_powers
         println(@sprintf("%.2f", power))
     end
     println(line_break)
