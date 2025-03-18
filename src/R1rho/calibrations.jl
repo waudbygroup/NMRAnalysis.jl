@@ -20,6 +20,9 @@ function setupR1rhopowers()
     
     println()
     println("$magenta Input your own list of target spinlock strengths (in Hz) separated by commas, or press enter for a default list:$reset")
+    println()
+    println("The default spinlock strengths are: [100, 200, 300, 500, 750, 1000, 1500, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000, 11000, 12000, 13000, 14000, 15000]")
+    println()
     print("> ")
     input = readline()
     
@@ -29,6 +32,24 @@ function setupR1rhopowers()
         target_spinlock_strengths = parse.(Float64, split(input, ","))
     end
     
+        # Check for high spinlock strengths
+    high_spinlock_strength = 13000
+    max_spinlock_strength = 15000
+    if any(x -> x > high_spinlock_strength, target_spinlock_strengths)
+        println()
+        println("$magenta WARNING - high spin-lock powers may cause damage to your probe! 
+ Check association spin-lock duration is within acceptable power limits. 
+ Maximum spin-lock strength will be $max_spinlock_strength Hz. 
+ Type 'yes' to proceed. Do you want to proceed? (yes/no):$reset")
+        println()
+        print("> ")
+        confirmation = readline()
+        if lowercase(confirmation) != "yes"
+            println("Operation cancelled.")
+            return
+        end
+    end
+
     # Calculate the final powers
     final_powers = convert_Hz_to_dB.(target_spinlock_strengths, pldb1, p1)
     
@@ -39,7 +60,7 @@ function setupR1rhopowers()
     
     # Print the final powers in the specified format
     println()
-    println("The default spinlock strengths are:", shuffled_spinlock_strengths)
+    println("The list corresponds to the following spinlock strengths (Hz): ", shuffled_spinlock_strengths)
     println()
     println("Copy & paste the list provided between the dashed lines.")
     println(line_break)
