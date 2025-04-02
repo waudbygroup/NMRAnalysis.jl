@@ -22,7 +22,7 @@ export diffusion
 
 include("R1rho/R1rho.jl")
 using .R1rho
-export r1rho
+export r1rho, setupR1rhopowers
 
 
 @info """
