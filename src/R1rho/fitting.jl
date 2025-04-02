@@ -62,9 +62,20 @@ function optimisewidth!(state)
     # find the integration width giving minimum error in parameters
     # set the integration width to that value
 
+    # check the range of peak maxima positions (in first increments) and ensure range covers this
+    xs = find_maxima(state, state[:peakppm][], state[:dx][])
+    # find the maximum and minimum x values
+    min_x = minimum(xs)
+    max_x = maximum(xs)
+    x = (min_x + max_x) / 2
+    state[:peakppm][] = x
+    state[:gui][:text_peakppm].displayed_string[] = string(round(x; digits=3))
+
+    dxmin = (max_x - min_x) * 2 # minimum dx = 2x range
     dx0 = state[:dx][]
     dxs = logrange(0.02, 50, 21) .* dx0
-    dxs = filter(x -> 0.01 <= x <= 5, dxs)
+    dxmin = max(0.01, dxmin)
+    dxs = filter(x -> dxmin <= x <= 5, dxs)
 
     # scoring function
     score(state) =
@@ -82,4 +93,42 @@ function optimisewidth!(state)
     best = argmin(scores)
     @debug "best dx: $(dxs[best])"
     return state[:dx][] = dxs[best]
+end
+
+function find_maxima(state, start_x, dx)
+    xs = []
+    idx = map(x -> x[1], state[:series])
+    for spec in state[:dataset].spectra[idx]
+        x = find_maximum(spec, start_x, dx)
+        push!(xs, x)
+    end
+    return xs
+end
+
+function find_maximum(spectrum, start_x, dx)
+    x = data(spectrum, F1Dim)
+    y = data(spectrum)
+
+    # Validate inputs
+    length(x) == length(y) || throw(ArgumentError("x and y lists must be the same length"))
+    !isempty(x) || throw(ArgumentError("Input lists cannot be empty"))
+
+    # Define the search range
+    lower_bound = start_x - dx
+    upper_bound = start_x + dx
+
+    # Find indices of points within the search range
+    range_indices = findall(xi -> lower_bound <= xi <= upper_bound, x)
+
+    # Check if there are any points in the range
+    if isempty(range_indices)
+        throw(ArgumentError("No data points found within the specified range"))
+    end
+
+    # Find the maximum y value within the range
+    max_y_index = argmax(y[range_indices])
+    max_index = range_indices[max_y_index]
+
+    # Return the x value at the maximum
+    return x[max_index]
 end

@@ -130,7 +130,7 @@ function gui!(state)
         return state[:initiallnk][] = log(parse(Float64, s))
     end
 
-    input_panel[9, 1] = Label(fig, "σΔδ (ppm):")
+    input_panel[9, 1] = Label(fig, "Δδ stdev (ppm):")
     text_σΔδ = input_panel[9, 2:3] = Textbox(fig;
                                              stored_string=string(round(state[:σΔδ][];
                                                                         digits=1)),
