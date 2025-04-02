@@ -44,5 +44,6 @@ export cest2d
 
 # export PREExperiment
 export pre2d
+export lpre2d
 
 end

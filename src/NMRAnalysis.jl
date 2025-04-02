@@ -26,6 +26,7 @@ export diffusion
 @reexport using .GUI2D: hetnoe2d # HetNOEExperiment
 @reexport using .GUI2D: cest2d # CESTExperiment
 @reexport using .GUI2D: pre2d # PREExperiment
+@reexport using .GUI2D: lpre2d # LPREExperiment
 
 @info """
 NMRAnalysis.jl (v$(pkgversion(NMRAnalysis)))
