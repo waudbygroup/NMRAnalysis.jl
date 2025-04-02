@@ -335,11 +335,13 @@ function savefig!(state)
         println(f, "Initial R2,0 (s⁻¹):, $(state[:initialR20][])")
         println(f, "Initial Rex (s⁻¹):, $(state[:initialRex][])")
         println(f, "Initial kex (s⁻¹):, $(exp(state[:initiallnk][]))")
+        println(f, "Δδ stdev (ppm):, $(state[:σΔδ][])")
         println(f, "")
         println(f, "Fitted I0:, $(state[:fitI0][])")
         println(f, "Fitted R2,0 (s⁻¹):, $(state[:fitR20][])")
         println(f, "Fitted Rex (s⁻¹):, $(state[:fitRex][])")
-        return println(f, "Fitted kex (s⁻¹):, $(exp(state[:fitlnk][]))")
+        println(f, "Fitted K (s⁻¹):, $(state[:fitK][])")
+        return println(f, "Fitted kex (s⁻¹):, $(state[:fitkex][])")
     end
 
     # write dispersion fit data to CSVs
