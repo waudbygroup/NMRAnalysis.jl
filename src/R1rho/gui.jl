@@ -172,15 +172,14 @@ function gui!(state)
            linestyle=:dash)
     axislegend(ax_fit_R1rho; position=:rt)
 
-    gui[:results_text] = lift(state[:ftest], state[:σΔδ]) do ftest, _
+    gui[:results_text] = lift(state[:has_exchange], state[:σΔδ]) do has_ex, _
         I0 = state[:fitI0][]
         R20 = state[:fitR20][]
         Rex = state[:fitRex][]
         K = state[:fitK][]
         kex = state[:fitkex][]
         R20_null = state[:fitR20_null][]
-
-        f_stat, p_value = ftest
+        p_ex = state[:prob_exchange][]
 
         # Format full model results
         full_model = ["Exchange model results:",
@@ -195,14 +194,11 @@ function gui!(state)
                       "R₂₀ = $R20_null s⁻¹"]
 
         # Model comparison statistics
-        comparison = ["Model comparison:",
-                      "F-statistic = $(round(f_stat, digits=2)); p-value = $(round(p_value, digits=4))"]
+        comparison = ["Model comparison: p(exchange) = $(round(p_ex, digits=2))"]
 
         # Add significance interpretation
-        if p_value < 0.05
-            push!(comparison, "Exchange is statistically significant (p < 0.05)")
-        else
-            # push!(comparison, "Exchange is not statistically significant (p ≥ 0.05)")
+        if has_ex
+            push!(comparison, "Exchange is probable (>95% likelihood)")
         end
 
         # Combine all sections with blank lines between them

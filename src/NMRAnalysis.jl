@@ -8,6 +8,9 @@ using Plots
 using REPL.TerminalMenus
 using Statistics
 
+include("MCFitting/MCFitting.jl")
+using .MCFitting
+
 include("fileselection.jl")
 include("viscosity.jl")
 include("diffusion.jl")
@@ -23,7 +26,6 @@ export diffusion
 include("R1rho/R1rho.jl")
 using .R1rho
 export r1rho, setupR1rhopowers
-
 
 @info """
 NMRAnalysis.jl

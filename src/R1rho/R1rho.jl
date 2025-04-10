@@ -13,6 +13,7 @@ using Statistics
 
 export r1rho, setupR1rhopowers
 using ..NMRAnalysis: select_expts
+using ..MCFitting
 
 include("dataset.jl")
 include("power.jl")

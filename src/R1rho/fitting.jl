@@ -2,15 +2,18 @@ model_R1rho_onres(νSL, p) = @. p[2] + p[3] * exp(2p[4]) / (exp(2p[4]) + (2π * 
 model_I_onres(TSL, νSL, p) = p[1] * exp.(-TSL .* model_R1rho_onres(νSL, p))
 model_I_onres(x, p) = model_I_onres(x[:, 1], x[:, 2], p)
 
+# returns the fit object, with fit.params having parameters ± uncertainty
 function fit_onres(state, p0)
     dataset = state[:dataset]
 
     x = hcat(dataset.TSLs, dataset.νSLs)
     intensities = state[:intensities][]
+    σ = state[:noise][]
 
     @debug "running fit..." p0
-    fit = LsqFit.curve_fit(model_I_onres, x, intensities, p0)
-    @debug fit.param fit.converged
+    fit = fit_model(x, intensities, model_I_onres, p0; σ=σ, n_particles=200,
+                    param_names=["I0", "R2,0", "Rex", "lnK"])
+    @debug fit.param_summary
     return fit
 end
 
@@ -25,11 +28,12 @@ function fit_onres_null(state, p0)
 
     x = hcat(dataset.TSLs, dataset.νSLs)
     intensities = state[:intensities][]
+    σ = state[:noise][]
 
     @debug "running null model fit..." p0
-    # Only need parameters p[1] (I0) and p[2] (R2,0)
-    fit = LsqFit.curve_fit(model_I_onres_null, x, intensities, p0)
-    @debug fit.param fit.converged
+    fit = fit_model(x, intensities, model_I_onres_null, p0[1:2]; σ=σ, n_particles=200,
+                    param_names=["I0", "R2,0"])
+    @debug fit.param_summary
     return fit
 end
 

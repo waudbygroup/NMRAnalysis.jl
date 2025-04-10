@@ -64,25 +64,19 @@ function initialisestate(dataset)
         # fitting
         state[:fit] = lift(state[:isfitting], state[:initialpars],
                            state[:intensities]) do isfitting, p0, _
-            # if isfitting
             return fit_onres(state, p0)
-            # else
-            #     LsqFit.LsqFitResult([1.0, 2.0, 10.0, 8.5],Float64[],zeros(4,4),false,Vector{LsqFit.LMState{LsqFit.LevenbergMarquardt}}(),Float64[])
-            # end
         end
         # fit results
-        state[:fitpars] = lift(coef, state[:fit])
-        state[:fiterrs] = lift(state[:fit]) do fit
-            try
-                stderror(fit)
-            catch
-                [0.1, 0.1, 0.1, 0.1]
-            end
+        state[:fitpars] = lift(state[:fit]) do fit
+            return pmean.(fit.parameters)
         end
-        state[:fitI0] = lift((p, e) -> p[1] ± e[1], state[:fitpars], state[:fiterrs])
-        state[:fitR20] = lift((p, e) -> p[2] ± e[2], state[:fitpars], state[:fiterrs])
-        state[:fitRex] = lift((p, e) -> p[3] ± e[3], state[:fitpars], state[:fiterrs])
-        state[:fitlnk] = lift((p, e) -> p[4] ± e[4], state[:fitpars], state[:fiterrs])
+        state[:fiterrs] = lift(state[:fit]) do fit
+            return pstd.(fit.parameters)
+        end
+        state[:fitI0] = lift(fit -> fit.parameters[1], state[:fit])
+        state[:fitR20] = lift(fit -> fit.parameters[2], state[:fit])
+        state[:fitRex] = lift(fit -> fit.parameters[3], state[:fit])
+        state[:fitlnk] = lift(fit -> fit.parameters[4], state[:fit])
         state[:fitR2s] = lift(state[:fitpars]) do p
             return [fitexp(dataset.TSLs[state[:series][i]],
                            state[:intensities][][state[:series][i]], p)
@@ -100,34 +94,23 @@ function initialisestate(dataset)
                                 state[:intensities]) do isfitting, p0, _
             return fit_onres_null(state, p0[1:2])
         end
-        state[:fitpars_null] = lift(coef, state[:fit_null])
-        state[:fiterrs_null] = lift(state[:fit_null]) do fit
-            try
-                stderror(fit)
-            catch
-                [0.1, 0.1]
-            end
+        state[:fitpars_null] = lift(state[:fit_null]) do fit
+            return pmean.(fit.parameters)
         end
-        state[:fitI0_null] = lift((p, e) -> p[1] ± e[1], state[:fitpars_null],
-                                  state[:fiterrs_null])
-        state[:fitR20_null] = lift((p, e) -> p[2] ± e[2], state[:fitpars_null],
-                                   state[:fiterrs_null])
+        state[:fiterrs_null] = lift(state[:fit_null]) do fit
+            return pstd.(fit.parameters)
+        end
+        state[:fitI0_null] = lift(fit -> fit.parameters[1], state[:fit_null])
+        state[:fitR20_null] = lift(fit -> fit.parameters[2], state[:fit_null])
 
         # Model comparison statistics
-        state[:ftest] = lift(state[:fit], state[:fit_null],
-                             state[:intensities]) do full_fit, null_fit, intensities
-            n = length(intensities)
-            p_full = 4  # Parameters in full model
-            p_null = 2  # Parameters in null model
-
-            rss_full = sum(abs2, full_fit.resid)
-            rss_null = sum(abs2, null_fit.resid)
-
-            f_stat = ((rss_null - rss_full) / (p_full - p_null)) / (rss_full / (n - p_full))
-            p_value = 1 - cdf(FDist(p_full - p_null, n - p_full), f_stat)
-
-            return (f_stat, p_value)
+        state[:model_comparison] = lift(state[:fit], state[:fit_null]) do fit, fit_null
+            return compare_models(fit, fit_null)
         end
+        state[:prob_exchange] = lift(mc -> 1 - mc.prob_model2_better,
+                                     state[:model_comparison])
+        state[:has_exchange] = lift(p -> p > 0.95,
+                                    state[:prob_exchange])
 
         # fit plotting
         state[:fitseries] = lift(state[:fitpars]) do p
