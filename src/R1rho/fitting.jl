@@ -36,15 +36,15 @@ end
 function fitexp(t, I, p)
     I0 = p[1]
     R0 = p[3] / 2
-    p0 = [I0, R0]
+    p0 = [R0]
 
-    model(t, p) = @. p[1] * exp(-t * p[2])
+    model(t, p) = @. I0 * exp(-t * p[1])
 
     R, Re = try
         fit = LsqFit.curve_fit(model, t, I, p0)
-        R = coef(fit)[2]
+        R = coef(fit)[1]
         Re = try
-            stderror(fit)[2]
+            stderror(fit)[1]
         catch
             0.0
         end
