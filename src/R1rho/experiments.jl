@@ -1,4 +1,4 @@
-function processexperiments(experimentfiles)
+function processexperiments(experimentfiles, minνSL=250.0)
     # prepare empty list of floats for ΩSL, νSL and R1rho
     exptnumbers = Vector{Int64}()
     ΩSLs = Vector{Float64}()
@@ -28,12 +28,19 @@ function processexperiments(experimentfiles)
     end
 
     # normalise by maximum intensity
-    mx = map(maximum, spectra) |> maximum
+    mx = maximum(map(maximum, spectra))
     spectra ./= mx
 
-    R1RhoDataset(exptnumbers, ΩSLs, νSLs, TSLs, spectra)
-end
+    # remove low νSL from TSL, ΩSL, νSL and spectra lists
+    idx = findall(νSLs .> minνSL)
+    ΩSLs = ΩSLs[idx]
+    νSLs = νSLs[idx]
+    TSLs = TSLs[idx]
+    spectra = spectra[idx]
+    exptnumbers = exptnumbers[idx]
 
+    return R1RhoDataset(exptnumbers, ΩSLs, νSLs, TSLs, spectra)
+end
 
 function process_offres_experiment(expt)
     # 2. Get list of spinlock offsets
@@ -45,15 +52,15 @@ function process_offres_experiment(expt)
 
     # 4. Get spinlock power
     spinlock_power_W = acqus(expt, :plw, 25)
-    νSL = convert_W_to_Hz(spinlock_power_W, expt) 
+    νSL = convert_W_to_Hz(spinlock_power_W, expt)
 
     nΩ = length(ΩSL)
     nT = length(relaxation_times)
 
-    νSL  = [νSL           for i in 1:nT, j in 1:nΩ] |> vec
-    TSL  = [TSL[i]        for i in 1:nT, j in 1:nΩ] |> vec
-    ΩSL  = [ΩSL[j]        for i in 1:nT, j in 1:nΩ] |> vec
-    spec = [expt[:, j, i] for i in 1:nT, j in 1:nΩ] |> vec
+    νSL = vec([νSL for i in 1:nT, j in 1:nΩ])
+    TSL = vec([TSL[i] for i in 1:nT, j in 1:nΩ])
+    ΩSL = vec([ΩSL[j] for i in 1:nT, j in 1:nΩ])
+    spec = vec([expt[:, j, i] for i in 1:nT, j in 1:nΩ])
 
     return ΩSL, νSL, TSL, spec
 end
@@ -73,10 +80,10 @@ function process_onres_experiment(expt)
     nν = length(νSL)
     nT = length(TSL)
 
-    νSL  = [νSL[j]        for i in 1:nT, j in 1:nν] |> vec
-    TSL  = [TSL[i]        for i in 1:nT, j in 1:nν] |> vec
-    ΩSL  = [ΩSL           for i in 1:nT, j in 1:nν] |> vec
-    spec = [expt[:, j, i] for i in 1:nT, j in 1:nν] |> vec
+    νSL = vec([νSL[j] for i in 1:nT, j in 1:nν])
+    TSL = vec([TSL[i] for i in 1:nT, j in 1:nν])
+    ΩSL = vec([ΩSL for i in 1:nT, j in 1:nν])
+    spec = vec([expt[:, j, i] for i in 1:nT, j in 1:nν])
 
     return ΩSL, νSL, TSL, spec
 end

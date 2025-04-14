@@ -200,9 +200,9 @@ function gui!(state)
 
         # Add significance interpretation
         if p_value < 0.05
-            push!(comparison, "Exchange is statistically significant (p < 0.05)")
+            push!(comparison, "Exchange significant (p < 0.05)")
         else
-            # push!(comparison, "Exchange is not statistically significant (p ≥ 0.05)")
+            push!(comparison, "Exchange not significant (p ≥ 0.05)")
         end
 
         # Combine all sections with blank lines between them

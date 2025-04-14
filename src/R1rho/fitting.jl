@@ -35,7 +35,7 @@ end
 
 function fitexp(t, I, p)
     I0 = p[1]
-    R0 = p[3] / 2
+    R0 = p[2] + p[3] / 2  # R2,0 + Rex/2
     p0 = [R0]
 
     model(t, p) = @. I0 * exp(-t * p[1])
@@ -50,7 +50,7 @@ function fitexp(t, I, p)
         end
         R, Re
     catch
-        0.0, 0.0
+        R0, 0.0
     end
 
     return R ± Re

@@ -52,9 +52,9 @@ function initialisestate(dataset)
 
         # parameters
         state[:initialI0] = Observable(state[:intensities][][1])
-        state[:initialR20] = Observable(2.0)
-        state[:initialRex] = Observable(50.0)
-        state[:initiallnk] = Observable(7.5)
+        state[:initialR20] = Observable(5.0)
+        state[:initialRex] = Observable(30.0)
+        state[:initiallnk] = Observable(9.0)
         state[:initialpars] = lift(state[:initialI0], state[:initialR20],
                                    state[:initialRex],
                                    state[:initiallnk]) do I0, R20, Rex, lnk
