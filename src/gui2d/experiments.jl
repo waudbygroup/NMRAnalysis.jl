@@ -33,6 +33,7 @@ include("expt-intensitybased.jl")
 include("expt-hetnoe.jl")
 include("expt-PRE.jl")
 include("expt-cest.jl")
+include("expt-cpmg.jl")
 
 # generic functions
 
@@ -56,17 +57,17 @@ hasfixedpositions(expt::MovingPeakExperiment) = false
 function setupexptobservables!(expt)
     xres = abs(expt.specdata.x[1][2] - expt.specdata.x[1][1])
     yres = abs(expt.specdata.y[1][2] - expt.specdata.y[1][1])
-    expt.xradius[] = clamp(4*xres, 0.04, 0.1)
-    expt.yradius[] = clamp(4*yres, 0.1, 0.8)
+    expt.xradius[] = clamp(4 * xres, 0.04, 0.1)
+    expt.yradius[] = clamp(4 * yres, 0.1, 0.8)
     on(expt.peaks) do _
         @debug "Peaks changed"
         mask!(expt)
         cluster!(expt)
-        simulate!(expt)
+        return simulate!(expt)
     end
     on(expt.clusters) do _
         @debug "Clusters changed"
-        checktouched!(expt)
+        return checktouched!(expt)
     end
     on(expt.touched) do _
         @debug "Cluster touched"
@@ -95,7 +96,7 @@ function setupexptobservables!(expt)
             peak.xradius.val = expt.xradius[]
             peak.touched.val = true
         end
-        notify(expt.peaks)
+        return notify(expt.peaks)
     end
     on(expt.yradius) do _
         @debug "Y radius changed"
@@ -104,9 +105,9 @@ function setupexptobservables!(expt)
             peak.yradius.val = expt.yradius[]
             peak.touched.val = true
         end
-        notify(expt.peaks)
+        return notify(expt.peaks)
     end
-    expt
+    return expt
 end
 
 """
@@ -126,7 +127,7 @@ function movepeak!(expt, idx, newpos)
     expt.peaks[][idx].parameters[:x].initialvalue[][slice] = newpos[1]
     expt.peaks[][idx].parameters[:y].initialvalue[][slice] = newpos[2]
     expt.peaks[][idx].touched.val = true
-    notify(expt.peaks)
+    return notify(expt.peaks)
 end
 
 """
@@ -142,7 +143,7 @@ function deletepeak!(expt, idx)
         expt.peaks[][i].touched[] = true
     end
     deleteat!(expt.peaks[], idx)
-    notify(expt.peaks)
+    return notify(expt.peaks)
 end
 
 """
@@ -153,7 +154,7 @@ Remove all peaks from the experiment.
 function deleteallpeaks!(expt)
     expt.state[][:current_peak_idx][] = 0
     # delete any existing peaks
-    for i=length(expt.peaks[]):-1:1
+    for i in length(expt.peaks[]):-1:1
         deletepeak!(expt, i)
     end
 end
@@ -166,9 +167,9 @@ Update which clusters have been modified.
 function checktouched!(expt)
     @debug "Checking touched clusters" #maxlog=10
     touched = map(expt.clusters[]) do cluster
-        any([expt.peaks[][j].touched[] for j in cluster])
+        return any([expt.peaks[][j].touched[] for j in cluster])
     end
-    expt.touched[] = touched
+    return expt.touched[] = touched
 end
 
 """
@@ -200,7 +201,7 @@ function fit!(expt::Experiment)
                 postfit!(expt.clusters[][i], expt)
             end
         end
-        
+
         postfitglobal!(expt)
         @debug "Fit finished - notifying peaks" #maxlog=10
         notify(expt.peaks)
@@ -219,7 +220,7 @@ end
 
 """Additional fitting of peak following spectrum fit - defaults to no action"""
 function postfit!(peak::Peak, expt::Experiment)
-    peak.postfitted[] = true
+    return peak.postfitted[] = true
 end
 
 """Global fitting of entire experiment following spectrum fit - defaults to no action"""
@@ -241,30 +242,30 @@ function fit!(cluster::Vector{Int}, expt::Experiment)
     bigmask = reduce(vcat, vec.(m))
     smallmask = reduce(vcat, vec.(smallmask))
     zobs = reduce(vcat, vec.(expt.specdata.z))[bigmask]
-    @debug "zobs" zobs maxlog=10
+    @debug "zobs" zobs maxlog = 10
 
-    @debug "pre-allocating zsim" maxlog=10
+    @debug "pre-allocating zsim" maxlog = 10
     zsim = map(1:nslices(expt)) do i
-        similar(expt.specdata.z[i][xbounds[i], ybounds[i]])
+        return similar(expt.specdata.z[i][xbounds[i], ybounds[i]])
     end
-    @debug "zsim" zsim maxlog=10
+    @debug "zsim" zsim maxlog = 10
     zsimm = similar(zobs)
     # create residual function
     function resid(p)
-        @debug "resid (start)" maxlog=10
+        @debug "resid (start)" maxlog = 10
         unpack!(copy(p), peaks, :value)
-        for i=1:nslices(expt)
+        for i in 1:nslices(expt)
             fill!(zsim[i], 0.0)
         end
         simulate!(zsim, cluster, expt, xbounds, ybounds)
         zsimm .= reduce(vcat, vec.(zsim))[smallmask]
-        zobs - zsimm
+        return zobs - zsimm
     end
-    @debug "running fit" maxlog=10
+    @debug "running fit" maxlog = 10
     sol = LsqFit.lmfit(resid, p0, Float64[])
     pfit = coef(sol)
     perr = stderror(sol)
-    @debug "fit complete" pfit maxlog=10
+    @debug "fit complete" pfit maxlog = 10
     unpack!(pfit, peaks, :value)
     unpack!(perr, peaks, :uncertainty)
 
@@ -287,18 +288,19 @@ function simulate!(expt::Experiment)
         fill!(zi, 0)
     end
     simulate!(z, expt)
-    notify(expt.specdata.zfit)
+    return notify(expt.specdata.zfit)
 end
 
 function simulate!(z, expt::Experiment)
-    @debug "Simulating experiment with z" maxlog=10
+    @debug "Simulating experiment with z" maxlog = 10
     for cluster in expt.clusters[]
         simulate!(z, cluster, expt)
     end
 end
 
-function simulate!(z, cluster::Vector{Int}, expt::Experiment, xbounds=nothing, ybounds=nothing)
-    @debug "Simulating cluster $cluster" maxlog=10
+function simulate!(z, cluster::Vector{Int}, expt::Experiment, xbounds=nothing,
+                   ybounds=nothing)
+    @debug "Simulating cluster $cluster" maxlog = 10
     for i in cluster
         simulate!(z, expt.peaks[][i], expt, xbounds, ybounds)
     end
@@ -316,18 +318,18 @@ function mask!(expt::Experiment)
         fill!(zi, false)
     end
     mask!(z, expt)
-    notify(expt.specdata.mask)
+    return notify(expt.specdata.mask)
 end
 
 function mask!(z, expt::Experiment)
-    @debug "Masking experiment with z" maxlog=10
+    @debug "Masking experiment with z" maxlog = 10
     for peak in expt.peaks[]
         mask!(z, peak, expt)
     end
 end
 
 function mask(cluster::Vector{Int}, expt::Experiment)
-    @debug "Generating cluster mask" maxlog=10
+    @debug "Generating cluster mask" maxlog = 10
     z = [similar(zi) for zi in expt.specdata.mask[]]
     for zi in z
         fill!(zi, false)
@@ -335,43 +337,42 @@ function mask(cluster::Vector{Int}, expt::Experiment)
     for i in cluster
         mask!(z, expt.peaks[][i], expt)
     end
-    z
+    return z
 end
 
 function bounds(mask)
-    @debug "Generating cluster bounds from mask" maxlog=10
+    @debug "Generating cluster bounds from mask" maxlog = 10
     b = map(mask) do m
         # m is a matrix of booleans
         # get projections ix and iy where any value is true
-        ix = any(m, dims=2) |> vec
-        iy = any(m, dims=1) |> vec
-        [ix, iy]
+        ix = vec(any(m; dims=2))
+        iy = vec(any(m; dims=1))
+        return [ix, iy]
     end
     # reshape into list of ix, and list of iy
     ix = [b[i][1] for i in 1:length(b)]
     iy = [b[i][2] for i in 1:length(b)]
-    @debug "bounds" sum.(ix) sum.(iy) maxlog=10
+    @debug "bounds" sum.(ix) sum.(iy) maxlog = 10
 
     return ix, iy
 end
 
-
 # generic masking method - can be specialised if needed
 function mask!(z, peak::Peak, expt::Experiment)
-    @debug "masking peak $(peak.label)" maxlog=10
+    @debug "masking peak $(peak.label)" maxlog = 10
     n = length(z)
     for i in 1:n
         x = expt.specdata.x[i]
         y = expt.specdata.y[i]
         maskellipse!(z[i], x, y,
-            initialposition(peak)[][i][1],
-            initialposition(peak)[][i][2],
-            peak.xradius[], peak.yradius[])
+                     initialposition(peak)[][i][1],
+                     initialposition(peak)[][i][2],
+                     peak.xradius[], peak.yradius[])
     end
 end
 
 function Base.show(io::IO, expt::Experiment)
-    print(io, "$(typeof(expt))($(npeaks(expt)) peaks, $(nslices(expt)) slices)")
+    return print(io, "$(typeof(expt))($(npeaks(expt)) peaks, $(nslices(expt)) slices)")
 end
 
 function Base.show(io::IO, mime::MIME"text/plain", expt::Experiment)
@@ -379,5 +380,5 @@ function Base.show(io::IO, mime::MIME"text/plain", expt::Experiment)
     println(io, "  $(npeaks(expt)) peaks")
     println(io, "  $(nslices(expt)) slices")
     println(io, "  $(length(expt.clusters[])) clusters")
-    println(io, "  fitting: $(expt.isfitting[])")
+    return println(io, "  fitting: $(expt.isfitting[])")
 end

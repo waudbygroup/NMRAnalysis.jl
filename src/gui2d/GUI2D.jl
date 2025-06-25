@@ -29,7 +29,6 @@ include("visualisation.jl")
 export MaybeVector
 # export gui!
 
-
 # export IntensityExperiment
 export intensities2d
 export relaxation2d
@@ -41,6 +40,9 @@ export hetnoe2d
 
 # export CESTExperiment
 export cest2d
+
+# export CPMGExperiment
+export cpmg2d
 
 # export PREExperiment
 export pre2d

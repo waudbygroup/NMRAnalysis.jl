@@ -1,41 +1,57 @@
 """
-    cest2d(inputfilename, B1, Tsat)
+    cpmg2d(inputfilename; Trelax, vCPMG)
+    cpmg2d(inputfilename; Trelax, ncyc)
 
-Start interactive GUI for analyzing 2D CEST (Chemical Exchange Saturation Transfer) data.
+Start interactive GUI for analysing 2D CPMG relaxation dispersion data.
 
 # Arguments
 - `inputfilename`: NMR data file as a processed data directory containing pseudo-3D data
                    where the first plane is the reference spectrum and subsequent planes
                    are the saturation spectra
-- `B1`: Saturation power in Hz
-- `Tsat`: Saturation time in seconds
+- `Trelax`: Relaxation time in seconds
+- `vCPMG`: list of CPMG frequencies in Hz, use zero for reference spectrum
+- `ncyc`: list of CPMG cycle numbers, use zero for reference spectrum. 
+          When provided, vCPMG is calculated as ncyc/Trelax
 
-# Example:
+# Examples:
 ```julia
-cest2d("path/to/expno/pdata/1", 15, 0.3)
+# Direct specification of CPMG frequencies
+cpmg2d("path/to/expno"; Trelax=0.04, vCPMG=[0, 25, 50, 75, 100])
+
+# Using cycle numbers (vCPMG calculated automatically)
+ncyc = [0, 1, 2, 3, 4]
+cpmg2d("path/to/expno"; Trelax=0.04, ncyc=ncyc)
 ```
 """
-function cest2d(inputfilename, B1, Tsat)
-    expt = CESTExperiment(inputfilename, B1, Tsat)
+function cpmg2d(inputfilename; Trelax, vCPMG=nothing, ncyc=nothing)
+    if !isnothing(vCPMG) && !isnothing(ncyc)
+        throw(ArgumentError("Cannot specify both vCPMG and ncyc"))
+    elseif !isnothing(ncyc)
+        vCPMG = ncyc ./ Trelax
+    elseif isnothing(vCPMG)
+        throw(ArgumentError("Must specify either vCPMG or ncyc"))
+    end
+
+    expt = CPMGExperiment(inputfilename, Trelax, vCPMG)
     return gui!(expt)
 end
 
 """
-    CESTExperiment <: FixedPeakExperiment
+    CPMGExperiment <: FixedPeakExperiment
 
-Chemical Exchange Saturation Transfer experiment with reference and saturation spectra.
+CPMG experiment with reference plane and relaxation planes.
 
 # Fields
 - `specdata`: Spectral data and metadata
 - `peaks`: Observable list of peaks
-- `frequencies`: Vector of saturation frequencies in ppm
+- `vCPMG`: Vector of CPMG frequencies in Hz (zero for reference)
+- `Trelax`: Relaxation time in seconds
 """
-struct CESTExperiment <: FixedPeakExperiment
+struct CPMGExperiment <: FixedPeakExperiment
     specdata::Any
     peaks::Any
-    frequencies::Vector{Float64}
-    B1::Float64
-    Tsat::Float64
+    Trelax::Float64
+    vCPMG::Vector{Float64}
 
     clusters::Any
     touched::Any
@@ -45,8 +61,8 @@ struct CESTExperiment <: FixedPeakExperiment
     yradius::Any
     state::Any
 
-    function CESTExperiment(specdata, peaks, frequencies, B1, Tsat)
-        expt = new(specdata, peaks, frequencies, B1, Tsat,
+    function CPMGExperiment(specdata, peaks, Trelax, vCPMG)
+        expt = new(specdata, peaks, Trelax, vCPMG,
                    Observable(Vector{Vector{Int}}()), # clusters
                    Observable(Vector{Bool}()), # touched
                    Observable(true), # isfitting
@@ -59,39 +75,33 @@ struct CESTExperiment <: FixedPeakExperiment
     end
 end
 
-struct CESTVisualisation <: VisualisationStrategy end
-visualisationtype(::CESTExperiment) = CESTVisualisation()
+struct CPMGVisualisation <: VisualisationStrategy end
+visualisationtype(::CPMGExperiment) = CPMGVisualisation()
 
 """
-    CESTExperiment(inputfilename)
+    CPMGExperiment(inputfilename, Trelax, vCPMG)
 
-Create CEST experiment from a pseudo-3D input file where the first plane is the reference
-and the remaining planes are saturation spectra at different frequencies.
+Create CPMG experiment from a pseudo-3D input file. Zero frequency in `vCPMG` indicates the reference plane.
 """
-function CESTExperiment(inputfilename, B1, Tsat)
-    @debug "Creating CEST experiment from $inputfilename with B1=$B1 Hz and Tsat=$Tsat s"
+function CPMGExperiment(inputfilename, Trelax, vCPMG)
+    @debug "Creating CPMG experiment from $inputfilename with Trelax=$Trelax s and vCPMG=$vCPMG Hz"
     spec = loadnmr(inputfilename)
 
-    # Extract saturation frequencies from fq3list using proper NMRTools methods
-    frequencies = if haskey(acqus(spec), :fq3list)
-        fq_list = acqus(spec, :fq3list)
-        # Get frequencies in ppm
-        getppm(fq_list, dims(spec, F2Dim))
-    else
-        # Fallback if fq3list is not available
-        collect(range(-10.0, 10.0; length=ndims(spec, 3)))
+    # check that vCPMG is a vector of frequencies with length matching spectrum size
+    if length(vCPMG) != size(spec, X3Dim)
+        error("vCPMG must be a vector of frequencies with length matching the number of slices in the spectrum.")
     end
 
     # Prepare specdata
-    specdata = preparespecdata(inputfilename, frequencies, CESTExperiment)
+    specdata = preparespecdata(inputfilename, vCPMG, CPMGExperiment)
     peaks = Observable(Vector{Peak}())
 
-    return CESTExperiment(specdata, peaks, frequencies, B1, Tsat)
+    return CPMGExperiment(specdata, peaks, Trelax, vCPMG)
 end
 
 # Load the NMR data and prepare the SpecData object
-function preparespecdata(inputfilename, frequencies, ::Type{CESTExperiment})
-    @debug "Preparing spec data for CEST experiment: $inputfilename"
+function preparespecdata(inputfilename, vCPMG, ::Type{CPMGExperiment})
+    @debug "Preparing spec data for CPMG experiment: $inputfilename"
     spec = loadnmr(inputfilename)
     x = data(spec, F1Dim)
     y = data(spec, F2Dim)
@@ -104,10 +114,7 @@ function preparespecdata(inputfilename, frequencies, ::Type{CESTExperiment})
     z = eachslice(raw_data; dims=3)
 
     # Create labels for each saturation frequency
-    zlabels = ["Reference"]
-    for freq in frequencies[2:end]  # Skip first frequency for reference
-        push!(zlabels, "$(round(freq, digits=2)) ppm")
-    end
+    zlabels = ["$(round(v, digits=0)) Hz" for v in vCPMG]
 
     return SpecData(SingleElementVector(spec),
                     SingleElementVector(x),
@@ -118,7 +125,7 @@ function preparespecdata(inputfilename, frequencies, ::Type{CESTExperiment})
 end
 
 """Add peak to experiment, setting up type-specific parameters."""
-function addpeak!(expt::CESTExperiment, initialposition::Point2f, label="",
+function addpeak!(expt::CPMGExperiment, initialposition::Point2f, label="",
                   xradius=expt.xradius[], yradius=expt.yradius[])
     expt.state[][:total_peaks][] += 1
     if label == ""
@@ -146,16 +153,15 @@ function addpeak!(expt::CESTExperiment, initialposition::Point2f, label="",
     newpeak.parameters[:R2y] = R2y
     newpeak.parameters[:amp] = amp
 
-    # Add post-parameters for CEST analysis
-    newpeak.postparameters[:R1] = Parameter("R1", 0.0)
-    newpeak.postparameters[:R2] = Parameter("R2", 0.0)
+    # Add post-parameters for CPMG analysis
+    newpeak.postparameters[:R20] = Parameter("R2,0", 10.0)
 
     push!(expt.peaks[], newpeak)
     return notify(expt.peaks)
 end
 
 """Simulate single peak according to experiment type."""
-function simulate!(z, peak::Peak, expt::CESTExperiment, xbounds=nothing, ybounds=nothing)
+function simulate!(z, peak::Peak, expt::CPMGExperiment, xbounds=nothing, ybounds=nothing)
     n = length(z)
     for i in 1:n
         # get axis references for window functions
@@ -186,49 +192,57 @@ function simulate!(z, peak::Peak, expt::CESTExperiment, xbounds=nothing, ybounds
 end
 
 """Calculate final parameters after fitting."""
-function postfit!(peak::Peak, expt::CESTExperiment)
-    @debug "Post-fitting peak $(peak.label)" maxlog = 10
+function postfit!(peak::Peak, expt::CPMGExperiment)
+    @debug "Post-fitting peak $(peak.label)" #maxlog = 10
 
-    δsat = expt.frequencies[2:end]
-    δ0 = peak.parameters[:y].value[][1]
+    vCPMG = expt.vCPMG
+    Trelax = expt.Trelax
+    refidx = vCPMG .≈ 0
+    cpmglist = vCPMG[.!refidx]
     R20 = peak.parameters[:R2y].value[][1]
-    v0 = δ0 * expt.specdata.nmrdata[1][2, :bf]
-    vsat = δsat .* expt.specdata.nmrdata[1][2, :bf]
-    Tsat = expt.Tsat
-    v1 = expt.B1
 
-    zspecobs = peak.parameters[:amp].value[][2:end] ./ peak.parameters[:amp].value[][1]
-    p0 = [1.5, R20] # R1, R2 
+    Aref = peak.parameters[:amp].value[][refidx] .±
+           peak.parameters[:amp].uncertainty[][refidx]
+    Aref = sum(Aref) / length(Aref) # average reference amplitude
+
+    Acpmg = peak.parameters[:amp].value[][.!refidx] .±
+            peak.parameters[:amp].uncertainty[][.!refidx]
+    R2effobs = @. log(Acpmg / Aref) / (-Trelax) # effective R2 from CPMG amplitudes
+    y = Measurements.value.(R2effobs) # convert to Float64 for fitting
+    yerr = Measurements.uncertainty.(R2effobs) # uncertainties in R2eff
+    w = 1 ./ yerr .^ 2 # weights for fitting
+    p0 = [R20]
 
     # Fit the model
-    model(x, p) = Z(x, v0, v1, Tsat, p[1], p[2])
-    fit = curve_fit(model, vsat, zspecobs, p0)
+    @debug "Fitting model to CPMG data" cpmglist R2effobs p0
+    # model(x, p) = Z(x, v0, v1, Tsat, p[1], p[2])
+    model(x, p) = ones(length(x)) * p[1] # no exchange, R2eff = R20
+    fit = curve_fit(model, cpmglist, y, w, p0)
     pfit = coef(fit)
     perr = stderror(fit)
     # pfit = p0
-    # perr = [0.1, 0.1]
+    # perr = [0.1]
+    @debug "Fitted parameters: $(pfit), uncertainties: $(perr)"
 
     # Update post-parameters with fitted values
-    peak.postparameters[:R1].value[] .= pfit[1]
-    peak.postparameters[:R1].uncertainty[] .= perr[1]
-    peak.postparameters[:R2].value[] .= pfit[2]
-    peak.postparameters[:R2].uncertainty[] .= perr[2]
+    peak.postparameters[:R20].value[] .= pfit[1]
+    peak.postparameters[:R20].uncertainty[] .= perr[1]
 
     @debug "Fitted parameters: $(peak.postparameters)"
     return peak.postfitted[] = true
 end
 
 """Return descriptive text for slice idx."""
-function slicelabel(expt::CESTExperiment, idx)
-    if idx == 1
+function slicelabel(expt::CPMGExperiment, idx)
+    if expt.vCPMG[idx] ≈ 0
         "Reference"
     else
-        "Saturation at $(round(expt.frequencies[idx], digits=2)) ppm ($idx of $(nslices(expt)))"
+        "$(expt.vCPMG[idx]) Hz ($idx of $(nslices(expt)))"
     end
 end
 
 """Return formatted text describing peak idx."""
-function peakinfotext(expt::CESTExperiment, idx)
+function peakinfotext(expt::CPMGExperiment, idx)
     if idx == 0
         return "No peak selected"
     end
@@ -236,8 +250,7 @@ function peakinfotext(expt::CESTExperiment, idx)
     peak = expt.peaks[][idx]
     if peak.postfitted[]
         return "Peak: $(peak.label[])\n" *
-               "R1: $(peak.postparameters[:R1].value[][1] ± peak.postparameters[:R1].uncertainty[][1]) s⁻¹\n" *
-               "R2: $(peak.postparameters[:R2].value[][1] ± peak.postparameters[:R2].uncertainty[][1]) s⁻¹\n" *
+               "R2,0: $(peak.postparameters[:R20].value[][1] ± peak.postparameters[:R20].uncertainty[][1]) s⁻¹\n" *
                "\n" *
                "δX: $(peak.parameters[:x].value[][1] ± peak.parameters[:x].uncertainty[][1]) ppm\n" *
                "δY: $(peak.parameters[:y].value[][1] ± peak.parameters[:y].uncertainty[][1]) ppm\n" *
@@ -250,8 +263,8 @@ function peakinfotext(expt::CESTExperiment, idx)
 end
 
 """Return formatted text describing experiment."""
-function experimentinfo(expt::CESTExperiment)
-    return "Analysis type: CEST (Chemical Exchange Saturation Transfer)\n" *
+function experimentinfo(expt::CPMGExperiment)
+    return "Analysis type: CPMG (relaxation dispersion)\n" *
            "Filename: $(expt.specdata.nmrdata[1][:filename])\n" *
            "Number of planes: $(nslices(expt))\n" *
            "Number of peaks: $(length(expt.peaks[]))\n" *
@@ -259,24 +272,25 @@ function experimentinfo(expt::CESTExperiment)
 end
 
 ## Visualisation
-function get_cest_data(peak, expt::CESTExperiment)
-    @debug "getting CEST data"
-    isnothing(peak) && return (Point2f[], [(0.0, 0.0, 0.0)], 0.0, Point2f[])
+function get_cpmg_data(peak, expt::CPMGExperiment)
+    @debug "getting CPMG data"
+    isnothing(peak) && return (Point2f[], [(0.0, 0.0, 0.0)], Point2f[])
 
-    # X-axis will be frequency values
-    x = expt.frequencies[2:end]
+    vCPMG = expt.vCPMG
+    Trelax = expt.Trelax
+    refidx = vCPMG .≈ 0
+    x = vCPMG[.!refidx]
+    # @debug "CPMG frequencies (Hz)" x
 
-    # Get amplitudes and reference amplitude
-    amp = peak.parameters[:amp].value[]
-    amp_err = peak.parameters[:amp].uncertainty[]
-    ref_amp = 1.0  # Reference amplitude is always 1.0
-    ref_err = amp[1] > 0 ? amp_err[1] / amp[1] : 0.1
+    Aref = peak.parameters[:amp].value[][refidx] .±
+           peak.parameters[:amp].uncertainty[][refidx]
+    Aref = sum(Aref) / length(Aref) # average reference amplitude
 
-    # Calculate relative intensities
-    y = amp[2:end] ./ amp[1]
-    yerr = amp_err[2:end] ./ amp[1]
-    # if error > 100% set to 100%
-    yerr = min.(yerr, 1.0)
+    Acpmg = peak.parameters[:amp].value[][.!refidx] .±
+            peak.parameters[:amp].uncertainty[][.!refidx]
+    R2effobs = @. log(Acpmg / Aref) / (-Trelax) # effective R2 from CPMG amplitudes
+    y = Measurements.value.(R2effobs) # convert to Float64 for plotting
+    yerr = Measurements.uncertainty.(R2effobs) # uncertainties in R2eff
 
     # Create error tuples for plotting (without propagating reference uncertainty)
     obs_points = Point2f.(x, y)
@@ -284,85 +298,50 @@ function get_cest_data(peak, expt::CESTExperiment)
 
     # Calculate fit line if peak has been fitted
     if peak.postfitted[]
-        δ0 = peak.parameters[:y].value[][1]
-        v0 = δ0 * expt.specdata.nmrdata[1][2, :bf]
-        vsat = x * expt.specdata.nmrdata[1][2, :bf]
-        Tsat = expt.Tsat
-        v1 = expt.B1
-        R1 = peak.postparameters[:R1].value[][1]
-        R2 = peak.postparameters[:R2].value[][1]
-
-        ypred = Z.(vsat, v0, v1, Tsat, R1, R2)
-        fit_points = Point2f.(x, ypred)
+        ypred = peak.postparameters[:R20].value[][1]
+        fit_points = [Point2f(xval, ypred) for xval in sort(x)]
     else
         fit_points = Point2f[]
     end
+    @debug "get_cpmg_data" obs_points obs_err fit_points
 
-    return (obs_points, obs_err, ref_err, fit_points)
+    return (obs_points, obs_err, fit_points)
 end
 
-function completestate!(state, expt, ::CESTVisualisation)
-    @debug "completing state for CEST visualisation"
-    state[:peak_plot_data] = lift(peak -> get_cest_data(peak, expt), state[:current_peak])
-    # state[:peak_plot_x] = lift(d -> d[1], state[:peak_plot_data])
+function completestate!(state, expt, ::CPMGVisualisation)
+    @debug "completing state for CPMG visualisation"
+    state[:peak_plot_data] = lift(peak -> get_cpmg_data(peak, expt),
+                                  state[:current_peak])
+    # # state[:peak_plot_x] = lift(d -> d[1], state[:peak_plot_data])
     state[:peak_plot_obs] = lift(d -> d[1], state[:peak_plot_data])
     state[:peak_plot_err] = lift(d -> d[2], state[:peak_plot_data])
-    state[:peak_plot_ref_err] = lift(d -> d[3], state[:peak_plot_data])
-    return state[:peak_plot_fit] = lift(d -> d[4], state[:peak_plot_data])
+    return state[:peak_plot_fit] = lift(d -> d[3], state[:peak_plot_data])
 end
 
-function plot_peak!(panel, peak, expt, ::CESTVisualisation)
-    @debug "plotting peak for CEST visualisation"
+function plot_peak!(panel, peak, expt, ::CPMGVisualisation)
+    @debug "plotting peak for CPMG visualisation"
 
-    obs_points, obs_err, ref_err, fit_points = get_cest_data(peak, expt)
+    obs_points, obs_err, fit_points = get_cpmg_data(peak, expt)
 
     ax = Axis(panel[1, 1];
-              xlabel="Saturation frequency (ppm)",
-              ylabel="Relative intensity (I/I₀)")
+              xlabel="νCPMG (Hz)",
+              ylabel="R₂,eff (s⁻¹)",)
 
     hlines!(ax, [0.0]; linewidth=0, color=:black) # sneaky way to ensure axis goes to zero
-    hlines!(ax, [1.0]; linewidth=1, color=:gray, linestyle=:dash) # Add reference line at y=1
-    hspan!(ax, 1 - ref_err, 1 + ref_err; color=(:gray, 0.2))
     errorbars!(ax, obs_err; whiskerwidth=10)
     scatter!(ax, obs_points)
     return lines!(ax, fit_points; color=:red)
 end
 
-function makepeakplot!(gui, state, expt, ::CESTVisualisation)
-    @debug "making peak plot for CEST visualisation"
+function makepeakplot!(gui, state, expt, ::CPMGVisualisation)
+    @debug "making peak plot for CPMG visualisation"
     gui[:axpeakplot] = ax = Axis(gui[:panelpeakplot][1, 1];
-                                 xlabel="Saturation frequency (ppm)",
-                                 ylabel="Relative intensity (I/I₀)",
-                                 title="CEST Profile")
+                                 xlabel="νCPMG (Hz)",
+                                 ylabel="R₂,eff (s⁻¹)",
+                                 title="CPMG Profile")
 
     hlines!(ax, [0.0]; linewidth=0, color=:black) # sneaky way to ensure axis goes to zero
-    hlines!(ax, [1.0]; linewidth=1, color=:gray, linestyle=:dash)
-    hspan!(ax, lift(e -> 1 - e, state[:peak_plot_ref_err]),
-           lift(e -> 1 + e, state[:peak_plot_ref_err]);
-           color=(:gray, 0.2))
     errorbars!(ax, state[:peak_plot_err]; whiskerwidth=10)
     scatter!(ax, state[:peak_plot_obs])
     return lines!(ax, state[:peak_plot_fit]; color=:red)
-end
-
-## CEST fitting (exchange free)
-function Z(vsat, v0, v1, Tsat, R1, R2)
-    # https://iopscience.iop.org/article/10.1088/0031-9155/58/22/R221
-
-    ωsat = 2π * vsat # s-1
-    ω0 = 2π * v0 # s-1
-    ω1 = 2π * v1 # s-1
-    Δω = ω0 .- ωsat
-
-    cosθ = @. Δω / sqrt(ω1^2 + Δω^2)
-    R1res = cosθ * R1
-    Pz = cosθ
-    Pzeff = cosθ
-
-    Reff = @. (R2 - R1) * ω1^2 / (ω1^2 + Δω^2)
-
-    Zss = @. Pz * R1res / Reff
-    Z = @. (Zss + (Pzeff * Pz - Zss) * exp(-Tsat * Reff)) * exp(-Tsat * R1)
-
-    return Z
 end

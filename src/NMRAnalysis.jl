@@ -25,6 +25,7 @@ export diffusion
 @reexport using .GUI2D: intensities2d, relaxation2d, recovery2d, modelfit2d # IntensityExperiment
 @reexport using .GUI2D: hetnoe2d # HetNOEExperiment
 @reexport using .GUI2D: cest2d # CESTExperiment
+@reexport using .GUI2D: cpmg2d # CPMGExperiment
 @reexport using .GUI2D: pre2d # PREExperiment
 
 @info """
@@ -49,6 +50,7 @@ Available interfaces:
 - modelfit2d()
 - hetnoe2d()
 - cest2d()
+- cpmg2d()
 
 Current working directory: $(pwd())
 """
