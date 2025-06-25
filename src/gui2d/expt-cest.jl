@@ -1,7 +1,7 @@
 """
-    cest2d(inputfilename, B1, Tsat)
+    cest2d(inputfilename; B1, Tsat)
 
-Start interactive GUI for analyzing 2D CEST (Chemical Exchange Saturation Transfer) data.
+Start interactive GUI for analysing 2D CEST (Chemical Exchange Saturation Transfer) data.
 
 # Arguments
 - `inputfilename`: NMR data file as a processed data directory containing pseudo-3D data
@@ -12,10 +12,10 @@ Start interactive GUI for analyzing 2D CEST (Chemical Exchange Saturation Transf
 
 # Example:
 ```julia
-cest2d("path/to/expno/pdata/1", 15, 0.3)
+cest2d("path/to/expno/pdata/1"; B1=15, Tsat=0.3)
 ```
 """
-function cest2d(inputfilename, B1, Tsat)
+function cest2d(inputfilename; B1, Tsat)
     expt = CESTExperiment(inputfilename, B1, Tsat)
     return gui!(expt)
 end
