@@ -6,10 +6,9 @@ makedocs(;
          format=Documenter.HTML(),
          pages=["Home" => "index.md",
                 "R1ρ" => "r1rho.md",
-                "Tutorials" => ["R1ρ analysis" => "tutorials/R1rho.md"]],
+                "Tutorials" => ["R1ρ analysis" => "tutorials/r1rho.md"]],
          sitename="NMRAnalysis.jl",
          authors="Chris Waudby",
-         assets=String[],
          warnonly=[:missing_docs],)
 
 deploydocs(;
