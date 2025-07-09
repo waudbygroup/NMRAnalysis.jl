@@ -55,7 +55,8 @@ function gui!(state)
     text_peakppm = input_panel[3, 2:3] = Textbox(fig;
                                                  stored_string=string(round(state[:peakppm][];
                                                                             digits=2)),
-                                                 validator=Float64, width=150)
+                                                 validator=Float64, width=150,
+                                                 textpadding=4)
     gui[:text_peakppm] = text_peakppm
     on(text_peakppm.stored_string) do s
         return state[:peakppm][] = parse(Float64, s)
@@ -65,7 +66,8 @@ function gui!(state)
     text_noiseppm = input_panel[4, 2:3] = Textbox(fig;
                                                   stored_string=string(round(state[:noiseppm][];
                                                                              digits=2)),
-                                                  validator=Float64, width=150)
+                                                  validator=Float64, width=150,
+                                                  textpadding=4)
     gui[:text_noiseppm] = text_noiseppm
     on(text_noiseppm.stored_string) do s
         return state[:noiseppm][] = parse(Float64, s)
@@ -75,7 +77,7 @@ function gui!(state)
     text_dx = input_panel[2, 2] = Textbox(fig;
                                           stored_string=string(round(state[:dx][];
                                                                      digits=2)),
-                                          validator=Float64, width=50)
+                                          validator=Float64, width=50, textpadding=4)
     gui[:text_dx] = text_dx
     on(text_dx.stored_string) do s
         return state[:dx][] = parse(Float64, s)
@@ -90,7 +92,7 @@ function gui!(state)
     text_I0 = input_panel[5, 2:3] = Textbox(fig;
                                             stored_string=string(round(state[:initialI0][];
                                                                        digits=1)),
-                                            validator=Float64, width=150)
+                                            validator=Float64, width=150, textpadding=4)
     gui[:text_I0] = text_I0
     on(text_I0.stored_string) do s
         return state[:initialI0][] = parse(Float64, s)
@@ -104,7 +106,7 @@ function gui!(state)
     text_R20 = input_panel[6, 2:3] = Textbox(fig;
                                              stored_string=string(round(state[:initialR20][];
                                                                         digits=1)),
-                                             validator=Float64, width=150)
+                                             validator=Float64, width=150, textpadding=4)
     gui[:text_R20] = text_R20
     on(text_R20.stored_string) do s
         return state[:initialR20][] = parse(Float64, s)
@@ -114,7 +116,7 @@ function gui!(state)
     text_Rex = input_panel[7, 2:3] = Textbox(fig;
                                              stored_string=string(round(state[:initialRex][];
                                                                         digits=1)),
-                                             validator=Float64, width=150)
+                                             validator=Float64, width=150, textpadding=4)
     gui[:text_Rex] = text_Rex
     on(text_Rex.stored_string) do s
         return state[:initialRex][] = parse(Float64, s)
@@ -124,7 +126,7 @@ function gui!(state)
     text_kex = input_panel[8, 2:3] = Textbox(fig;
                                              stored_string=string(round(exp(state[:initiallnk][]);
                                                                         digits=1)),
-                                             validator=Float64, width=150)
+                                             validator=Float64, width=150, textpadding=4)
     gui[:text_kex] = text_kex
     on(text_kex.stored_string) do s
         return state[:initiallnk][] = log(parse(Float64, s))
@@ -134,7 +136,7 @@ function gui!(state)
     text_σΔδ = input_panel[9, 2:3] = Textbox(fig;
                                              stored_string=string(round(state[:σΔδ][];
                                                                         digits=1)),
-                                             validator=Float64, width=150)
+                                             validator=Float64, width=150, textpadding=4)
     gui[:text_σΔδ] = text_σΔδ
     on(text_σΔδ.stored_string) do s
         return state[:σΔδ][] = parse(Float64, s)
@@ -219,7 +221,8 @@ function gui!(state)
     # Label(results_panel[5,1:2], lift(x->"kex (s⁻¹): $(exp(x))", state[:fitlnk]))
     results_panel[2, 1:2] = Label(fig, "Working directory:\n$(pwd())")
     results_panel[3, 1] = Label(fig, "Output folder:")
-    text_out = results_panel[3, 2] = Textbox(fig; stored_string="out", width=150)
+    text_out = results_panel[3, 2] = Textbox(fig; stored_string="out", width=150,
+                                             textpadding=4)
     gui[:text_out] = text_out
     on(text_out.stored_string) do s
         return state[:outputdir][] = s
