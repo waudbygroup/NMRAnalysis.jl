@@ -1,20 +1,17 @@
-using Documenter, NMRTools, Plots
+using Documenter
 ENV["GKSwstype"] = "100" # https://github.com/jheinen/GR.jl/issues/278
 
 makedocs(;
-    modules=[NMRTools],
-    format=Documenter.HTML(),
-    pages=[
-        "Home" => "index.md",
-        "Examples" => "examples.md",
-        "Metadata" => "metadata.md",
-    ],
-    # repo="https://github.com/waudbygroup/NMRTools.jl/blob/{commit}{path}#L{line}",
-    sitename="NMRTools.jl",
-    authors="Chris Waudby",
-    assets=String[],
-)
+         modules=[NMRAnalysis],
+         format=Documenter.HTML(),
+         pages=["Home" => "index.md",
+                "R1ρ" => "r1rho.md",
+                "Tutorials" => ["R1ρ analysis" => "tutorials/R1rho.md"]],
+         sitename="NMRAnalysis.jl",
+         authors="Chris Waudby",
+         assets=String[],
+         warnonly=[:missing_docs],)
 
 deploydocs(;
-    repo="github.com/waudbygroup/NMRTools.jl.git",
-)
+           repo="github.com/waudbygroup/NMRAnalysis.jl.git",
+           versions=["stable" => "v^", "v#.#", "dev" => "main"],)

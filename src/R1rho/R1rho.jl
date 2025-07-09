@@ -36,8 +36,8 @@ Launch the R1rho analysis GUI for a given directory or experiment folder.
 # Example
 
 ```julia
-# analyse experiments 104 and 105
-r1rho(["/Users/chris/git/R1rho.jl/data/104", "/Users/chris/git/R1rho.jl/data/105"])
+# analyse experiments 11 and 12
+r1rho(["examples/R1rho/11", "examples/R1rho/12"])
 
 # open a dialog to select a directory, and scale the display size by 1.5
 r1rho(scalefactor=1.5)

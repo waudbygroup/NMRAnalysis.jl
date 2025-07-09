@@ -1,15 +1,6 @@
-# NMRTools.jl
+# NMRAnalysis.jl
 
-NMRTools.jl is a simple library for importing and plotting NMR data. Documentation is incomplete and interested users are recommended to check out the [Examples](@ref).
+NMRAnalysis.jl is a Julia package for the analysis of NMR experiments including diffusion and relaxation.
 
 !!! note
-    This package is under active development and it may be a while before its features and syntax stabilises.
-
-
-
-```@index
-```
-
-```@autodocs
-Modules = [NMRTools]
-```
+    This package is under active development and its features and syntax may change.
