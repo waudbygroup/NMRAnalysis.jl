@@ -103,10 +103,3 @@ All analysis functions provide:
 - Publication-quality figures
 - Options to save results
 
-
-```@index
-```
-
-```@autodocs
-Modules = [NMRAnalysis]
-```
