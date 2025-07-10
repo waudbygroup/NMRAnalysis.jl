@@ -35,6 +35,27 @@ r1rho(["example/R1rho/11", "example/R1rho/12"])
 
 ![R1ρ Analysis Interface](assets/r1rho-interface.png)
 
+## Filtering spin-lock strengths: `minvSL` and `maxvSL`
+
+In on-resonance R1ρ experiments, very low spin-lock strengths can result in poor magnetization alignment, often observed as oscillations in the decay curves. Conversely, very high spin-lock strengths may introduce artifacts due to detuning. To improve the robustness of your analysis, you can use the `minvSL` and `maxvSL` keyword arguments to exclude problematic spin-lock strengths from the fit.
+
+- `minvSL`: Exclude spin-lock strengths below this value (in Hz). The default lower limit is 250 Hz.
+- `maxvSL`: Exclude spin-lock strengths above this value (in Hz). By default, there is no upper limit.
+
+For example, to exclude spin-lock strengths below 500 Hz and above 10 kHz:
+
+```julia
+r1rho(["example/R1rho/11", "example/R1rho/12"], minvSL=500, maxvSL=10_000)
+```
+
+Or, when launching with a dialog:
+
+```julia
+r1rho(minvSL=800)  # Exclude all spin-locks below 800 Hz
+```
+
+Filtering in this way helps ensure that only reliable data are included in the fit, improving the robustness of your analysis.
+
 ## Adjusting the Display Size: `scalefactor`
 
 The GUI display size can be adjusted using the optional `scalefactor` keyword argument. By default, this is set to `:automatic`, which uses a value of `2` for high-resolution (HiDPI/Retina) displays and `1` for standard displays. You can override this by specifying a numeric value:
