@@ -3,6 +3,7 @@ Pkg.activate(@__DIR__)  # Activate the docs environment
 Pkg.instantiate()       # Install all dependencies
 
 using Documenter, NMRAnalysis
+
 ENV["GKSwstype"] = "100" # https://github.com/jheinen/GR.jl/issues/278
 
 # DocMeta.setdocmeta!(NMRTools, :DocTestSetup, :(using NMRAnalysis); recursive=true)
@@ -12,6 +13,10 @@ makedocs(;
     format=Documenter.HTML(),
     pages=[
         "Home" => "index.md",
+        "R1ρ" => "r1rho.md",
+        "Tutorials" => [
+            "R1ρ analysis" => "tutorials/r1rho.md",
+        ],
         "Reference guide" => [
             "Creating new experiments" => "experiments.md",
         ],

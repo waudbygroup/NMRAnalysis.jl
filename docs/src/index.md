@@ -1,10 +1,15 @@
 # NMRAnalysis.jl
 
-A Julia package for analysis of biomolecular NMR data, with particular focus on protein dynamics experiments.
+A Julia package for analysis of NMR data, with particular focus on relaxation, diffusion, screening and
+protein dynamics experiments.
+
+!!! note
+    This package is under active development and its features and syntax may change.
 
 ## Overview
 
-NMRAnalysis.jl provides tools for processing and analyzing various types of NMR experiments commonly used in biomolecular NMR:
+NMRAnalysis.jl provides tools for processing and analyzing various types of NMR experiments commonly
+used in biomolecular NMR:
 
 - Relaxation measurements (T1, T2)
 - Heteronuclear NOE
@@ -98,10 +103,3 @@ All analysis functions provide:
 - Publication-quality figures
 - Options to save results
 
-
-```@index
-```
-
-```@autodocs
-Modules = [NMRAnalysis]
-```

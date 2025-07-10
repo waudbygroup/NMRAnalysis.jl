@@ -2,11 +2,14 @@ module NMRAnalysis
 
 using LsqFit
 using Measurements
+using NativeFileDialog
 using NMRTools
 using Plots
+using REPL.TerminalMenus
 using Reexport
 using Statistics
 
+include("fileselection.jl")
 include("viscosity.jl")
 include("diffusion.jl")
 include("tract.jl")
@@ -21,12 +24,17 @@ export viscosity
 export tract
 export diffusion
 
+include("R1rho/R1rho.jl")
+using .R1rho
+
 @reexport using .GUI2D: MaybeVector
 @reexport using .GUI2D: intensities2d, relaxation2d, recovery2d, modelfit2d # IntensityExperiment
 @reexport using .GUI2D: hetnoe2d # HetNOEExperiment
 @reexport using .GUI2D: cest2d # CESTExperiment
 @reexport using .GUI2D: cpmg2d # CPMGExperiment
 @reexport using .GUI2D: pre2d # PREExperiment
+
+@reexport using .R1rho: r1rho, setupR1rhopowers
 
 @info """
 NMRAnalysis.jl (v$(pkgversion(NMRAnalysis)))
@@ -40,6 +48,7 @@ NMRAnalysis.jl (v$(pkgversion(NMRAnalysis)))
 Available analysis routines:
 - tract()
 - diffusion()
+- r1rho()
 
 # 2D Experiment Analysis
 
