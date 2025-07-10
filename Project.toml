@@ -1,7 +1,7 @@
 name = "NMRAnalysis"
 uuid = "e8f11e50-668f-4bdf-b40b-95f76662da30"
 authors = ["Chris Waudby"]
-version = "0.2.3"
+version = "0.2.4"
 
 [deps]
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
