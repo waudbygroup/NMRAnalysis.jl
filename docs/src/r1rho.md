@@ -40,13 +40,13 @@ Once launched, the GUI displays the first spectrum of the dataset.
 ![R1ρ Analysis Interface](assets/r1rho-interface.png)
 
 - **Series Toggle**: Navigate between measurements at different spin-lock field strengths.
-- **Integration Width**: Manually input an integration width, or select **Optimise**  to automatically adjust the integration width to minimize fititng error.
+- **Integration Width**: Manually input an integration width, or select **Optimise**  to automatically adjust the integration width to minimize fitting error.
 - **Peak position (ppm)**: Automatically set to the chemical shift of the ligand; can be manually adjusted if needed.
-- **Noise position (ppm)**: Automatically placed at a distance from the peak; adjust as ncessary. 
+- **Noise position (ppm)**: Automatically placed at a distance from the peak; adjust as necessary. 
 - **Initial Guesses**: Provide starting values for `R2,0`, `Rex`, and `kex` to guide the fitting model.
 - **Δδ stdev (ppm)**: Accounts for the unknown chemical shift difference between free and bound states. We assume a normal distribution centered at zero with a standard deviation of 2 ppm.
 - **Output folder**: Specify a name for your results folder to keep outputs organised.
-- **Save Results**: Click to export fitted paramaters and plots to your output folder.
+- **Save Results**: Click to export fitted parameters and plots to your output folder.
 
 ## Analysis Workflow
 
@@ -61,7 +61,7 @@ Once launched, the GUI displays the first spectrum of the dataset.
 - Use **Optimise** to refine the integration width automatically.
 - Input initial guesses for model parameters:
   - `R2,0`: transverse relaxation rate
-  - `Rex`: exchange conttribution to relaxation rate
+  - `Rex`: exchange contribution to relaxation rate
   - `kex`: exchange rate constant
 - The data is automatically fit.
 
