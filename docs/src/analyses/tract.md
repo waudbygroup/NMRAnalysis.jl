@@ -51,13 +51,13 @@ The program displays the selected integration and noise regions for both experim
 Displaying integration and noise regions. Press enter to continue.
 ```
 
-![Integration and Noise Regions](assets/tract-regions.png)
+![Integration and Noise Regions](../assets/tract-regions.png)
 
 ### 4. Fitting and Results
 
 After confirmation, the analysis proceeds automatically. The program fits exponential decays to both TROSY and anti-TROSY data and calculates the effective rotational correlation time:
 
-![TRACT Fit](assets/tract-fit.png)
+![TRACT Fit](../assets/tract-fit.png)
 
 ```
 ┌ Info: TRACT results

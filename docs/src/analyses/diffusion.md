@@ -51,13 +51,13 @@ The program displays the selected integration and noise regions for confirmation
 Displaying integration and noise regions. Press enter to continue.
 ```
 
-![Integration and Noise Regions](assets/diffusion-regions.png)
+![Integration and Noise Regions](../assets/diffusion-regions.png)
 
 ### 4. Fitting and Results
 
 After pressing enter, the fit runs automatically using the Stejskal-Tanner equation. Results are displayed in the terminal while a fit plot is shown:
 
-![Diffusion Fit](assets/diffusion-fit.png)
+![Diffusion Fit](../assets/diffusion-fit.png)
 
 ```
 [ Info: Viscosity: calculation based on Cho et al, J Phys Chem B (1999) 103 1991-1994

@@ -23,7 +23,7 @@ You can provide a starting folder as an argument. The program will display a lis
 r1rho("example/R1rho")
 ```
 
-![R1ρ Experiment Selection](assets/r1rho-selection.png)
+![R1ρ Experiment Selection](../assets/r1rho-selection.png)
 
 ### 3. Launch with a List of Specific Input Spectra
 
@@ -33,7 +33,7 @@ You can also provide a list of specific experiment folders or files for direct a
 r1rho(["example/R1rho/11", "example/R1rho/12"])
 ```
 
-![R1ρ Analysis Interface](assets/r1rho-interface.png)
+![R1ρ Analysis Interface](../assets/r1rho-interface.png)
 
 ## Filtering spin-lock strengths: `minvSL` and `maxvSL`
 

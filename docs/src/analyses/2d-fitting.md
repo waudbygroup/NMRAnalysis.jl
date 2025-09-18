@@ -24,14 +24,14 @@ hetnoe2d(
 intensities2d("109/pdata/23")
 ```
 
-![Screenshot from peak fitting to a single 2D](assets/intensity2d.png)
+![Screenshot from peak fitting to a single 2D](../assets/intensity2d.png)
 
 ```julia
 t=[0.1, .2, .4, .7, 1, 1.5, 2,3,4,5]
 recovery2d("33",t)
 ```
 
-![Screenshot from analysis with a magnetisation recovery model](assets/recovery2d.png)
+![Screenshot from analysis with a magnetisation recovery model](../assets/recovery2d.png)
 
 
 ## Interactive Analysis
