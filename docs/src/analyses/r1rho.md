@@ -1,4 +1,4 @@
-# R1ρ Analysis
+# 1D R1ρ Analysis
 
 The `R1rho` module in NMRAnalysis.jl provides a graphical interface for the analysis of one-dimensional R1ρ relaxation dispersion experiments. This GUI allows you to load, visualize, and fit R1ρ data interactively.
 
