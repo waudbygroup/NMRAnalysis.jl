@@ -96,8 +96,9 @@ TRACT analysis exploits the interference between dipolar and CSA relaxation mech
 
 ```math
 \begin{aligned}
-\Delta R_2 &= R_{2,\mathrm{anti-TROSY}} - R_{2,\mathrm{TROSY}}
+\Delta R_2 &= R_{2,\mathrm{anti-TROSY}} - R_{2,\mathrm{TROSY}} \\
 \eta_{xy} &= \Delta R_2 / 2
+\end{aligned}
 ```
 
 Where:
@@ -110,7 +111,7 @@ Where:
 The effective rotational correlation time is calculated from the analytical solution:
 
 ```math
-\eta_{xy} = \frac{2}{5} \cdot \fram{\mu_0 \gamma_N \gamma_H \hbar}{4\pi r_{NH}^3} \cdot \frac{\omega_N \Delta\sigma}{3} \cdot \left[4\tau_c + \frac{3\tau_c}{1 + \omega_N^2\tau_c^2} \right]
+\eta_{xy} = \frac{2}{5} \cdot \frac{\mu_0 \gamma_N \gamma_H \hbar}{4\pi r_{NH}^3} \cdot \frac{\omega_N \Delta\sigma}{3} \cdot \left[4\tau_c + \frac{3\tau_c}{1 + \omega_N^2\tau_c^2} \right]
 ```
 
 Where:

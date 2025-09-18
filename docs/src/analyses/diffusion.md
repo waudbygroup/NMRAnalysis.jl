@@ -96,7 +96,7 @@ The file format is automatically chosen based on the extension (e.g., `.png` or 
 Experiments are fitted to the Stejskal-Tanner equation with finite gradient length correction:
 
 ```math
-I(g) = I_0 \exp\left[ -\left( \gamma\delta\sigma g G_\mathrm{max} \right)^2 \left(\Delta - \delta/3\right) D]
+I(g) = I_0 \cdot \exp \left( -\left[ \gamma\delta\sigma g G_\mathrm{max} \right] ^2 \left[\Delta - \delta/3 \right] D \right)
 ```
 
 Where:

@@ -46,8 +46,8 @@ I(T_{\text{SL}}, \nu_{\text{SL}}) = I_0 \cdot \exp\left(-\left[R_{2,0} + \frac{R
 
 Adapted from Trott & Palmer (2002, *J. Magn. Reson.* **154**, 157–160) where:
 
-```
-K^2 = k_{\text{ex}}^2 + 4\pi^2 \Delta\nu^2
+```math
+K^2 = k_\mathrm{ex}^2 + 4\pi^2 \Delta\nu^2
 ```
 
 To assess whether exchange contributes significantly, a null model excluding ``R_\mathrm{ex}`` is also fit and compared using an F-test.
