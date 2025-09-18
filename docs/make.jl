@@ -27,4 +27,5 @@ makedocs(;
 
 deploydocs(;
            repo="github.com/waudbygroup/NMRAnalysis.jl.git",
+           devbranch="main",
            versions=["stable" => "v^", "v#.#", "dev" => "main"],)

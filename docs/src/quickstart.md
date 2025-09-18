@@ -1,12 +1,10 @@
 # Quick Start
 
-This guide will help you get started with `NMRAnalysis.jl`, even if you're new to Julia.
+This guide will help you get started with NMRAnalysis.jl, even if you're new to Julia.
 
 ## Installation
 
-### Step 1: Install Julia
-
-1. If you don't already have Julia installed, **download Julia** from https://julialang.org/install/ and install according to the instructions on this page.
+1. If you don't already have Julia installed, **download Julia** from [https://julialang.org/install/](https://julialang.org/install/) and install according to the instructions on this page.
 
 2. **Verify installation** by opening a terminal/command prompt and typing:
    ```
@@ -14,31 +12,27 @@ This guide will help you get started with `NMRAnalysis.jl`, even if you're new t
    ```
    You should see the Julia REPL (interactive prompt) with version information.
 
-### Step 2: Install NMRAnalysis
+3. Once Julia is installed, you need to **add the NMRAnalysis package**:
 
-Once Julia is installed, you need to add the NMRAnalysis package:
+   1. Enter package mode by pressing `]` (you'll see the prompt change to `pkg>`)
+   2. Add the package by typing:
+      ```
+      add NMRAnalysis
+      ```
+   3. Wait for installation - Julia will automatically download and install NMRAnalysis and all its        dependencies
+   4. Exit package mode by pressing Backspace
 
-1. **Start Julia** by typing `julia` in your terminal
-2. **Enter package mode** by pressing `]` (you'll see the prompt change to `pkg>`)
-3. **Add the package** by typing:
-   ```
-   add NMRAnalysis
-   ```
-4. **Wait for installation** - Julia will automatically download and install NMRAnalysis and all its dependencies
-5. **Exit package mode** by pressing Backspace
-6. **Test the installation** by typing:
+4. **Activate the installation** by typing:
    ```julia
    using NMRAnalysis
    ```
 
-You should see an information message listing the available analysis routines.
+   You should see an information message listing the available analysis routines.
 
 !!! note "Package Installation"
     The first time you install NMRAnalysis, it may take several minutes to download and compile all dependencies. This is normal and only happens once.
 
 ## Basic Usage
-
-### Getting Started
 
 1. **Navigate to your data directory**:
    ```julia
@@ -57,9 +51,7 @@ You should see an information message listing the available analysis routines.
    ?r1rho        # Shows help for R1ρ analysis
    ```
 
-### Analysis Examples
-
-#### 1D Experiments
+Some examples of analysing **1D experiments**:
 
 ```julia
 using NMRAnalysis
@@ -76,7 +68,7 @@ r1rho(["11", "12"])                       # Analyze experiments 11 and 12
 r1rho(["11", "12"], minvSL=500)           # Filter low spin-lock strengths
 ```
 
-#### 2D Experiments (Interactive GUI)
+**2D experiments** can be analysed with the interactive graphical interface:
 
 ```julia
 # Relaxation analysis (T1, T2)
@@ -110,14 +102,13 @@ hetnoe2d(["reference/pdata/1", "saturated/pdata/1"], [false, true])
 diffusion("/Users/chris/NMR/project_data/106")
 ```
 
-### Next Steps
+## Next Steps
 
 - Check the [Analyses](analyses/diffusion.md) section for guides on specific experiment types
 - Explore the [Tutorials](tutorials/r1rho.md) for step-by-step examples
+
+
+## Getting Help
+
 - Use the built-in help system with `?function_name`
-
-
-### Getting Help
-
-- Use `?function_name` in Julia for detailed help
-- Please report any problems or suggestions at https://github.com/waudbygroup/NMRAnalysis.jl/issues
+- Please report any problems or suggestions at [https://github.com/waudbygroup/NMRAnalysis.jl/issues](https://github.com/waudbygroup/NMRAnalysis.jl/issues)

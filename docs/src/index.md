@@ -6,37 +6,16 @@ protein dynamics experiments.
 !!! note
     This package is under active development and its features and syntax may change.
 
-## Overview
-
 NMRAnalysis.jl provides tools for analysing various types of NMR experiments commonly
 used in biomolecular NMR:
 
-- Relaxation measurements (T1, T2)
-- Heteronuclear NOE
-- Diffusion
-- TRACT (TROSY/anti-TROSY Cross-Correlated Relaxation)
-- 19F R1rho relaxation dispersion
+- 1D diffusion (`diffusion()`)
+- 1D TRACT (`tract()`)
+- 1D 19F R1rho relaxation dispersion (`r1rho()`)
+- 2D relaxation measurements (T1, T2) (`relaxation2d(experimentfiles, relaxationtimes)`)
+- Heteronuclear NOE (`hetnoe2d(planefilenames, saturation)`)
 
+Some utility functions are also provided:
 
-## Key Functions
-
-### 1D Analysis with Guided Interface
-
-- `diffusion()`: Analyze diffusion experiments
-- `tract()`: Analyze TRACT experiments for estimating rotational correlation times
-
-### 1D R1rho relaxation dispersion
-
-- `r1rho()`: Analyse 1D (on-resonance) R1rho relaxation dispersion experiments with interactive interface.
-
-### 2D Analysis with Interactive GUI
-
-- `relaxation2d(experimentfiles, relaxationtimes)`: Analyze T1/T2 relaxation data
-- `hetnoe2d(planefilenames, saturation)`: Analyze heteronuclear NOE data
-
-### Utility Functions
-
-- `viscosity(solvent, T)`: Estimate solvent viscosity at given temperature
-  - Supports `:h2o` and `:d2o`
-  - Uses model from Cho et al, J Phys Chem B (1999) 103 1991-1994
+- `viscosity(solvent, T)`: Estimate solution viscosity at given temperature. Solvent can be `:h2o` or `:d2o`.
 

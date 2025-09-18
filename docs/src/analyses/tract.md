@@ -1,6 +1,6 @@
 # 1D TRACT Analysis
 
-The TRACT (TROSY for Rotational Correlation Times) analysis module in `NMRAnalysis.jl` provides tools for determining effective rotational correlation times (τc) of proteins from NMR relaxation interference. TRACT experiments measure the difference in relaxation rates between TROSY and anti-TROSY components to estimate molecular tumbling rates.
+The TRACT (TROSY for Rotational Correlation Times) analysis module in NMRAnalysis.jl provides tools for determining effective rotational correlation times (τc) of proteins from NMR relaxation interference. TRACT experiments measure the difference in relaxation rates between TROSY and anti-TROSY components to estimate molecular tumbling rates.
 
 ## What TRACT Measures
 
