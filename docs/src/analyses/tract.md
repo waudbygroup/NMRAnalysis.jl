@@ -94,32 +94,33 @@ The file format is automatically chosen based on the extension (e.g., `.png` or 
 
 TRACT analysis exploits the interference between dipolar and CSA relaxation mechanisms in ¹⁵N-¹H spin systems. The key relationship is:
 
-```
-ΔR₂ = R₂(anti-TROSY) - R₂(TROSY)
-ηxy = ΔR₂ / 2
+```math
+\begin{aligned}
+\Delta R_2 &= R_{2,\mathrm{anti-TROSY}} - R_{2,\mathrm{TROSY}}
+\eta_{xy} &= \Delta R_2 / 2
 ```
 
 Where:
-- `ΔR₂` is the difference in transverse relaxation rates
-- `ηxy` is the cross-correlation rate between dipolar and CSA mechanisms
-- `R₂(TROSY)` and `R₂(anti-TROSY)` are the fitted relaxation rates
+- ``\Delta R_2`` is the difference in transverse relaxation rates
+- ``η_{xy}`` is the cross-correlation rate between dipolar and CSA mechanisms
+- ``R_{2,\mathrm{TROSY}}`` and ``R_{2,\mathrm{anti-TROSY}}`` are the fitted relaxation rates
 
 ### Rotational Correlation Time Calculation
 
 The effective rotational correlation time is calculated from the analytical solution:
 
-```
-ηxy = (2/5) × (μ₀γNγHℏ/4πrNH³) × (ωNΔσ/3) × [4τc + 3τc/(1 + (ωNτc)²)]
+```math
+\eta_{xy} = \frac{2}{5} \cdot \fram{\mu_0 \gamma_N \gamma_H \hbar}{4\pi r_{NH}^3} \cdot \frac{\omega_N \Delta\sigma}{3} \cdot \left[4\tau_c + \frac{3\tau_c}{1 + \omega_N^2\tau_c^2} \right]
 ```
 
 Where:
-- `μ₀` is the permeability of free space
-- `γN`, `γH` are the gyromagnetic ratios of ¹⁵N and ¹H
-- `ℏ` is the reduced Planck constant
-- `rNH` is the N-H bond length (typically 1.02 Å)
-- `ωN` is the ¹⁵N Larmor frequency
-- `Δσ` is the ¹⁵N chemical shift anisotropy (typically -160 ppm)
-- `τc` is the rotational correlation time
+- ``\mu_0`` is the permeability of free space
+- ``\gamma_H``, ``\gamma_N`` are the gyromagnetic ratios
+- ``\hbar`` is the reduced Planck constant
+- ``r_{NH}`` is the N-H bond length (typically 1.02 Å)
+- ``\omega_N`` is the nitrogen-15 Larmor frequency
+- ``\Delta\sigma`` is the ¹⁵N chemical shift anisotropy (-160 ppm)
+- ``\tau_c`` is the (effective) rotational correlation time
 
 ### Assumptions and Limitations
 
@@ -131,4 +132,4 @@ Uncertainties in relaxation rates are derived from noise analysis of the integra
 
 ## Citation
 
-* Lee, D., Hilty, C., Wider, G., & Wüthrich, K. (2006). Effective rotational correlation times of proteins from NMR relaxation interference. *Journal of Magnetic Resonance*, 178(1), 72-76. doi: 10.1016/j.jmr.2005.08.014
+* Lee, D., Hilty, C., Wider, G., & Wüthrich, K. (2006). Effective rotational correlation times of proteins from NMR relaxation interference. *Journal of Magnetic Resonance*, **178**, 72-76. doi: 10.1016/j.jmr.2005.08.014

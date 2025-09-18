@@ -36,40 +36,38 @@ Once launched, the GUI displays the first spectrum of the dataset.
 
 ### 3. Interpret the Results
 
-#### 📊 Peak Integrals
+#### Peak Integrals
 
 Signal intensities are fit globally as a function of relaxation time and spin-lock field strength:
 
-$$
+```math
 I(T_{\text{SL}}, \nu_{\text{SL}}) = I_0 \cdot \exp\left(-\left[R_{2,0} + \frac{R_{\text{ex}} \cdot K^2}{K^2 + 4\pi^2 \nu_{\text{SL}}^2}\right] \cdot T_{\text{SL}}\right)
-$$
+```
 
-*Adapted from Trott & Palmer (2002), J. Magn. Reson. 154, 157–160.*
+Adapted from Trott & Palmer (2002, *J. Magn. Reson.* **154**, 157–160) where:
 
-Where:
-
-$$
+```
 K^2 = k_{\text{ex}}^2 + 4\pi^2 \Delta\nu^2
-$$
+```
 
-To assess whether exchange contributes significantly, a null model excluding `Rex` is also fit and compared using an F-test.
+To assess whether exchange contributes significantly, a null model excluding ``R_\mathrm{ex}`` is also fit and compared using an F-test.
 
-#### 📈 Dispersion Curve
+#### Dispersion Curve
 
-The GUI plots $R_{1ρ}$ as a function of $ν_{SL}$ using fitted parameters:
+The GUI plots ``R_{1\rho}`` as a function of ``ν_\mathrm{SL}`` using fitted parameters:
 
-$$
-R_{1\rho} = R_{2,0} + \frac{R_{\text{ex}} \cdot K^2}{K^2 + 4\pi^2 \nu_{\text{SL}}^2}
-$$
+```math
+R_{1\rho} = R_{2,0} + \frac{R_\mathrm{ex} \cdot K^2}{K^2 + 4\pi^2 \nu_\mathrm{SL}^2}
+```
 
-This curve is overlaid with $R_{1ρ}$ values obtained from exponential fits at individual spin-lock field strengths, enabling visual comparison of model performance.
+This curve is overlaid with ``R_{1ρ}`` values obtained from exponential fits at individual spin-lock field strengths, enabling visual comparison of model performance.
 
-#### 🔁 Kex Correction
+#### Kex Correction
 
-To account for uncertainty in the chemical shift difference ($Δδ$), a particle-based Monte Carlo correction is applied to $K$. For each particle, $k_{\text{off}}$ is calculated as:
+To account for uncertainty in the chemical shift difference (``\Delta\delta``), a particle-based Monte Carlo correction is applied to $K$. For each particle, ``k_\mathrm{off}`` is calculated as:
 
-$$
-k_{\text{off}} \approx k_{\text{ex}} = \sqrt{K^2 - 4\pi^2 \Delta\nu^2}
-$$
+```math
+k_\mathrm{off} \approx k_\mathrm{ex} = \sqrt{K^2 - 4\pi^2 \Delta\nu^2}
+```
 
 Samples yielding nonphysical values are excluded, and the final estimate is reported as the mean ± standard deviation of valid particles.

@@ -95,33 +95,32 @@ The file format is automatically chosen based on the extension (e.g., `.png` or 
 
 Experiments are fitted to the Stejskal-Tanner equation with finite gradient length correction:
 
-```
-I(g) = I₀ × exp(-(γ × δ × σ × g × Gmax)² × (Δ - δ/3) × D)
+```math
+I(g) = I_0 \exp\left[ -\left( \gamma\delta\sigma g G_\mathrm{max} \right)^2 \left(\Delta - \delta/3\right) D]
 ```
 
 Where:
-- `I(g)` is the signal intensity at gradient strength `g`
-- `I₀` is the initial signal intensity
-- `γ` is the gyromagnetic ratio
-- `δ` is the gradient pulse length
-- `σ` is the gradient shape factor
-- `Gmax` is the maximum gradient strength
-- `Δ` is the diffusion delay
-- `D` is the diffusion coefficient
+- ``I(g)`` is the signal intensity at gradient strength ``g``
+- ``I_0`` is the initial signal intensity
+- ``\gamma`` is the gyromagnetic ratio
+- ``\delta`` is the gradient pulse length
+- ``\sigma`` is the gradient shape factor (0.9 for trapezoidal gradients)
+- ``G_\mathrm{max}`` is the maximum gradient strength
+- ``\Delta`` is the diffusion delay
+- ``D`` is the diffusion coefficient
 
 ### Hydrodynamic Radius Calculation
 
-The hydrodynamic radius is calculated using the Stokes-Einstein relation:
+The hydrodynamic radius ``r_h`` is calculated using the Stokes-Einstein relation:
 
-```
-D = kT / (6πηr)
+```math
+D = \frac{kT}{6\pi \eta r_h}
 ```
 
 Where:
-- `k` is the Boltzmann constant
-- `T` is the temperature
-- `η` is the dynamic viscosity
-- `r` is the hydrodynamic radius
+- ``k`` is the Boltzmann constant
+- ``T`` is the temperature
+- ``\eta`` is the dynamic viscosity
 
 The viscosity is estimated based on solvent type and temperature using the formula from Cho et al., J. Phys. Chem. B (1999) 103, 1991-1994.
 
