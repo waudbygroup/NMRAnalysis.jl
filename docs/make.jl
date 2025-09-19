@@ -14,6 +14,7 @@ makedocs(;
          pages=["Home" => "index.md",
                 "Quick Start" => "quickstart.md",
                 "Analyses" => ["Diffusion (1D)" => "analyses/diffusion.md",
+                               "Relaxation (1D)" => "analyses/relaxation.md",
                                "TRACT (1D)" => "analyses/tract.md",
                                "R1ρ (1D)" => "analyses/r1rho.md",
                                "2D experiments" => "analyses/2d-fitting.md"],
