@@ -9,7 +9,7 @@ function relaxation()
 end
 
 function relaxation(filename::String)
-    ispath(filename) || throw(SystemError("No such file or directory"))
+    ispath(filename) || throw(ArgumentError("No such file or directory: $filename"))
 
     print("Enter 'IR' for inversion-recovery otherwise press ENTER: ")
     input = readline()
@@ -32,13 +32,13 @@ function relaxation(spec::NMRData{T,2}; ir=false) where {T}
         end
         tau = vclist .* conversion_factor / 1000
     else
-        throw(KeyError("No vdlist or vclist found in acqus"))
+        throw(ArgumentError("No vdlist or vclist found in acqus. Cannot determine relaxation delays. Use relaxation(spec, tau) to specify delays directly."))
     end
+    @info "Relaxation delays (s):" tau
     return relaxation(spec, tau; ir=ir)
 end
 
 function relaxation(spec::NMRData{T,2}, tau; ir=false) where {T}
-    @info tau
     spec = deepcopy(spec) # work on copy of the data
     label!(spec, "Relaxation")
 
@@ -53,7 +53,9 @@ function relaxation(spec::NMRData{T,2}, tau; ir=false) where {T}
     print("Defining integration region - please enter second chemical shift: ")
     ppm2 = readline()
     ppm2 = tryparse(Float64, ppm2)
-
+    if ppm1 === nothing || ppm2 === nothing
+        throw(ArgumentError("Invalid chemical shift value(s) entered for integration region. Please enter valid numbers."))
+    end
     ppm1, ppm2 = minmax(ppm1, ppm2)
 
     # 3. pick noise region
@@ -63,12 +65,15 @@ function relaxation(spec::NMRData{T,2}, tau; ir=false) where {T}
     print("Enter a chemical shift in the center of the noise region: ")
     noiseppm = readline()
     noiseppm = tryparse(Float64, noiseppm)
+    if noiseppm === nothing
+        throw(ArgumentError("Invalid chemical shift for noise region"))
+    end
 
     # create integration region and noise selectors
 
     ppmrange = ppm2 - ppm1
-    noise1 = noiseppm - 0.5ppmrange
-    noise2 = noiseppm + 0.5ppmrange
+    noise1 = noiseppm - 0.5 * ppmrange
+    noise2 = noiseppm + 0.5 * ppmrange
 
     roi = ppm1 .. ppm2
     noiseroi = noise1 .. noise2
@@ -117,6 +122,7 @@ function relaxation(spec::NMRData{T,2}, tau; ir=false) where {T}
     plot!(p1, x, yfit / I0;
           label="fit",
           z_order=:back)
+    # add invisible hline to force axis to go to zero
     hline!(p1, [0]; color=:black, lw=0, primary=false)
 
     println()

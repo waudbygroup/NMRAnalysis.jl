@@ -1,6 +1,18 @@
 # 1D Relaxation Analysis
 
-The relaxation analysis module in NMRAnalysis.jl provides a basic tool for analyzing R1 and R2 measurements, fitting either to exponential decays or to an inversion-recovery model.
+The relaxation analysis module in NMRAnalysis.jl provides a basic tool for analyzing R1 and R2 measurements, fitting either to an exponential decay:
+
+```math
+I(\tau) = I_0 \exp\left(-R\tau\right)
+```
+
+or to an inversion-recovery model:
+
+```math
+I(\tau) = I_0 \cdot \left[1 - A \exp\left(-R\tau\right)\right]
+```
+
+where ``I_0`` is the maximum intensity, ``R`` is the relaxation rate, and ``A`` is the amplitude of the recovery phase (if used).
 
 ## Launching Relaxation Analysis
 
@@ -105,4 +117,4 @@ The file format is automatically chosen based on the extension (e.g., `.png` or 
 
 ## Noise Estimation
 
-Noise levels for peak integrals are calculated by integrating a matching region of noise and taking the standard deviation across diffusion gradient strengths. This approach relies on good quality baselines for accurate noise estimation.
+Noise levels for peak integrals are calculated by integrating a matching region of noise and taking the standard deviation across relaxation delays. This approach relies on good quality baselines for accurate noise estimation.
