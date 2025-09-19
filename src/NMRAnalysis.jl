@@ -12,6 +12,7 @@ using Statistics
 include("fileselection.jl")
 include("viscosity.jl")
 include("diffusion.jl")
+include("relaxation.jl")
 include("tract.jl")
 
 include("gui2d/GUI2D.jl")
@@ -21,8 +22,9 @@ using PrecompileTools
 include("precompile.jl")
 
 export viscosity
-export tract
 export diffusion
+export relaxation
+export tract
 
 include("R1rho/R1rho.jl")
 using .R1rho
