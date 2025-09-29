@@ -1,6 +1,27 @@
 # Tutorial: R1ρ Analysis
 
-This tutorial walks through the graphical interface for analysing R1ρ relaxation dispersion data. It covers GUI controls, fitting workflow, and interpretation of results.
+This tutorial walks through the graphical interface for analysing R1ρ relaxation dispersion data. It covers experimental setup, GUI controls, fitting workflow, and interpretation of results.
+
+## Experimental Setup 
+
+### 1. Determine the Ligand Chemical Shift 🔎
+
+Acquire a 1D broadband <sup>19</sup>F NMR experiment to identify the chemical shift of the ligand resonance. This value will serve as the O1 in the 90° pulse calibration experiment. Ensure that the pulse length (P1) is set appropriately in subsequent $R_{1ρ}$ experiments.
+
+### 2. Pulse Sequence
+
+The pulse sequence is adapted from Overbeck (2020).
+
+### 3. Calibrate Spinlock Powers
+
+Within NMRAnalysis.jl, the calibrations.jl module provides the function `setupR1rhopowers()` for calibrating spinlock powers.
+
+- Input the P1 value for the <sup>19</sup>F hard pulse (in μs) and the pldB1 (<sup>19</sup>F hard pulse power in dB). 
+- You may supply a custom list of spinlock strengths (in Hz), or use the default set provided.
+- For high spinlock powers, a warning will be issued to verify that the spinlock duration remains within acceptable power limits. 
+- The output is a list of calibrated spinlock powers (in dB) that can be copied directly into VALIST in TopSpin. 
+
+![setupR1rhopowers](../assets/setupR1rhopowers.png)
 
 ## GUI Overview 
 
@@ -73,3 +94,48 @@ k_{\text{off}} \approx k_{\text{ex}} = \sqrt{K^2 - 4\pi^2 \Delta\nu^2}
 $$
 
 Samples yielding nonphysical values are excluded, and the final estimate is reported as the mean ± standard deviation of valid particles.
+
+### 4. 📁 Output Files
+
+Upon saving results, the GUI generates both raw and fitted data files, along with summary plots. These outputs are organized by analysis type:
+
+#### 📄 Dispersion Curve Outputs
+
+These files correspond to the global fit of $R_{1ρ}$ versus spinlock field strength:
+
+- `dispersion-points.csv`: Raw $R_{1ρ}$ values from exponential fits at each spinlock field
+- `dispersion-fit.csv`: Fitted $R_{1ρ}$ values based on the global model
+- `dispersion.pdf`: Plot of the dispersion curve with overlaid model fit
+
+![dispersion.pdf](../assets/example_results_file.png)
+
+> The CSV files can be loaded into data frames, allowing efficient customization of plots and further exploration of fitted parameters.
+
+
+#### 📄 Peak Integral Outputs
+
+For each spinlock power, the GUI exports:
+
+- `intensities_<spinlock>Hz-points.csv`: Raw peak intensities as a function of spinlock duration
+- `intensities_<spinlock>Hz-fit.csv`: Fitted intensities using the relaxation model
+- `intensities_<spinlock>Hz.pdf`: Plot of intensity decay curves with fitted overlays
+
+> These files support detailed inspection of signal decay and fitting quality at individual spinlock powers.
+ 
+ #### 📄 Summary File: `results.txt`
+
+This file provides a concise summary of the analysis, including:
+
+- Input file paths used in the fitting  
+- Peak and noise positions (ppm)  
+- Integration width  
+- Initial parameter guesses (`I0`, `R2,0`, `Rex`, `kex`)  
+- Final fitted values with uncertainties  
+
+**Example:**
+
+![results_file](../assets/example_results_file.png)
+
+> This file is useful for quick reference and record-keeping, especially when comparing fits across multiple datasets or conditions.
+
+
