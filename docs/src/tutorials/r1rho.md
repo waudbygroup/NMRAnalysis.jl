@@ -8,15 +8,21 @@ This tutorial walks through the graphical interface for analysing R1ρ relaxatio
 
 Acquire a 1D broadband <sup>19</sup>F NMR experiment to identify the chemical shift of the ligand resonance. This value will serve as the O1 in the 90° pulse calibration experiment. Ensure that the pulse length (P1) is set appropriately in subsequent $R_{1ρ}$ experiments.
 
-### 2. Pulse Sequence
+### 2. Pulse Program
 
-The pulse sequence is adapted from Overbeck (2020).
+The pulse program used for on-resonance $R_{1ρ}$ experiments is available on GitHub:
+
+**[`19F_onresR1p.cw`](https://github.com/chriswaudby/pp/blob/master/19F_onresR1p.cw)**  
+
+This sequence is adapted from Overbeck et al., J. Magn. Reson. 2020, 74, 753–766 and includes improved temperature compensation. It supports pseudo-3D acquisition with variable spinlock lengths and powers, read in via `VPLIST` and `VALIST`.
+
+> Make sure to calibrate your hard pulse and spinlock powers before running the sequence. See the calibration section above for details.
 
 ### 3. Calibrate Spinlock Powers
 
 Within NMRAnalysis.jl, the calibrations.jl module provides the function `setupR1rhopowers()` for calibrating spinlock powers.
 
-- Input the P1 value for the <sup>19</sup>F hard pulse (in μs) and the pldB1 (<sup>19</sup>F hard pulse power in dB). 
+- Input the P1 value for the <sup>19</sup>F hard pulse (in μs) and the PLdB1 (<sup>19</sup>F hard pulse power in dB). 
 - You may supply a custom list of spinlock strengths (in Hz), or use the default set provided.
 - For high spinlock powers, a warning will be issued to verify that the spinlock duration remains within acceptable power limits. 
 - The output is a list of calibrated spinlock powers (in dB) that can be copied directly into VALIST in TopSpin. 
