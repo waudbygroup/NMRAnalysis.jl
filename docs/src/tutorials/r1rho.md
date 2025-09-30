@@ -52,7 +52,7 @@ r1rho(["example/R1rho/11", "example/R1rho/12"])
 
 - **Series Toggle**: Switch between measurements at different spin-lock field strengths.
 - **Integration Width**: Manually input a value or click **Optimise** to automatically minimize fitting error.
-- **Peak Position (ppm)**: Automatically set to the chemical shift of a ligand; manually adjust accordingly if analsying a mixture.
+- **Peak Position (ppm)**: Automatically set to the chemical shift of a ligand; manually adjust accordingly if analysing a mixture.
 - **Noise Position (ppm)**: Automatically placed away from the peak; adjust if baseline noise is misestimated.
 - **Initial Guesses**: Provide starting values for `R2,0`, `Rex`, and `kex` to guide model fitting.
 - **Δδ stdev (ppm)**: Accounts for uncertainty in the chemical shift difference between free and bound states. Assumes a normal distribution centered at 0 ppm with a standard deviation of 2 ppm.
