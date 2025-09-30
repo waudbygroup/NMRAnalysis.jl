@@ -12,15 +12,15 @@ Acquire a 1D broadband <sup>19</sup>F NMR experiment to identify the chemical sh
 
 The pulse program used for on-resonance $R_{1ρ}$ experiments is available on GitHub:
 
-**[`19F_onresR1p.cw`](https://github.com/chriswaudby/pp/blob/master/19F_onresR1p.cw)**  
+- **[`19F_onresR1p.cw`](https://github.com/chriswaudby/pp/blob/master/19F_onresR1p.cw)**  
 
-This sequence is adapted from Overbeck et al., J. Magn. Reson. 2020, 74, 753–766 and includes improved temperature compensation. It supports pseudo-3D acquisition with variable spinlock lengths and powers, read in via `VPLIST` and `VALIST`.
+This sequence is adapted from Overbeck et al. (J. Magn. Reson. 2020, **74**, 753–766) and includes improved temperature compensation. It supports pseudo-3D acquisition with variable spinlock lengths and powers, read in via `VPLIST` and `VALIST`.
 
-> Make sure to calibrate your hard pulse and spinlock powers before running the sequence. See the calibration section above for details.
+> Make sure to calibrate your hard pulse and spinlock powers before running the sequence. See the calibration section below for details.
 
 ### 3. Calibrate Spinlock Powers
 
-Within NMRAnalysis.jl, the calibrations.jl module provides the function `setupR1rhopowers()` for calibrating spinlock powers.
+NMRAnalysis.jl provides the function `setupR1rhopowers()` for calculating spinlock powers based on a calibrated <sup>19</sup>F 90 degree hard pulse:
 
 - Input the P1 value for the <sup>19</sup>F hard pulse (in μs) and the PLdB1 (<sup>19</sup>F hard pulse power in dB). 
 - You may supply a custom list of spinlock strengths (in Hz), or use the default set provided.
@@ -31,7 +31,22 @@ Within NMRAnalysis.jl, the calibrations.jl module provides the function `setupR1
 
 ## GUI Overview 
 
-Once launched, the GUI displays the first spectrum of the dataset. 
+Open a Julia session in the terminal and launch the analysis interface:
+
+```julia
+using NMRAnalysis
+
+# prompt to select experiments
+r1rho()
+
+# provide path to directory containing experiments
+r1rho("example/R1rho")
+
+# provide path to specific experiments
+r1rho(["example/R1rho/11", "example/R1rho/12"])
+```
+
+ Once loaded, the GUI displays the first spectrum of the dataset.
 
 ![R1ρ Analysis Interface](../assets/r1rho-interface.png)
 
@@ -63,8 +78,6 @@ Once launched, the GUI displays the first spectrum of the dataset.
 
 ### 3. Interpret the Results
 
-#### 📊 Peak Integrals
-
 Signal intensities are fit globally as a function of relaxation time and spin-lock field strength:
 
 $$
@@ -81,7 +94,7 @@ $$
 
 To assess whether exchange contributes significantly, a null model excluding `Rex` is also fit and compared using an F-test.
 
-#### 📈 Dispersion Curve
+#### Dispersion Curve
 
 The GUI plots $R_{1ρ}$ as a function of $ν_{SL}$ using fitted parameters:
 
@@ -91,7 +104,7 @@ $$
 
 This curve is overlaid with $R_{1ρ}$ values obtained from exponential fits at individual spin-lock field strengths, enabling visual comparison of model performance.
 
-#### 🔁 Kex Correction
+#### Chemical Shift Correction
 
 To account for uncertainty in the chemical shift difference ($Δδ$), a particle-based Monte Carlo correction is applied to $K$. For each particle, $k_{\text{off}}$ is calculated as:
 
@@ -101,11 +114,11 @@ $$
 
 Samples yielding nonphysical values are excluded, and the final estimate is reported as the mean ± standard deviation of valid particles.
 
-### 4. 📁 Output Files
+### 4. Output Files
 
 Upon saving results, the GUI generates both raw and fitted data files, along with summary plots. These outputs are organized by analysis type:
 
-#### 📄 Dispersion Curve Outputs
+#### Dispersion Curve Outputs
 
 These files correspond to the global fit of $R_{1ρ}$ versus spinlock field strength:
 
@@ -118,7 +131,7 @@ These files correspond to the global fit of $R_{1ρ}$ versus spinlock field stre
 > The CSV files can be loaded into data frames, allowing efficient customization of plots and further exploration of fitted parameters.
 
 
-#### 📄 Peak Integral Outputs
+#### Peak Integral Outputs
 
 For each spinlock power, the GUI exports:
 
@@ -128,7 +141,7 @@ For each spinlock power, the GUI exports:
 
 > These files support detailed inspection of signal decay and fitting quality at individual spinlock powers.
  
- #### 📄 Summary File: `results.txt`
+ #### Summary File: `results.txt`
 
 This file provides a concise summary of the analysis, including:
 
