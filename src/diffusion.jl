@@ -172,8 +172,9 @@ function diffusion(spec::NMRData{T,2}, coherence=SQ(H1)) where {T}
     if !ismissing(solvent)
         η = viscosity(solvent, temp)
         kB = 1.38e-23
-        rH = kB*temp / (6π*η*0.001 * D) * 1e10 # in Å
+        rH = kB * temp / (6π * η * 0.001 * D) * 1e10 # in Å
     else
+        η = missing
         rH = missing
     end
 

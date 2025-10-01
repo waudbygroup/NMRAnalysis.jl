@@ -12,7 +12,11 @@ function processexperiments(experimentfiles; minvSL=250.0, maxvSL=1e6)
         expt = loadnmr(experimentfile)
         expt /= NMRTools.scale(expt)
 
-        offres = occursin("offres", expt[:pulseprogram])
+        offres = if isnothing(NMRTools.annotations(expt))
+            occursin("offres", expt[:pulseprogram])
+        else
+            "off-resonance" in NMRTools.annotations(expt, "features")
+        end
         if offres
             ΩSL, νSL, TSL, spec = process_offres_experiment(expt)
             n = ones(length(spec))
@@ -48,9 +52,9 @@ function process_offres_experiment(expt)
     # 3. Get list of relaxation times
     TSL = acqus(expt, :vplist)
 
-    # 4. Get spinlock power
-    spinlock_power_W = acqus(expt, :plw, 25)
-    νSL = convert_W_to_Hz(spinlock_power_W, expt)
+    # 4. Get spinlock power (using 90 degree p1@pl1 as reference)
+    spinlock_power = acqus(expt, :plw, 25)
+    νSL = hz(spinlock_power, acqus(expt, :pl, 1), acqus(expt, :p, 1), 90)
 
     nΩ = length(ΩSL)
     nT = length(relaxation_times)
