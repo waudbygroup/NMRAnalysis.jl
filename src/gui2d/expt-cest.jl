@@ -192,8 +192,8 @@ function postfit!(peak::Peak, expt::CESTExperiment)
     δsat = expt.frequencies[2:end]
     δ0 = peak.parameters[:y].value[][1]
     R20 = peak.parameters[:R2y].value[][1]
-    v0 = δ0 * expt.specdata.nmrdata[1][2, :bf]
-    vsat = δsat .* expt.specdata.nmrdata[1][2, :bf]
+    v0 = 1e-6 * δ0 * expt.specdata.nmrdata[1][2, :bf]
+    vsat = 1e-6 * δsat .* expt.specdata.nmrdata[1][2, :bf]
     Tsat = expt.Tsat
     v1 = expt.B1
 
@@ -285,8 +285,8 @@ function get_cest_data(peak, expt::CESTExperiment)
     # Calculate fit line if peak has been fitted
     if peak.postfitted[]
         δ0 = peak.parameters[:y].value[][1]
-        v0 = δ0 * expt.specdata.nmrdata[1][2, :bf]
-        vsat = x * expt.specdata.nmrdata[1][2, :bf]
+        v0 = 1e-6 * δ0 * expt.specdata.nmrdata[1][2, :bf]
+        vsat = 1e-6 * x * expt.specdata.nmrdata[1][2, :bf]
         Tsat = expt.Tsat
         v1 = expt.B1
         R1 = peak.postparameters[:R1].value[][1]
