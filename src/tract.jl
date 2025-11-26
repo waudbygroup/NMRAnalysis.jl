@@ -1,3 +1,22 @@
+"""
+    tract()
+    tract(trosy_filename, antitrosy_filename)
+
+Analyze 1D TRACT relaxation experiments.
+
+Interactively select integration and noise regions, then fit relaxation data to extract
+relaxation rates and an effective correlation time.
+    
+- `trosy_filename`: Path to Bruker experiment folder for TROSY data
+- `antitrosy_filename`: Path to Bruker experiment folder for anti-TROSY data
+
+# Example
+
+```julia
+tract()
+tract("path/to/trosy_experiment", "path/to/antitrosy_experiment")
+```
+"""
 function tract()
     println("Current directory: $(pwd())")
     println()
@@ -15,7 +34,7 @@ end
 
 function tract(trosy::String, antitrosy::String)
     return tract(loadnmr(trosy),
-                         loadnmr(antitrosy))
+                 loadnmr(antitrosy))
 end
 
 function tract(trosy::NMRData{T,2}, antitrosy::NMRData{T,2}) where {T}
@@ -40,8 +59,8 @@ function tract(trosy::NMRData{T,2}, antitrosy::NMRData{T,2}) where {T}
     antitrosytau = data(antitrosy, 2)
 
     # calculate field-dependent quantities
-    B0 = 2π * 1e6 * acqus(trosy, :bf1) / γH
-    ωN = 2π * 1e6 * acqus(trosy, :bf3)
+    B0 = 2π * acqus(trosy, :bf1) / γH
+    ωN = 2π * acqus(trosy, :bf3)
 
     p = μ0 * γH * γN * ħ / (8π * sqrt(2) * rNH^3)
     c = B0 * γN * ΔδN / (3 * sqrt(2))
