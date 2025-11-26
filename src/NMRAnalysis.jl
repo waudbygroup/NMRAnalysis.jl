@@ -41,27 +41,27 @@ using .R1rho
 @info """
 NMRAnalysis.jl (v$(pkgversion(NMRAnalysis)))
 
-# 1D Experiment Analysis
+1. set your working directory to a convenient location, e.g.
+   cd("/Users/chris/NMR/crick-702/my_experiment_directory")
+2. call the desired analysis routine
+3. use `?function_name` to get help on any function
 
-- set your working directory to a convenient location, e.g.
-  cd("/Users/chris/NMR/crick-702/my_experiment_directory")
-- call the desired analysis routine
+# 1D Experiment Analysis Routines
 
-Available analysis routines:
-- tract()
-- diffusion()
-- r1rho()
+- relaxation([filename])
+- diffusion([filename])
+- tract([trosy_filename, antitrosy_filename])
+- r1rho([directory_path]; minvSL=250, maxvSL=1e6, scalefactor=:automatic)
 
-# 2D Experiment Analysis
+# 2D Experiment Analysis Routines
 
-Available interfaces:
-- intensities2d()
-- relaxation2d()
-- recovery2d()
-- modelfit2d()
-- hetnoe2d()
-- cest2d()
-- cpmg2d()
+- intensities2d(inputfilenames)
+- relaxation2d(inputfilenames, relaxationtimes | taufilename)
+- recovery2d(inputfilenames, relaxationtimes | taufilename)
+- modelfit2d(inputfilenames, xvalues, equation, parameters)
+- hetnoe2d(inputfilenames, saturationlist)
+- cest2d(inputfilenames; B1, Tsat)
+- cpmg2d(inputfilename; Trelax, vCPMG | ncyc)
 
 Current working directory: $(pwd())
 """
