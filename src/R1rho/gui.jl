@@ -149,18 +149,22 @@ function gui!(state)
                   xlabel="TSL (ms)",
                   ylabel="Peak integral",
                   title=gui[:fitplottitle])
-    errorbars!(ax_fit, state[:currenterror])
-    scatter!(ax_fit, state[:currentscatter]; label="Observed")
-    lines!(ax_fit, state[:currentfit]; label="Global fit", color=c1)
-    lines!(ax_fit, state[:currentfit_null]; label="No exchange model", color=c3,
-           linestyle=:dash)
-    lines!(ax_fit, state[:currentexpfit]; label="Exponential fit", color=c2)
-    errorbars!(ax_fit, state[:residualerror]; color=c4)
-    scatter!(ax_fit, state[:residualpoints]; color=c4, label="Residuals")
-    errorbars!(ax_fit, state[:residualerror_null]; color=c5)
-    scatter!(ax_fit, state[:residualpoints_null]; color=c5, label="Residuals (no exchange)")
+    plt_obserr = errorbars!(ax_fit, state[:currenterror])
+    plt_obsscat = scatter!(ax_fit, state[:currentscatter]; label="Observed")
+    plt_glob = lines!(ax_fit, state[:currentfit]; label="Global fit", color=c1)
+    plt_noex = lines!(ax_fit, state[:currentfit_null]; label="No exchange model", color=c3,
+                      linestyle=:dash)
+    plt_expfit = lines!(ax_fit, state[:currentexpfit]; label="Exponential fit", color=c2)
+    plt_resierr = errorbars!(ax_fit, state[:residualerror]; color=c4)
+    plt_resis = scatter!(ax_fit, state[:residualpoints]; color=c4, label="Residuals")
+    plt_noexresierr = errorbars!(ax_fit, state[:residualerror_null]; color=c5)
+    plt_noexresis = scatter!(ax_fit, state[:residualpoints_null]; color=c5,
+                             label="Residuals (no ex)")
 
-    axislegend(ax_fit; position=:rt)
+    # axislegend(ax_fit; position=:rt)
+    Legend(bottom_panel[2, 1],
+           ax_fit;
+           nbanks=2, orientation=:horizontal)
 
     ax_fit_R1rho = Axis(bottom_panel[1, 2];
                         xlabel="νSL (kHz)",
@@ -172,7 +176,10 @@ function gui!(state)
     lines!(ax_fit_R1rho, state[:fitR1rho]; label="Global fit", color=c1)
     lines!(ax_fit_R1rho, state[:fitR1rho_null]; label="No exchange model", color=c3,
            linestyle=:dash)
-    axislegend(ax_fit_R1rho; position=:rt)
+    # axislegend(ax_fit_R1rho; position=:rt)
+    Legend(bottom_panel[2, 2],
+           ax_fit_R1rho;
+           orientation=:horizontal)
 
     gui[:results_text] = lift(state[:ftest], state[:σΔδ]) do ftest, _
         I0 = state[:fitI0][]
