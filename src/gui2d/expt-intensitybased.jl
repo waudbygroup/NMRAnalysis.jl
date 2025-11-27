@@ -321,10 +321,11 @@ function simulate!(z, peak::Peak, expt::IntensityExperiment, xbounds=nothing,
         xs = x[xi]
         ys = y[yi]
         # NB. scale intensities by R2x and R2y to decouple amplitude estimation from linewidth
-        zx = NMRTools.NMRBase._lineshape(getω(xaxis, x0), R2x, getω(xaxis, xs),
+
+        zx = NMRTools.NMRBase._lineshape(2π * hz(x0, xaxis), R2x, 2π * hz(xs, xaxis),
                                          xaxis[:window], RealLineshape())
         zy = (π^2 * amp * R2x0 * R2y0) *
-             NMRTools.NMRBase._lineshape(getω(yaxis, y0), R2y, getω(yaxis, ys),
+             NMRTools.NMRBase._lineshape(2π * hz(y0, yaxis), R2y, 2π * hz(ys, yaxis),
                                          yaxis[:window], RealLineshape())
         z[i][xi, yi] .+= zx .* zy'
     end

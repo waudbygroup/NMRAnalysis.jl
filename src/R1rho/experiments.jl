@@ -47,7 +47,7 @@ end
 function process_offres_experiment(expt)
     # 2. Get list of spinlock offsets
     fqlist = acqus(expt, :fq1list)
-    ΩSL = getoffset(fqlist, dims(expt, F1Dim)) # in Hz
+    ΩSL = hz(fqlist, dims(expt, F1Dim)) # in Hz
 
     # 3. Get list of relaxation times
     TSL = acqus(expt, :vplist)

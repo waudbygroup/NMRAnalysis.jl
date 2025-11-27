@@ -76,7 +76,7 @@ function CESTExperiment(inputfilename, B1, Tsat)
     frequencies = if haskey(acqus(spec), :fq3list)
         fq_list = acqus(spec, :fq3list)
         # Get frequencies in ppm
-        getppm(fq_list, dims(spec, F2Dim))
+        ppm(fq_list, dims(spec, F2Dim))
     else
         # Fallback if fq3list is not available
         collect(range(-10.0, 10.0; length=ndims(spec, 3)))
@@ -176,10 +176,10 @@ function simulate!(z, peak::Peak, expt::CESTExperiment, xbounds=nothing, ybounds
         xs = x[xi]
         ys = y[yi]
         # NB. scale intensities by R2x and R2y to decouple amplitude estimation from linewidth
-        zx = NMRTools.NMRBase._lineshape(getω(xaxis, x0), R2x, getω(xaxis, xs),
+        zx = NMRTools.NMRBase._lineshape(2π * hz(x0, xaxis), R2x, 2π * hz(xs, xaxis),
                                          xaxis[:window], RealLineshape())
         zy = (π^2 * amp * R2x * R2y) *
-             NMRTools.NMRBase._lineshape(getω(yaxis, y0), R2y, getω(yaxis, ys),
+             NMRTools.NMRBase._lineshape(2π * hz(y0, yaxis), R2y, 2π * hz(ys, yaxis),
                                          yaxis[:window], RealLineshape())
         z[i][xi, yi] .+= zx .* zy'
     end
