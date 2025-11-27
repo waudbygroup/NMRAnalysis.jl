@@ -12,7 +12,7 @@ diamagnetic and paramagnetic states respectively.
 """
 function pre2d(inputfilenames, paramagnetic_concs, expttype, Trelax)
     expt = PREExperiment(inputfilenames, paramagnetic_concs, expttype, Trelax)
-    gui!(expt)
+    return gui!(expt)
 end
 
 """
@@ -52,7 +52,7 @@ struct PREExperiment <: FixedPeakExperiment
                    Observable{Dict}())
         setupexptobservables!(expt)
         expt.state[] = preparestate(expt)
-        expt
+        return expt
     end
 end
 
@@ -173,10 +173,10 @@ function simulate!(z, peak::Peak, expt::PREExperiment, xbounds=nothing, ybounds=
         xs = x[xi]
         ys = y[yi]
         # NB. scale intensities by R2x and R2y to decouple amplitude estimation from linewidth
-        zx = NMRTools.NMRBase._lineshape(getω(xaxis, x0), R2x, getω(xaxis, xs),
+        zx = NMRTools.NMRBase._lineshape(2π * hz(x0, xaxis), R2x, 2π * hz(xs, xaxis),
                                          xaxis[:window], RealLineshape())
         zy = (π^2 * amp * R2x0 * R2y0) *
-             NMRTools.NMRBase._lineshape(getω(yaxis, y0), R2y, getω(yaxis, ys),
+             NMRTools.NMRBase._lineshape(2π * hz(y0, yaxis), R2y, 2π * hz(ys, yaxis),
                                          yaxis[:window], RealLineshape())
         z[i][xi, yi] .+= zx .* zy'
     end
@@ -186,7 +186,7 @@ end
 function postfit!(peak::Peak, ::PREExperiment)
     peak.postparameters[:PRE].uncertainty[] .= peak.parameters[:PRE].uncertainty[]
     peak.postparameters[:PRE].value[] .= peak.parameters[:PRE].value[]
-    peak.postfitted[] = true
+    return peak.postfitted[] = true
 end
 
 """Return descriptive text for slice idx."""
