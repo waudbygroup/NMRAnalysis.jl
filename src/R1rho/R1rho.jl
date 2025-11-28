@@ -54,8 +54,7 @@ r1rho("examples/R1rho", maxvSL=10_000)
 ```
 """
 function r1rho(directory_path=""; minvSL=250, maxvSL=1e6, scalefactor=:automatic)
-    @info "Select a numbered experiment folder or parent directory"
-    filenames = select_expts(directory_path; title_filters=["1rho", "1p"])
+    filenames = select_expts(directory_path; experiment_type_filter="r1rho")
     isempty(filenames) && return
     return r1rho(filenames; minvSL=minvSL, maxvSL=maxvSL, scalefactor=scalefactor)
 end
