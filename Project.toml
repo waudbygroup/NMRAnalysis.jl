@@ -1,7 +1,7 @@
 name = "NMRAnalysis"
 uuid = "e8f11e50-668f-4bdf-b40b-95f76662da30"
-authors = ["Chris Waudby", "Sophia Hazlett"]
 version = "0.2.5"
+authors = ["Chris Waudby", "Sophia Hazlett"]
 
 [deps]
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
@@ -34,7 +34,7 @@ LinearAlgebra = "1.10.0"
 LsqFit = "0.15"
 Measurements = "2.11"
 MonteCarloMeasurements = "1.4.5"
-NMRTools = "0.2.1"
+NMRTools = "0.2.3"
 NativeFileDialog = "0.2.1"
 OrderedCollections = "1.8"
 Plots = "1.40"

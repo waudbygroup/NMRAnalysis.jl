@@ -10,7 +10,9 @@ using Reexport
 using Statistics
 
 include("fileselection.jl")
+include("analyse.jl")
 include("viscosity.jl")
+include("calibration.jl")
 include("diffusion.jl")
 include("relaxation.jl")
 include("tract.jl")
@@ -21,6 +23,7 @@ using .GUI2D
 using PrecompileTools
 include("precompile.jl")
 
+export analyse
 export viscosity
 export diffusion
 export relaxation
@@ -45,6 +48,10 @@ NMRAnalysis.jl (v$(pkgversion(NMRAnalysis)))
    cd("/Users/chris/NMR/crick-702/my_experiment_directory")
 2. call the desired analysis routine
 3. use `?function_name` to get help on any function
+
+# Generic Analysis (alpha)
+
+- analyse(filename)
 
 # 1D Experiment Analysis Routines
 
