@@ -157,3 +157,11 @@ function isexpt(directory)
     title_path = joinpath(directory, "pdata", "1", "title")
     return isfile(title_path)
 end
+
+function short_expt_path(directory)
+    # shorten an experiment path to folder/number
+    # e.g. /Users/chris/NMR/crick-701/sophia_trypsin_lig1_251117/10 -> sophia_trypsin_lig1_251117/10
+    parent_folder = basename(dirname(directory))
+    folder_num = basename(directory)
+    return joinpath(parent_folder, folder_num)
+end
