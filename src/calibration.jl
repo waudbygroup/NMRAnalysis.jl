@@ -1,3 +1,24 @@
+function analyse_1d_calibration(filename)
+    types, features = types_and_features(filename)
+    return analyse_1d_calibration(filename, types, features)
+end
+
+function analyse_1d_calibration(filename, types, features)
+    "calibration" in types ||
+        error("analyse_1d_calibration called for non-calibration experiment")
+    result = nothing
+    if "1d" in types && "nutation" in features
+        @info "Analysing calibration by nutation on $filename"
+        result = analyse_1d_nutation(filename) # named tuple with :plt, :pulse90, :nut_hz
+    end
+    if isnothing(result)
+        @info "No specific calibration analysis implemented for features: $(join(features, ", "))"
+        return
+    end
+    display(result.plt)
+    return result
+end
+
 """
     analyse_1d_nutation(filename)
 
@@ -45,9 +66,10 @@ function analyse_1d_nutation(filename)
     R = coef(fit)[3] ± stderror(fit)[3]
     inhomogeneity = R / (2π * nut_hz)
 
-    pulse90 = 1e6 / (4 * nut_hz) # in µs
+    pulse90 = 1 / (4 * nut_hz) # in s
+    @info " - Power level: $(db(cal_pl)) dB"
     @info " - Nutation frequency ν₁: $nut_hz Hz"
-    @info " - 90° pulse length: $pulse90 µs"
+    @info " - 90° pulse length: $(1e6*pulse90) µs"
     @info " - Decay rate: $R s⁻¹"
     @info " - B₁ inhomogeneity (R/2πν₁): $(inhomogeneity * 100) %"
 
@@ -61,5 +83,5 @@ function analyse_1d_nutation(filename)
                   titlefontsize=13,
                   frame=:box, grid=nothing)
     plot!(plt, tfit, yfit; label="Fit ($nut_hz Hz)")
-    return plt
+    return (pulse90=pulse90, nut_hz=nut_hz, power_level=cal_pl, plt=plt)
 end

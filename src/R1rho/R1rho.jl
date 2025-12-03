@@ -5,6 +5,7 @@ using Distributions: cdf, FDist
 using GLMakie
 using LinearAlgebra
 using LsqFit
+using Measurements: Measurements
 using MonteCarloMeasurements: ±, pmean, pstd, register_primitive
 using NMRTools
 using Printf
@@ -12,7 +13,7 @@ using Random
 using Statistics
 
 export r1rho, setupR1rhopowers
-using ..NMRAnalysis: select_expts
+using ..NMRAnalysis: select_expts, analyse_1d_calibration
 
 include("dataset.jl")
 include("power.jl")

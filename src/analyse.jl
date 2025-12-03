@@ -12,10 +12,3 @@ function analyse(filename)
     end
     @info "No automatic analysis routine available for experiment types: $(join(types, ", "))"
 end
-
-function analyse_1d_calibration(filename, types, features)
-    if "1d" in types && "nutation" in features
-        @info "Analysing calibration by nutation on $filename"
-        analyse_1d_nutation(filename)
-    end
-end
