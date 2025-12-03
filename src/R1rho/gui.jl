@@ -274,6 +274,10 @@ function gui!(state)
     end
 
     display(fig)
+    optimisewidth!(state) # optiomise width at start
+    autolimits!(ax_fit)
+    autolimits!(ax_fit_R1rho)
+
     while true #!state["should_close"][]
         sleep(0.1)
         if !isopen(fig.scene)
