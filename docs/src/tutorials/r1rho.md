@@ -29,7 +29,15 @@ NMRAnalysis.jl provides the function `setupR1rhopowers()` for calculating spinlo
 
 ![setupR1rhopowers](../assets/setupR1rhopowers.png)
 
-## GUI Overview 
+## GUI Overview
+
+### Example Data
+
+Example R1ρ data is available for download: [example-R1rho.zip](../assets/example-R1rho.zip)
+
+This dataset contains two experiments (11 and 12) that should be analysed together, as they contain different spinlock strengths. Extract the zip file and use the extracted directory path in the examples below.
+
+### Launching the Interface
 
 Open a Julia session in the terminal and launch the analysis interface:
 
