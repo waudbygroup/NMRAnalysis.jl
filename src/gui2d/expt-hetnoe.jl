@@ -1,11 +1,11 @@
 """
-    hetnoe2d(planefilenames, saturation)
+    hetnoe2d(inputfilenames, saturationlist)
 
 Start interactive GUI for analyzing 2D heteronuclear NOE data.
 
 # Arguments
-- `planefilenames`: List of NMR data files as processed data directories
-- `saturation`: List of boolean flags indicating which spectra are saturated (true) or reference (false)
+- `inputfilenames`: List of NMR data files as processed data directories
+- `saturationlist`: List of boolean flags indicating which spectra are saturated (true) or reference (false)
 
 The lists must be paired - each reference spectrum should be followed by its saturated counterpart.
 
@@ -19,12 +19,10 @@ hetnoe2d([
 ], [false, true, false, true])
 ```
 """
-function hetnoe2d(planefilenames, saturation)
-    expt = HetNOEExperiment(planefilenames, saturation)
-    gui!(expt)
+function hetnoe2d(planefilenames, saturationlist)
+    expt = HetNOEExperiment(planefilenames, saturationlist)
+    return gui!(expt)
 end
-
-
 
 """
     HetNOEExperiment
@@ -59,13 +57,12 @@ struct HetNOEExperiment <: FixedPeakExperiment
                    Observable{Dict}())
         setupexptobservables!(expt)
         expt.state[] = preparestate(expt)
-        expt
+        return expt
     end
 end
 
 struct HetNOEVisualisation <: VisualisationStrategy end
 visualisationtype(::HetNOEExperiment) = HetNOEVisualisation()
-
 
 """
     HetNOEExperiment(planefilenames, saturation)
@@ -116,7 +113,7 @@ function addpeak!(expt::HetNOEExperiment, initialposition::Point2f, label="",
     amp0 = map(1:nslices(expt)) do i
         ix = findnearest(expt.specdata.x[i], x0)
         iy = findnearest(expt.specdata.y[i], y0)
-        expt.specdata.z[i][ix, iy]
+        return expt.specdata.z[i][ix, iy]
     end
     amp = Parameter("Amplitude", amp0)
     newpeak.parameters[:R2x] = R2x
@@ -127,7 +124,7 @@ function addpeak!(expt::HetNOEExperiment, initialposition::Point2f, label="",
     newpeak.postparameters[:amp] = Parameter("Amplitude", maximum(amp0))
 
     push!(expt.peaks[], newpeak)
-    notify(expt.peaks)
+    return notify(expt.peaks)
 end
 
 """Simulate single peak according to experiment type."""
@@ -152,10 +149,10 @@ function simulate!(z, peak::Peak, expt::HetNOEExperiment, xbounds=nothing, yboun
         xs = x[xi]
         ys = y[yi]
         # NB. scale intensities by R2x and R2y to decouple amplitude estimation from linewidth
-        zx = NMRTools.NMRBase._lineshape(getω(xaxis, x0), R2x, getω(xaxis, xs),
+        zx = NMRTools.NMRBase._lineshape(2π * hz(x0, xaxis), R2x, 2π * hz(xs, xaxis),
                                          xaxis[:window], RealLineshape())
         zy = (π^2 * amp * R2x * R2y) *
-             NMRTools.NMRBase._lineshape(getω(yaxis, y0), R2y, getω(yaxis, ys),
+             NMRTools.NMRBase._lineshape(2π * hz(y0, yaxis), R2y, 2π * hz(ys, yaxis),
                                          yaxis[:window], RealLineshape())
         z[i][xi, yi] .+= zx .* zy'
     end
@@ -177,7 +174,7 @@ function postfit!(peak::Peak, expt::HetNOEExperiment)
     peak.postparameters[:amp].value[] .= Measurements.value(Iref)
     peak.postparameters[:amp].uncertainty[] .= Measurements.uncertainty(Iref)
 
-    peak.postfitted[] = true
+    return peak.postfitted[] = true
 end
 
 """Return descriptive text for slice idx."""
@@ -219,7 +216,6 @@ function experimentinfo(expt::HetNOEExperiment)
            "Experiment title: $(expt.specdata.nmrdata[1][:title])\n"
 end
 
-
 ## visualisation
 function get_hetnoe_data(peak, expt::HetNOEExperiment)
     x = 1:nslices(expt)
@@ -236,11 +232,11 @@ function get_hetnoe_data(peak, expt::HetNOEExperiment)
 
     y = [peak.parameters[:amp].value[][i] / Iref for i in 1:nslices(expt)]
     err = [(1.0 * i,
-          peak.parameters[:amp].value[][i] / Iref,
-          peak.parameters[:amp].uncertainty[][i] / Iref)
-         for i in 1:nslices(expt)]
+            peak.parameters[:amp].value[][i] / Iref,
+            peak.parameters[:amp].uncertainty[][i] / Iref)
+           for i in 1:nslices(expt)]
     fit = [1, hetnoe]
-    
+
     return (x, y, err, fit)
 end
 
@@ -250,32 +246,32 @@ function completestate!(state, expt, ::HetNOEVisualisation)
     state[:peak_plot_x] = lift(d -> d[1], state[:peak_plot_data])
     state[:peak_plot_y] = lift(d -> d[2], state[:peak_plot_data])
     state[:peak_plot_err] = lift(d -> d[3], state[:peak_plot_data])
-    state[:peak_plot_fit] = lift(d -> d[4], state[:peak_plot_data])
+    return state[:peak_plot_fit] = lift(d -> d[4], state[:peak_plot_data])
 end
 
-function plot_peak!(panel, peak, expt, ::HetNOEVisualisation) 
+function plot_peak!(panel, peak, expt, ::HetNOEVisualisation)
     x, y, err, fit = get_hetnoe_data(peak, expt)
-    
-    ax = Axis(panel[1, 1],
+
+    ax = Axis(panel[1, 1];
               xlabel="Experiment",
               ylabel="Relative amplitude",
               xticks=(1:nslices(expt), expt.specdata.zlabels))
-              
+
     hlines!(ax, [0]; linewidth=0)
     hlines!(ax, fit; linewidth=2, color=:red)
     errorbars!(ax, err; whiskerwidth=10)
-    barplot!(ax, x, y)
+    return barplot!(ax, x, y)
 end
 
 function makepeakplot!(gui, state, expt, ::HetNOEVisualisation)
     @debug "making peak plot for hetNOE visualisation"
     gui[:axpeakplot] = ax = Axis(gui[:panelpeakplot][1, 1];
-                                xlabel="Experiment",
-                                ylabel="Relative amplitude",
-                                xticks=(1:nslices(expt), expt.specdata.zlabels))
+                                 xlabel="Experiment",
+                                 ylabel="Relative amplitude",
+                                 xticks=(1:nslices(expt), expt.specdata.zlabels))
 
     hlines!(ax, [0]; linewidth=0)
     hlines!(ax, state[:peak_plot_fit]; linewidth=2, color=:red)
     errorbars!(ax, state[:peak_plot_err]; whiskerwidth=10)
-    barplot!(ax, state[:peak_plot_x], state[:peak_plot_y])
+    return barplot!(ax, state[:peak_plot_x], state[:peak_plot_y])
 end

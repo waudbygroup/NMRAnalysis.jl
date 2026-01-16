@@ -47,7 +47,7 @@ function initialisestate(dataset)
         end
         state[:currentspectrum] = lift(state[:currentseries]) do i
             j = state[:series][i][1]
-            return Point2f.(data(dataset.spectra[j], F1Dim), dataset.spectra[j])
+            return Point2f.(data(dataset.spectra[j], F1Dim), data(dataset.spectra[j]))
         end
 
         # parameters

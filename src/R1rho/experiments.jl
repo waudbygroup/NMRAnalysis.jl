@@ -12,8 +12,7 @@ function processexperiments(experimentfiles; minvSL=250.0, maxvSL=1e6)
         expt = loadnmr(experimentfile)
         expt /= NMRTools.scale(expt)
 
-        offres = occursin("offres", expt[:pulseprogram])
-        if offres
+        if "off_resonance" in annotations(expt, :features)
             ΩSL, νSL, TSL, spec = process_offres_experiment(expt)
             n = ones(length(spec))
         else
@@ -41,16 +40,28 @@ function processexperiments(experimentfiles; minvSL=250.0, maxvSL=1e6)
 end
 
 function process_offres_experiment(expt)
+    # Get list of spinlock strengths
+    powers = annotations(expt, :r1rho, :power)
+    p, pl = referencepulse(expt, annotations(expt, :r1rho, :channel))
+    νSL = hz.(powers, pl, p, 90)
+
+    # 3. Get relaxation times
+    TSL = annotations(expt, :r1rho, :duration)
+
+    # 4. Get spinlock offset
+    ΩSL = annotations(expt, :r1rho, :offset)
+
     # 2. Get list of spinlock offsets
-    fqlist = acqus(expt, :fq1list)
-    ΩSL = getoffset(fqlist, dims(expt, F1Dim)) # in Hz
+    fqlist = annotations(expt, :r1rho, :offset)
+    ΩSL = hz.(fqlist, dims(expt, F1Dim)) # in Hz
 
     # 3. Get list of relaxation times
-    TSL = acqus(expt, :vplist)
+    TSL = annotations(expt, :r1rho, :duration)
 
-    # 4. Get spinlock power
-    spinlock_power_W = acqus(expt, :plw, 25)
-    νSL = convert_W_to_Hz(spinlock_power_W, expt)
+    # 4. Get spinlock power (using 90 degree p1@pl1 as reference)
+    power = annotations(expt, :r1rho, :power)
+    p, pl = referencepulse(expt, annotations(expt, :r1rho, :channel))
+    νSL = hz.(power, pl, p, 90)
 
     nΩ = length(ΩSL)
     nT = length(relaxation_times)
@@ -64,16 +75,20 @@ function process_offres_experiment(expt)
 end
 
 function process_onres_experiment(expt, minvSL, maxvSL)
-    # NB. we expect a 3D experiment, chemical shift * offset * relaxation time
+    # Get list of spinlock strengths
+    powers = annotations(expt, :r1rho, :power)
+    p, pl = referencepulse(expt, annotations(expt, :r1rho, :channel))
+    νSL = hz.(powers, pl, p, 90)
 
-    # 2. Get list of spinlock strengths
-    νSL = convert_valist_to_Hz(expt)
-
-    # 3. Get list of relaxation times
-    TSL = acqus(expt, :vplist)
+    # 3. Get relaxation times
+    TSL = annotations(expt, :r1rho, :duration)
 
     # 4. Get spinlock offset
-    ΩSL = 0
+    ΩSL = annotations(expt, :r1rho, :offset)
+    # check that ΩSL is a scalar
+    if !(ΩSL isa Number)
+        error("Spinlock offset (ΩSL) must be a single value for on-resonance R1rho experiments.")
+    end
 
     nν = length(νSL)
     nT = length(TSL)

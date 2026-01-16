@@ -2,8 +2,31 @@
 # 1 "<built-in>"
 # 1 "<command-line>"
 # 1 "/root/.topspin-BladeEpu/local_acqu/sophia_231027_R1p_lig2/104/lists/pp/19F_onresR1p.cw"
-;19F on-resonance R1rho relaxation
-;based on Overbeck (2020)
+
+;@ schema_version: "0.0.2"
+;@ sequence_version: "0.1.1"
+;@ title: 19F on-resonance R1rho relaxation dispersion
+;@ authors:
+;@   - Chris Waudby <c.waudby@ucl.ac.uk>
+;@   - Jan Overbeck
+;@ citation:
+;@   - Hazlett et al. ChemRxiv (2025)
+;@   - Overbeck (2020)
+;@ doi:
+;@   - 10.26434/chemrxiv-2025-vt1wg
+;@ created: 2020-01-01
+;@ last_modified: 2025-11-15
+;@ repository: github.com/waudbygroup/pulseprograms
+;@ status: beta
+;@ experiment_type: [r1rho, 1d]
+;@ features: [relaxation_dispersion, on_resonance, temperature_compensation]
+;@ typical_nuclei: [19F]
+;@ dimensions: [r1rho.duration, r1rho.power, f1]
+;@ acquisition_order: [f1, r1rho.duration, r1rho.power]
+;@ reference_pulse:
+;@ - {channel: f1, duration: p1, power: pl1}
+;@ r1rho: {channel: f1, power: powerlist, duration: taulist, offset: 0, alignment: hard_pulse}
+
 
 
 # 17 "/root/.topspin-BladeEpu/local_acqu/sophia_231027_R1p_lig2/104/lists/pp/19F_onresR1p.cw"
@@ -149,8 +172,8 @@ define loopcounter FACTOR6
 ;$Id:$
 # 32 "/root/.topspin-BladeEpu/local_acqu/sophia_231027_R1p_lig2/104/lists/pp/19F_onresR1p.cw" 2
 
-define list<pulse> plength = <$VPLIST>
-define list<power> list1 = <$VALIST>
+define list<pulse> taulist = <$VPLIST>
+define list<power> powerlist = <$VALIST>
 
 "p2=p1*2"
 "d11=30m"
@@ -188,10 +211,10 @@ define loopcounter ST1CNT
 LBLAV, MCWRK
       "l2 = l2orig + t1loop * 1"
 
-      "list1.idx = t2loop * (1)"
+      "powerlist.idx = t2loop * (1)"
 
 # 43 "/root/.topspin-BladeEpu/local_acqu/sophia_231027_R1p_lig2/104/lists/pp/19F_onresR1p.cw"
- "p30 = plength.max"
+ "p30 = taulist.max"
 # 1 "mc_line 44 file /root/.topspin-BladeEpu/local_acqu/sophia_231027_R1p_lig2/104/lists/pp/19F_onresR1p.cw exp. start label for mc cmd."
 2 MCWRK 
 LBLST1, MCWRK  * 2
@@ -201,7 +224,7 @@ LBLST2, MCWRK
 
 
 # 48 "/root/.topspin-BladeEpu/local_acqu/sophia_231027_R1p_lig2/104/lists/pp/19F_onresR1p.cw"
- "p32=plength[l2]"
+ "p32=taulist[l2]"
  "p31=p30-p32"
 ; ----------------------------------
 
@@ -210,7 +233,7 @@ LBLST2, MCWRK
 if "p31 > 0.0"
  {
  1u fq=100(bf ppm):f1
- 1u list1:f1
+ 1u powerlist:f1
  (p31 ph1):f1
  }
 ; ----------------------------------
@@ -230,7 +253,7 @@ else
  {
  1u pl1:f1
  p1 ph4
- 1u list1:f1
+ 1u powerlist:f1
  (p32 ph1):f1 ; <-- this is the Spin Lock
 }
 ;-----------------------------------
@@ -259,7 +282,7 @@ else
   "t1loop+=1 * (1 - kronecker_delta(1 , td1) )"
       "l2 = l2orig + t1loop * 1"
 
-      "list1.idx = t2loop * (1)"
+      "powerlist.idx = t2loop * (1)"
 
   lo to LBLST1 times ST1CNT
   MCWRK 
@@ -269,7 +292,7 @@ else
   "t2loop+=1 * (1 - kronecker_delta(1 , td2) )"
       "l2 = l2orig + t1loop * 1"
 
-      "list1.idx = t2loop * (1)"
+      "powerlist.idx = t2loop * (1)"
 
   lo to LBLST2 times ST2CNT
   MCWRK 

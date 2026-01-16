@@ -1,4 +1,4 @@
-function setupR1rhopowers()
+function setupR1rhopowers(calibration_experiment_file="")
     # ANSI escape code for magenta
     magenta = "\033[35m"
     reset = "\033[0m"
@@ -7,19 +7,26 @@ function setupR1rhopowers()
     term_width = displaysize(stdout)[2]
     line_break = repeat("-", term_width)
 
-    # Prompt the user for inputs with magenta color and caret
-    println()
-    println("Enter p1 (19F hard pulse power, in us):")
-    print("> ")
-    p1 = parse(Float64, readline()) * 1e-6 # convert to seconds
+    if calibration_experiment_file == ""
+        # Prompt the user for inputs with magenta color and caret
+        println()
+        println("Enter p1 (19F hard pulse power, in us):")
+        print("> ")
+        p1 = parse(Float64, readline()) * 1e-6 # convert to seconds
+
+        println()
+        println("Enter pldB1 (19F hard pulse power, in dB):")
+        print("> ")
+        pldb1 = parse(Float64, readline())
+        pl1 = Power(pldb1, :dB)
+    else
+        calibration = analyse_1d_calibration(calibration_experiment_file)
+        p1 = Measurements.value(calibration.pulse90)
+        pl1 = calibration.power_level
+    end
 
     println()
-    println("Enter pldB1 (19F hard pulse power, in dB):")
-    print("> ")
-    pldb1 = parse(Float64, readline())
-
-    println()
-    println("Input a list of spinlock strengths (in Hz) separated by commas, or press ENTER for a default list:")
+    println("Input a list of spinlock strengths (in Hz) separated by commas, or press ENTER for a default list (100-15000 Hz):")
     print("> ")
     input = readline()
 
@@ -50,7 +57,7 @@ Type 'yes' to proceed. Do you want to proceed? (yes/no):$reset")
     end
 
     # Calculate the final powers
-    final_powers = convert_Hz_to_dB.(target_spinlock_strengths, pldb1, p1)
+    final_powers = convert_Hz_to_dB.(target_spinlock_strengths, pl1, p1)
 
     # Shuffle the final powers list and the corresponding spinlock strengths
     shuffled_indices = shuffle(1:length(final_powers))

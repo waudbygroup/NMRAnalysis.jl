@@ -1,3 +1,24 @@
+"""
+    diffusion(coherence=SQ(H1))
+    diffusion(filename, coherence=SQ(H1))
+    diffusion(nmrdata, coherence=SQ(H1))
+
+Analyze NMR diffusion experiments by fitting signal decay to extract diffusion coefficients.
+
+Interactively configure gradient parameters, select integration and noise regions, then fit
+diffusion data to the Stejskal-Tanner equation to extract diffusion coefficients and hydrodynamic radii.
+
+- `filename`: Path to Bruker experiment folder
+- `nmrdata`: NMRData object (2D: chemical shift × gradient strength)
+- `coherence`: Coherence type for gyromagnetic ratio calculation (default: `SQ(H1)`)
+
+# Example
+
+```julia
+diffusion()
+diffusion("path/to/experiment")
+```
+"""
 function diffusion(coherence=SQ(H1))
     println("Current directory: $(pwd())")
     println()
@@ -22,7 +43,7 @@ function diffusion(spec::NMRData{T,2}, coherence=SQ(H1)) where {T}
 
     println("Parsing experiment parameters...")
     γ = gyromagneticratio(coherence)
-    δ = acqus(spec, :p, 30) * 2e-6  # gradient pulse length
+    δ = acqus(spec, :p, 30) * 2.0   # gradient pulse length
     Δ = acqus(spec, :d, 20)         # diffusion delay
     gpnam = acqus(spec, :gpnam, 6)  # try to identify shape factor
     σ = 1
@@ -83,9 +104,9 @@ function diffusion(spec::NMRData{T,2}, coherence=SQ(H1)) where {T}
     if response == 'l'
         g = LinRange(g1, g2, td)
     elseif response == 'q'
-        throw(MethodError("Unsupported ramp shape"))
+        throw(ArgumentError("Unsupported ramp shape"))
     elseif response == 'e'
-        throw(MethodError("Unsupported ramp shape"))
+        throw(ArgumentError("Unsupported ramp shape"))
     else
         throw(ArgumentError("Invalid input"))
     end
@@ -172,8 +193,9 @@ function diffusion(spec::NMRData{T,2}, coherence=SQ(H1)) where {T}
     if !ismissing(solvent)
         η = viscosity(solvent, temp)
         kB = 1.38e-23
-        rH = kB*temp / (6π*η*0.001 * D) * 1e10 # in Å
+        rH = kB * temp / (6π * η * 0.001 * D) * 1e10 # in Å
     else
+        η = missing
         rH = missing
     end
 

@@ -23,7 +23,8 @@ struct IntensityExperiment <: FixedPeakExperiment
     model::FittingModel
     visualisation::VisualisationStrategy
 
-    function IntensityExperiment(specdata, peaks, model, xvalues=nothing, visualisation=CrossSectionVisualisation())
+    function IntensityExperiment(specdata, peaks, model, xvalues=nothing,
+                                 visualisation=CrossSectionVisualisation())
         if isnothing(xvalues)
             xvalues = 1.0 * collect(1:length(specdata.z))
         end
@@ -37,7 +38,7 @@ struct IntensityExperiment <: FixedPeakExperiment
                    xvalues, model, visualisation)
         setupexptobservables!(expt)
         expt.state[] = preparestate(expt)
-        expt
+        return expt
     end
 end
 
@@ -51,21 +52,19 @@ Create an intensity analysis experiment.
 function intensities2d(inputfilenames)
     specdata = preparespecdata(inputfilenames, IntensityExperiment)
     peaks = Observable(Vector{Peak}())
-    
-    expt = IntensityExperiment(
-        specdata,
-        peaks,
-        NoFitting()
-    )
-    
-    gui!(expt)
+
+    expt = IntensityExperiment(specdata,
+                               peaks,
+                               NoFitting())
+
+    return gui!(expt)
 end
 
-
 """
-    relaxation2d(inputfilenames, relaxationtimes)
+    relaxation2d(inputfilenames, relaxationtimes::Vector{Float64})
+    relaxation2d(inputfilenames, taufilename::String)
 
-Create an intensity analysis experiment.
+Create a relaxation analysis experiment. Data will be fitted to an exponential decay model.
 """
 function relaxation2d(inputfilenames, relaxationtimes)
     specdata = preparespecdata(inputfilenames, IntensityExperiment)
@@ -86,21 +85,19 @@ function relaxation2d(inputfilenames, relaxationtimes)
     end
 
     # specdata.zlabels .= map(t -> "τ = $t", tau)
-    
-    expt = IntensityExperiment(
-        specdata,
-        peaks,
-        ExponentialModel(),
-        tau,
-        ModelFitVisualisation()
-    )
-    
-    gui!(expt)
+
+    expt = IntensityExperiment(specdata,
+                               peaks,
+                               ExponentialModel(),
+                               tau,
+                               ModelFitVisualisation())
+
+    return gui!(expt)
 end
 
-
 """
-    recovery2d(inputfilenames, relaxationtimes)
+    recovery2d(inputfilenames, relaxationtimes::Vector{Float64})
+    recovery2d(inputfilenames, taufilename::String)
 
 Create an intensity analysis experiment fitted to magnetisation recovery.
 """
@@ -123,26 +120,39 @@ function recovery2d(inputfilenames, relaxationtimes)
     end
 
     # specdata.zlabels .= map(t -> "τ = $t", tau)
-    
-    expt = IntensityExperiment(
-        specdata,
-        peaks,
-        RecoveryModel(),
-        tau,
-        ModelFitVisualisation()
-    )
-    
-    gui!(expt)
+
+    expt = IntensityExperiment(specdata,
+                               peaks,
+                               RecoveryModel(),
+                               tau,
+                               ModelFitVisualisation())
+
+    return gui!(expt)
 end
-
-
 
 """
     modelfit2d(inputfilenames, xvalues, equation, parameters)
 
-Create an intensity analysis experiment fitted to a custom equation
+Create an intensity analysis experiment with fitting to a custom equation.
+
+# Arguments
+- `inputfilenames`: String or vector of strings giving the input data files.
+- `xvalues`: Vector of Float64 giving the x values for fitting, or string giving a filename
+  from which to read the x values.
+- `equation`: String giving the model equation to fit, e.g. `"A*sin(J*x)"`
+- `parameters`: Vector of parameter name-value pairs giving initial parameter values,
+  e.g. `["A"=>40., "J"=>0.5]`
+
+# Example: J-modulation
+```julia
+modelfit2d(["112","113","114","115"],
+    [0.1, 0.2, 0.3, 0.4],
+    "A*sin(J*x)",
+    ["A"=>40., "J"=>0.5])
+```
 """
-function modelfit2d(inputfilenames, xvalues, modelfunction::String, parameters::Vector{Pair{String,Float64}}, xlabel="x")
+function modelfit2d(inputfilenames, xvalues, modelfunction::String,
+                    parameters::Vector{Pair{String,Float64}}, xlabel="x")
     specdata = preparespecdata(inputfilenames, IntensityExperiment)
     peaks = Observable(Vector{Peak}())
 
@@ -162,18 +172,14 @@ function modelfit2d(inputfilenames, xvalues, modelfunction::String, parameters::
 
     # specdata.zlabels .= map(t -> "τ = $t", tau)
     model = CustomModel(modelfunction, parameters::Vector{Pair{String,Float64}}, xlabel)
-    expt = IntensityExperiment(
-        specdata,
-        peaks,
-        model,
-        xval,
-        ModelFitVisualisation()
-    )
-    
-    gui!(expt)
+    expt = IntensityExperiment(specdata,
+                               peaks,
+                               model,
+                               xval,
+                               ModelFitVisualisation())
+
+    return gui!(expt)
 end
-
-
 
 # load the NMR data and prepare the SpecData object
 function preparespecdata(inputfilenames, ::Type{IntensityExperiment})
@@ -183,11 +189,11 @@ function preparespecdata(inputfilenames, ::Type{IntensityExperiment})
         # load a single file
         spec, x, y, z, σ = loadspecdata(inputfilenames, IntensityExperiment)
         (SingleElementVector(spec),
-            SingleElementVector(x),
-            SingleElementVector(y),
-            z ./ σ,
-            SingleElementVector(1),
-            SingleElementVector(choptitle(label(spec))))
+         SingleElementVector(x),
+         SingleElementVector(y),
+         z ./ σ,
+         SingleElementVector(1),
+         SingleElementVector(choptitle(label(spec))))
     elseif inputfilenames isa Vector{String}
         # load multiple files
         tmp = loadspecdata.(inputfilenames, IntensityExperiment)
@@ -266,7 +272,7 @@ function addpeak!(expt::IntensityExperiment, initialposition::Point2f, label="",
         return expt.specdata.z[i][ix, iy]
     end
     amp = Parameter("Amplitude", amp0)
-    
+
     newpeak.parameters[:R2x] = R2x
     newpeak.parameters[:R2y] = R2y
     newpeak.parameters[:amp] = amp
@@ -289,7 +295,8 @@ function setup_post_parameters!(peak::Peak, model::ParametricModel)
 end
 
 """Simulate single peak according to experiment type."""
-function simulate!(z, peak::Peak, expt::IntensityExperiment, xbounds=nothing, ybounds=nothing)
+function simulate!(z, peak::Peak, expt::IntensityExperiment, xbounds=nothing,
+                   ybounds=nothing)
     R2x0 = peak.parameters[:R2x].value[][1]
     R2y0 = peak.parameters[:R2y].value[][1]
     amp0 = peak.parameters[:amp].value[][1]
@@ -314,67 +321,63 @@ function simulate!(z, peak::Peak, expt::IntensityExperiment, xbounds=nothing, yb
         xs = x[xi]
         ys = y[yi]
         # NB. scale intensities by R2x and R2y to decouple amplitude estimation from linewidth
-        zx = NMRTools.NMRBase._lineshape(getω(xaxis, x0), R2x, getω(xaxis, xs),
+
+        zx = NMRTools.NMRBase._lineshape(2π * hz(x0, xaxis), R2x, 2π * hz(xs, xaxis),
                                          xaxis[:window], RealLineshape())
         zy = (π^2 * amp * R2x0 * R2y0) *
-             NMRTools.NMRBase._lineshape(getω(yaxis, y0), R2y, getω(yaxis, ys),
+             NMRTools.NMRBase._lineshape(2π * hz(y0, yaxis), R2y, 2π * hz(ys, yaxis),
                                          yaxis[:window], RealLineshape())
         z[i][xi, yi] .+= zx .* zy'
     end
 end
 
 function postfit!(peak::Peak, expt::IntensityExperiment)
-    postfit!(peak, expt, expt.model)
+    return postfit!(peak, expt, expt.model)
 end
 
 function get_model_data(peak, expt::IntensityExperiment)
-    get_model_data(peak, expt, expt.model)
+    return get_model_data(peak, expt, expt.model)
 end
 
 function peakinfotext(expt::IntensityExperiment, idx)
     if idx == 0
         return "No peak selected"
     end
-    
+
     peak = expt.peaks[][idx]
     if !peak.postfitted[]
         return "Peak: $(peak.label[])\nNot fitted"
     end
-    
+
     # Common peak information
-    info = [
-        "Peak: $(peak.label[])",
-        "",
-        "δX: $(peak.parameters[:x].value[][1] ± peak.parameters[:x].uncertainty[][1]) ppm",
-        "δY: $(peak.parameters[:y].value[][1] ± peak.parameters[:y].uncertainty[][1]) ppm",
-        "X Linewidth: $(peak.parameters[:R2x].value[][1] ± peak.parameters[:R2x].uncertainty[][1]) s⁻¹",
-        "Y Linewidth: $(peak.parameters[:R2y].value[][1] ± peak.parameters[:R2y].uncertainty[][1]) s⁻¹"
-    ]
-    
+    info = ["Peak: $(peak.label[])",
+            "",
+            "δX: $(peak.parameters[:x].value[][1] ± peak.parameters[:x].uncertainty[][1]) ppm",
+            "δY: $(peak.parameters[:y].value[][1] ± peak.parameters[:y].uncertainty[][1]) ppm",
+            "X Linewidth: $(peak.parameters[:R2x].value[][1] ± peak.parameters[:R2x].uncertainty[][1]) s⁻¹",
+            "Y Linewidth: $(peak.parameters[:R2y].value[][1] ± peak.parameters[:R2y].uncertainty[][1]) s⁻¹"]
+
     # Add model-specific parameters
     append!(info, model_parameter_text(peak, expt.model))
-    
-    join(info, "\n")
+
+    return join(info, "\n")
 end
 
 function experimentinfo(expt::IntensityExperiment)
-    info = [
-        "Analysis type: Intensity",
-        "Model: $(typeof(expt.model))",
-        "Filename: $(expt.specdata.nmrdata[1][:filename])",
-        "Number of peaks: $(length(expt.peaks[]))",
-        "Experiment title: $(expt.specdata.nmrdata[1][:title])"
-    ]
-    
+    info = ["Analysis type: Intensity",
+            "Model: $(typeof(expt.model))",
+            "Filename: $(expt.specdata.nmrdata[1][:filename])",
+            "Number of peaks: $(length(expt.peaks[]))",
+            "Experiment title: $(expt.specdata.nmrdata[1][:title])"]
+
     # Add model-specific information
     append!(info, model_info_text(expt.model, expt.x))
-    
-    join(info, "\n")
+
+    return join(info, "\n")
 end
 
 get_model_xlabel(expt::IntensityExperiment) = expt.model.xlabel
 get_model_ylabel(::IntensityExperiment) = "Peak amplitude"
-
 
 function slicelabel(expt::IntensityExperiment, idx)
     if length(expt.specdata.zlabels) == 1

@@ -1,3 +1,26 @@
+"""
+    relaxation()
+    relaxation(filename)
+    relaxation(nmrdata; ir=false)
+    relaxation(nmrdata, tau; ir=false)
+
+Analyze NMR relaxation experiments (T1 or T2) by fitting signal decay/recovery curves.
+
+Interactively select integration and noise regions, then fit relaxation data to extract
+relaxation rates and times. Supports standard decay/recovery and inversion-recovery experiments.
+
+- `filename`: Path to Bruker experiment folder
+- `nmrdata`: NMRData object (2D: chemical shift × relaxation delay)
+- `tau`: List of relaxation delays in seconds (auto-detected from `vdlist` or `vclist` if not provided)
+- `ir`: Set to `true` for inversion-recovery experiments (default: `false`)
+
+# Example
+
+```julia
+relaxation()
+relaxation("path/to/experiment")
+```
+"""
 function relaxation()
     println("Current directory: $(pwd())")
     println()

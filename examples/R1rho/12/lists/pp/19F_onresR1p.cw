@@ -1,19 +1,32 @@
-;19F on-resonance R1rho relaxation
-;based on Overbeck (2020)
+;@ schema_version: "0.0.1"
+;@ sequence_version: "0.1.0"
+;@ title: 19F on-resonance R1rho relaxation dispersion
+;@ authors:
+;@   - Chris Waudby <c.waudby@ucl.ac.uk>
+;@   - Jan Overbeck
+;@ citation:
+;@   - Hazlett et al. ChemRxiv (2025)
+;@   - Overbeck (2020)
+;@ doi:
+;@   - 10.26434/chemrxiv-2025-vt1wg
+;@ created: 2020-01-01
+;@ last_modified: 2025-08-01
+;@ repository: github.com/waudbygroup/pulseprograms
+;@ status: beta
+;@ experiment_type: [r1rho, 1d]
+;@ features: [relaxation dispersion, on-resonance, temperature compensation]
+;@ nuclei_hint: [19F, 1H]
+;@ dimensions: [spinlock_duration, spinlock_power, f1]
+;@ decoupling: [nothing, nothing, f2]
+;@ acquisition_order: [3, 1, 2]
+;@ hard_pulse:
+;@ - {channel: f1, length: p1, power: pl1}
+;@ - {channel: f2, length: p3, power: pl2}
+;@ decoupling_pulse:
+;@ - {channel: f2, length: p4, power: pl12, program: cpdprg2}
+;@ spinlock: {channel: f1, power: <$VALIST>, duration: <$VPLIST>, offset: 0, alignment: hard pulse}
 
-/*
-|
-| On-resonance 19F R1rho as pseudo-3D
-| with different SL lenghts read in via VPLIST
-| and different SL powers read in via VALIST
-|
-| using hard pulses for flipdown/flipback
-|
-| Pseudo-3D
-| Jan Overbeck
-| 2020
-|
-*/
+
 
 /*--------------------------------
 ; Parameters to set

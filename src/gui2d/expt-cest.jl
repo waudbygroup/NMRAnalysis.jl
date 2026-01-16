@@ -76,7 +76,7 @@ function CESTExperiment(inputfilename, B1, Tsat)
     frequencies = if haskey(acqus(spec), :fq3list)
         fq_list = acqus(spec, :fq3list)
         # Get frequencies in ppm
-        getppm(fq_list, dims(spec, F2Dim))
+        ppm(fq_list, dims(spec, F2Dim))
     else
         # Fallback if fq3list is not available
         collect(range(-10.0, 10.0; length=ndims(spec, 3)))
@@ -176,10 +176,10 @@ function simulate!(z, peak::Peak, expt::CESTExperiment, xbounds=nothing, ybounds
         xs = x[xi]
         ys = y[yi]
         # NB. scale intensities by R2x and R2y to decouple amplitude estimation from linewidth
-        zx = NMRTools.NMRBase._lineshape(getω(xaxis, x0), R2x, getω(xaxis, xs),
+        zx = NMRTools.NMRBase._lineshape(2π * hz(x0, xaxis), R2x, 2π * hz(xs, xaxis),
                                          xaxis[:window], RealLineshape())
         zy = (π^2 * amp * R2x * R2y) *
-             NMRTools.NMRBase._lineshape(getω(yaxis, y0), R2y, getω(yaxis, ys),
+             NMRTools.NMRBase._lineshape(2π * hz(y0, yaxis), R2y, 2π * hz(ys, yaxis),
                                          yaxis[:window], RealLineshape())
         z[i][xi, yi] .+= zx .* zy'
     end
@@ -192,8 +192,8 @@ function postfit!(peak::Peak, expt::CESTExperiment)
     δsat = expt.frequencies[2:end]
     δ0 = peak.parameters[:y].value[][1]
     R20 = peak.parameters[:R2y].value[][1]
-    v0 = δ0 * expt.specdata.nmrdata[1][2, :bf]
-    vsat = δsat .* expt.specdata.nmrdata[1][2, :bf]
+    v0 = 1e-6 * δ0 * expt.specdata.nmrdata[1][2, :bf]
+    vsat = 1e-6 * δsat .* expt.specdata.nmrdata[1][2, :bf]
     Tsat = expt.Tsat
     v1 = expt.B1
 
@@ -285,8 +285,8 @@ function get_cest_data(peak, expt::CESTExperiment)
     # Calculate fit line if peak has been fitted
     if peak.postfitted[]
         δ0 = peak.parameters[:y].value[][1]
-        v0 = δ0 * expt.specdata.nmrdata[1][2, :bf]
-        vsat = x * expt.specdata.nmrdata[1][2, :bf]
+        v0 = 1e-6 * δ0 * expt.specdata.nmrdata[1][2, :bf]
+        vsat = 1e-6 * x * expt.specdata.nmrdata[1][2, :bf]
         Tsat = expt.Tsat
         v1 = expt.B1
         R1 = peak.postparameters[:R1].value[][1]

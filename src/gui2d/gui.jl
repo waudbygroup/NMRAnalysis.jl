@@ -127,24 +127,24 @@ function addhanders!(g, state, expt::FixedPeakExperiment)
     # link 2D and 3D contour plot limits
     if haskey(g, :ax3d)
         on(g[:axcontour].xaxis.attributes.limits) do xl
-            xlims!(g[:ax3d], xl)
+            return xlims!(g[:ax3d], xl)
         end
         on(g[:axcontour].yaxis.attributes.limits) do yl
-            ylims!(g[:ax3d], yl)
+            return ylims!(g[:ax3d], yl)
         end
     end
 
     # contour levels
     on(g[:cmdcontourup].clicks) do _
-        g[:basecontour][] *= g[:contourscale][]
+        return g[:basecontour][] *= g[:contourscale][]
     end
     on(g[:cmdcontourdown].clicks) do _
-        g[:basecontour][] /= g[:contourscale][]
+        return g[:basecontour][] /= g[:contourscale][]
     end
 
     # zoom
     on(g[:cmdresetzoom].clicks) do _
-        reset_limits!(g[:axcontour])
+        return reset_limits!(g[:axcontour])
     end
 
     # slices
@@ -166,16 +166,16 @@ function addhanders!(g, state, expt::FixedPeakExperiment)
 
     # fitting active
     connect!(expt.isfitting, g[:togglefit].active)
-    connect!(g[:pltfit].visible, g[:togglefit].active)
+    on(x -> g[:pltfit].visible = x, g[:togglefit].active)
 
     # load peak list
     on(g[:cmdload].clicks) do _
-        loadpeaks!(expt)
+        return loadpeaks!(expt)
     end
 
     # save peak list
     on(g[:cmdsave].clicks) do _
-        saveresults!(expt)
+        return saveresults!(expt)
     end
 
     # delete peak
@@ -217,18 +217,18 @@ function addhanders!(g, state, expt::FixedPeakExperiment)
     end
     # mouse handling
     on(events(g[:axcontour]).mousebutton; priority=2) do event
-        process_mousebutton(expt, state, event)
+        return process_mousebutton(expt, state, event)
     end
     on(events(g[:axcontour]).mouseposition; priority=2) do mousepos
-        process_mouseposition(expt, state, mousepos)
+        return process_mouseposition(expt, state, mousepos)
     end
 
     # keyboard
     on(events(g[:axcontour]).keyboardbutton; priority=2) do event
-        process_keyboardbutton(expt, state, event)
+        return process_keyboardbutton(expt, state, event)
     end
     on(events(g[:fig]).unicode_input) do character
-        process_unicode_input(expt, state, character)
+        return process_unicode_input(expt, state, character)
     end
 end
 
@@ -242,7 +242,7 @@ function renamepeak!(expt, state, initiator)
     # state[:current_peak_info][] = "Renaming peak $(peak.label[]), press Enter to finish, Backspace to delete, Esc to cancel"
     state[:oldlabel][] = state[:current_peak][].label[]
     state[:current_peak][].label[] = "‸"
-    notify(expt.peaks)
+    return notify(expt.peaks)
 end
 
 bicolours(c1, c2) = [fill(c1, 11); fill(c2, 11)]
