@@ -1,4 +1,12 @@
-model_R1rho_onres(νSL, p) = @. p[2] + p[3] * exp(2p[4]) / (exp(2p[4]) + (2π * νSL)^2)
+function model_R1rho_onres(νSL, p)
+    R20 = p[2]
+    Rex = p[3]
+    if Rex < 0
+        Rex = 0.0
+    end
+    lnK = p[4]
+    @. R20 + Rex * exp(2lnK) / (exp(2lnK) + (2π * νSL)^2)
+end
 model_I_onres(TSL, νSL, p) = p[1] * exp.(-TSL .* model_R1rho_onres(νSL, p))
 model_I_onres(x, p) = model_I_onres(x[:, 1], x[:, 2], p)
 
@@ -8,9 +16,21 @@ function fit_onres(state, p0)
     x = hcat(dataset.TSLs, dataset.νSLs)
     intensities = state[:intensities][]
 
-    @debug "running fit..." p0
-    fit = LsqFit.curve_fit(model_I_onres, x, intensities, p0)
-    @debug fit.param fit.converged
+    @debug "running fit_onres..." p0
+    fit = LsqFit.curve_fit(model_I_onres, x, intensities, p0; lower=[-Inf, 0.0, 0.0, -Inf])
+    @debug "fit_onres results" fit.param fit.converged
+    if !fit.converged
+        @warn "fit did not converge"
+    elseif any(isnan, fit.param)
+        @warn "fit returned NaN parameters"
+    end
+    # if fit.param[3] < 0
+    #     @warn "fit returned negative Rex; refitting with Rex=0 constraint"
+    #     p0_constrained = copy(fit.param)
+    #     p0_constrained[3] = 0.0
+    #     fit = LsqFit.curve_fit(model_I_onres, x, intensities, p0_constrained; lower=[-Inf, -Inf, 0.0, -Inf])
+    #     @debug "refit results" fit.param fit.converged
+    # end
     return fit
 end
 
@@ -29,14 +49,19 @@ function fit_onres_null(state, p0)
     @debug "running null model fit..." p0
     # Only need parameters p[1] (I0) and p[2] (R2,0)
     fit = LsqFit.curve_fit(model_I_onres_null, x, intensities, p0)
-    @debug fit.param fit.converged
+    @debug "null model fit results" fit.param fit.converged
     return fit
 end
 
 function fitexp(t, I, p)
     I0 = p[1]
     R0 = p[2] + p[3] / 2  # R2,0 + Rex/2
+    if R0 < 0
+        R0 = p[2]
+    end
     p0 = [R0]
+
+    @debug "running fitexp..." I0 R0
 
     model(t, p) = @. I0 * exp(-t * p[1])
 
@@ -52,6 +77,8 @@ function fitexp(t, I, p)
     catch
         R0, 0.0
     end
+
+    @debug "fitexp results" R ± Re
 
     return R ± Re
 end
