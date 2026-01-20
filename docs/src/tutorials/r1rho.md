@@ -20,12 +20,88 @@ This sequence is adapted from Overbeck et al. (J. Magn. Reson. 2020, **74**, 753
 
 ### 3. Calibrate Spinlock Powers
 
-NMRAnalysis.jl provides the function `setupR1rhopowers()` for calculating spinlock powers based on a calibrated ``^{19}``F 90 degree hard pulse:
+NMRAnalysis.jl provides the function `setupR1rhopowers()` for calculating spinlock powers. This function can either accept manual input of pulse parameters or automatically extract them from a calibration experiment.
 
-- Input the P1 value for the ``^{19}``F hard pulse (in μs) and the PLdB1 (``^{19}``F hard pulse power in dB). 
+#### Option A: Using a Calibration Experiment (Recommended)
+
+The simplest approach is to provide a path to a nutation calibration experiment. The pulse parameters will be extracted automatically:
+
+```julia
+setupR1rhopowers("examples/calibration/1")
+```
+
+This first analyses the calibration experiment and then prompts for spinlock strengths:
+
+```
+[ Info: Analysing calibration by nutation on examples/calibration/1
+[ Info:  - Power level: 16.997737581326444 dB
+[ Info:  - Nutation frequency ν₁: 1010.6 ± 5.7 Hz
+[ Info:  - 90° pulse length: 247.4 ± 1.4 μs
+[ Info:  - Decay rate: 327.0 ± 69.0 s⁻¹
+[ Info:  - B₁ inhomogeneity (R/2πν₁): 5.1 ± 1.1 %
+
+Input a list of spinlock strengths (in Hz) separated by commas, or press ENTER for a default list (100-15000 Hz):
+>
+Using default spinlock strengths (in Hz):
+[100, 200, 300, 500, 750, 1000, 1500, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000, 11000, 12000, 13000, 14000, 15000]
+
+WARNING - high spin-lock powers may cause damage to your probe!
+Check the spin-lock duration is within acceptable power limits.
+Maximum spin-lock strength will be 15000 Hz.
+Type 'yes' to proceed. Do you want to proceed? (yes/no):
+
+> yes
+
+The list corresponds to the following spinlock strengths (Hz):
+[14000, 12000, 8000, 4000, 15000, 200, 13000, 10000, 1000, 2000, 11000, 1500, 9000, 5000, 100, 750, 3000, 300, 500, 6000, 7000]
+
+Copy & paste the list provided between the dashed lines.
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+dB
+-5.83
+-4.49
+-0.97
+5.05
+-6.43
+31.07
+-5.19
+-2.91
+17.09
+11.07
+-3.74
+13.57
+-2.00
+3.11
+37.09
+19.59
+7.55
+27.55
+23.11
+1.53
+0.19
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+```
+
+See the [Calibration documentation](../analyses/calibration.md) for details on acquiring nutation calibration experiments.
+
+#### Option B: Manual Input
+
+Alternatively, call `setupR1rhopowers()` without arguments to enter pulse parameters manually:
+
+```julia
+setupR1rhopowers()
+```
+
+You will be prompted to enter:
+- P1 value for the ``^{19}``F hard pulse (in μs)
+- PLdB1 (``^{19}``F hard pulse power in dB)
+
+#### Notes
+
 - You may supply a custom list of spinlock strengths (in Hz), or use the default set provided.
-- For high spinlock powers, a warning will be issued to verify that the spinlock duration remains within acceptable power limits. 
-- The output is a list of calibrated spinlock powers (in dB) that can be copied directly into VALIST in TopSpin. 
+- For high spinlock powers (>10 kHz), a warning will be issued to verify that the spinlock duration remains within acceptable power limits.
+- The output is a list of calibrated spinlock powers (in dB) that can be copied directly into VALIST in TopSpin.
+- The list is shuffled to avoid systematic errors from sample heating.
 
 ![setupR1rhopowers](../assets/setupR1rhopowers.png)
 
