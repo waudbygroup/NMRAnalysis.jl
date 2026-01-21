@@ -11,13 +11,15 @@ model_I_onres(TSL, νSL, p) = p[1] * exp.(-TSL .* model_R1rho_onres(νSL, p))
 model_I_onres(x, p) = model_I_onres(x[:, 1], x[:, 2], p)
 
 function fit_onres(state, p0)
+    # p0 = [I0, R2_0, Rex, lnK]
     dataset = state[:dataset]
 
     x = hcat(dataset.TSLs, dataset.νSLs)
     intensities = state[:intensities][]
 
     @debug "running fit_onres..." p0
-    fit = LsqFit.curve_fit(model_I_onres, x, intensities, p0; lower=[-Inf, 0.0, 0.0, -Inf])
+    fit = LsqFit.curve_fit(model_I_onres, x, intensities, p0; lower=[-Inf, 0.0, 0.0, -10.0],
+                           upper=[Inf, 1000.0, 1000.0, 40.0])
     @debug "fit_onres results" fit.param fit.converged
     if !fit.converged
         @warn "fit did not converge"
@@ -28,7 +30,7 @@ function fit_onres(state, p0)
     #     @warn "fit returned negative Rex; refitting with Rex=0 constraint"
     #     p0_constrained = copy(fit.param)
     #     p0_constrained[3] = 0.0
-    #     fit = LsqFit.curve_fit(model_I_onres, x, intensities, p0_constrained; lower=[-Inf, -Inf, 0.0, -Inf])
+    #     fit = LsqFit.curve_fit(model_I_onres, x, intensities, p0_constrained; lower=[-Inf, -Inf, 0.0, -10.], upper=[Inf, 1000., 1000., 40.])
     #     @debug "refit results" fit.param fit.converged
     # end
     return fit
@@ -55,10 +57,11 @@ end
 
 function fitexp(t, I, p)
     I0 = p[1]
-    R0 = p[2] + p[3] / 2  # R2,0 + Rex/2
-    if R0 < 0
-        R0 = p[2]
-    end
+    R0 = 1 / mean(t) # initial guess based on average measured times
+    # R0 = p[2] + p[3] / 2  # R2,0 + Rex/2
+    # if R0 < 0
+    #     R0 = p[2]
+    # end
     p0 = [R0]
 
     @debug "running fitexp..." I0 R0
