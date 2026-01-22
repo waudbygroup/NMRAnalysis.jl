@@ -65,6 +65,9 @@ function initialisestate(dataset)
         if quick_initial_Rex > 100.0
             quick_initial_Rex = 100.0
         end
+        if quick_initial_Rex < 1.1
+            quick_initial_Rex = 0.1
+        end
         state[:initialR20] = Observable(quick_initial_R20)
         state[:initialRex] = Observable(quick_initial_Rex)
         # set initial k to π * maximum vSL
