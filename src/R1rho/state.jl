@@ -61,6 +61,9 @@ function initialisestate(dataset)
         if quick_initial_R20 < 1.0
             quick_initial_R20 = 1.0
         end
+        if quick_initial_R20 > 100.0
+            quick_initial_R20 = 100.0
+        end
         quick_initial_Rex = maximum(quick_R2_vals) - quick_initial_R20
         if quick_initial_Rex > 100.0
             quick_initial_Rex = 100.0
