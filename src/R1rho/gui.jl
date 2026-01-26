@@ -339,24 +339,41 @@ function savefig!(state)
     # save fit results to CSV: peak/noise positions, and fit parameters. don't use additional libraries
     filename = joinpath(outputdir, "results.txt")
     open(filename, "w") do f
+        println(f, "R1rho fitting results")
+        println(f, "=====================")
+        println(f, "")
         for filename in state[:filenames]
             println(f, "Input file: $filename")
         end
-        println(f, "Peak position (ppm):, $(state[:peakppm][])")
-        println(f, "Noise position (ppm):, $(state[:noiseppm][])")
         println(f, "")
-        println(f, "Integration width (ppm):, $(state[:dx][])")
-        println(f, "Initial I0:, $(state[:initialI0][])")
-        println(f, "Initial R2,0 (s⁻¹):, $(state[:initialR20][])")
-        println(f, "Initial Rex (s⁻¹):, $(state[:initialRex][])")
-        println(f, "Initial kex (s⁻¹):, $(exp(state[:initiallnk][]))")
-        println(f, "Δδ stdev (ppm):, $(state[:σΔδ][])")
+        println(f, "Peak position (ppm): $(state[:peakppm][])")
+        println(f, "Noise position (ppm): $(state[:noiseppm][])")
+        println(f, "Integration width (ppm): $(state[:dx][])")
         println(f, "")
-        println(f, "Fitted I0:, $(state[:fitI0][])")
-        println(f, "Fitted R2,0 (s⁻¹):, $(state[:fitR20][])")
-        println(f, "Fitted Rex (s⁻¹):, $(state[:fitRex][])")
-        println(f, "Fitted K (s⁻¹):, $(state[:fitK][])")
-        return println(f, "Fitted kex (s⁻¹):, $(state[:fitkex][])")
+        # report if exchange is significant
+        f_stat, p_value = state[:ftest][]
+        if p_value < 0.05
+            println(f, "Exchange is significant (p < 0.05)")
+        else
+            println(f, "Exchange is not significant (p ≥ 0.05)")
+        end
+        println(f, "F-statistic: $(round(f_stat,digits=2))")
+        println(f, "p-value: $(round(p_value,digits=4))")
+        println(f, "")
+        println(f, "Initial I0: $(state[:initialI0][])")
+        println(f, "Initial R2,0 (s⁻¹): $(state[:initialR20][])")
+        println(f, "Initial Rex (s⁻¹): $(state[:initialRex][])")
+        println(f, "Initial kex (s⁻¹): $(exp(state[:initiallnk][]))")
+        println(f, "Δδ stdev (ppm): $(state[:σΔδ][])")
+        println(f, "")
+        println(f, "Fitted I0: $(state[:fitI0][])")
+        println(f, "Fitted R2,0 (s⁻¹): $(state[:fitR20][])")
+        println(f, "Fitted Rex (s⁻¹): $(state[:fitRex][])")
+        println(f, "Fitted K (s⁻¹): $(state[:fitK][])")
+        println(f, "Fitted kex (s⁻¹): $(state[:fitkex][])")
+        # include no-exchange fit result
+        println(f, "")
+        println(f, "Fitted R2,0 no-exchange (s⁻¹): $(state[:fitR20_null][])")
     end
 
     # write dispersion fit data to CSVs

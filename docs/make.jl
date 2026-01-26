@@ -16,6 +16,7 @@ makedocs(;
                 "Analyses" => ["Diffusion (1D)" => "analyses/diffusion.md",
                                "Relaxation (1D)" => "analyses/relaxation.md",
                                "TRACT (1D)" => "analyses/tract.md",
+                               "Calibration (1D)" => "analyses/calibration.md",
                                "R1ρ (1D)" => "analyses/r1rho.md",
                                "2D experiments" => "analyses/2d-fitting.md"],
                 "Tutorials" => ["19F R1ρ acquisition & analysis" => "tutorials/r1rho.md"],

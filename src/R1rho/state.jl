@@ -52,9 +52,30 @@ function initialisestate(dataset)
 
         # parameters
         state[:initialI0] = Observable(state[:intensities][][1])
-        state[:initialR20] = Observable(5.0)
-        state[:initialRex] = Observable(30.0)
-        state[:initiallnk] = Observable(9.0)
+        # fit exponentials to all series to get range of initial R2 values - use min and max to set initial R20 and Rex
+        quick_R2_vals = pmean.([fitexp(dataset.TSLs[state[:series][i]],
+                                       state[:intensities][][state[:series][i]],
+                                       [state[:initialI0][]])
+                                for i in 1:state[:nseries]])
+        quick_initial_R20 = minimum(quick_R2_vals)
+        if quick_initial_R20 < 1.0
+            quick_initial_R20 = 1.0
+        end
+        if quick_initial_R20 > 100.0
+            quick_initial_R20 = 100.0
+        end
+        quick_initial_Rex = maximum(quick_R2_vals) - quick_initial_R20
+        if quick_initial_Rex > 100.0
+            quick_initial_Rex = 100.0
+        end
+        if quick_initial_Rex < 1.1
+            quick_initial_Rex = 0.1
+        end
+        state[:initialR20] = Observable(quick_initial_R20)
+        state[:initialRex] = Observable(quick_initial_Rex)
+        # set initial k to π * maximum vSL
+        max_vSL = maximum(νSL(dataset))
+        state[:initiallnk] = Observable(log(π * max_vSL))
         state[:initialpars] = lift(state[:initialI0], state[:initialR20],
                                    state[:initialRex],
                                    state[:initiallnk]) do I0, R20, Rex, lnk
