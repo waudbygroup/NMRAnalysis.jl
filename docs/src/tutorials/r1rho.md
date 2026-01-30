@@ -136,7 +136,7 @@ r1rho("example/R1rho")
 r1rho(["example/R1rho/11", "example/R1rho/12"])
 ```
 
-### Optional arguments
+#### Optional arguments
 
 You can restrict the range of spin-lock field strengths included in the analysis using keyword arguments:
 
@@ -263,5 +263,11 @@ This file provides a concise summary of the analysis, including:
 ![results_file](../assets/example_results_file.png)
 
 > This file is useful for quick reference and record-keeping, especially when comparing fits across multiple datasets or conditions.
+
+### Video walkthrough (~ 1 minute)
+
+Click the image below to watch a short screen-recorded tutorial demonstrating how to launch and navigate the R1ρ GUI.
+
+[![R1ρ GUI video tutorial](../assets/r1rho-video-thumbnail.png)](https://liveuclac-my.sharepoint.com/:v:/g/personal/ucbthaz_ucl_ac_uk/IQB9sDYwVCGRQIMgPrloJr6CAXxOLHy9YJNxgkdVYA3qob0)
 
 
