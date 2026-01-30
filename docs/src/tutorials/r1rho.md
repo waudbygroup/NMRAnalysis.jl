@@ -12,7 +12,7 @@ Acquire a 1D broadband ``^{19}``F NMR experiment to identify the chemical shift 
 
 The pulse program used for on-resonance ``R_{1ρ}`` experiments is available on GitHub:
 
-- **[`19F_onresR1p.cw`](https://github.com/chriswaudby/pp/blob/master/19F_onresR1p.cw)**  
+- **[`19F_onresR1p.cw`](https://waudbylab.org/pulseprograms/sequences/19f_onresR1p.cw/)**  
 
 This sequence is adapted from Overbeck et al. (J. Magn. Reson. 2020, **74**, 753–766) and includes improved temperature compensation. It supports pseudo-3D acquisition with variable spinlock lengths and powers, read in via `VPLIST` and `VALIST`.
 
@@ -115,7 +115,13 @@ This dataset contains two experiments (11 and 12) that should be analysed togeth
 
 ### Launching the Interface
 
-Open a Julia session in the terminal and launch the analysis interface:
+Open a Julia session in the terminal.
+
+> **Tip:** For reproducible analyses, consider activating a dedicated Julia environment 
+> (e.g., in VS Code using `] activate .`). 
+> This ensures that the exact package versions used are tracked.
+
+Launch the analysis interface:
 
 ```julia
 using NMRAnalysis
@@ -130,9 +136,25 @@ r1rho("example/R1rho")
 r1rho(["example/R1rho/11", "example/R1rho/12"])
 ```
 
+#### Optional arguments
+
+You can restrict the range of spin-lock field strengths included in the analysis using keyword arguments:
+
+```julia
+r1rho("example/R1rho"; minvSL=250, maxvSL=100000)
+```
+
+This is useful for excluding low spin-lock fields that are poorly aligned or high spin-lock fields that may be affected by detuning.
+
+To view all available options and their default values, use Julia’s built-in help system:
+
+```julia
+?r1rho
+```
+
  Once loaded, the GUI displays the first spectrum of the dataset.
 
-![R1ρ Analysis Interface](../assets/r1rho-interface.png)
+![R1ρ Analysis Interface](../assets/r1rho-gui.png)
 
 - **Series Toggle**: Switch between measurements at different spin-lock field strengths.
 - **Integration Width**: Manually input a value or click **Optimise** to automatically minimize fitting error.
@@ -164,9 +186,9 @@ r1rho(["example/R1rho/11", "example/R1rho/12"])
 
 Signal intensities are fit globally as a function of relaxation time and spin-lock field strength:
 
-```math
+$$
 I(T_{\text{SL}}, \nu_{\text{SL}}) = I_0 \cdot \exp\left(-\left[R_{2,0} + \frac{R_{\text{ex}} \cdot K^2}{K^2 + 4\pi^2 \nu_{\text{SL}}^2}\right] \cdot T_{\text{SL}}\right)
-```
+$$
 
 *Adapted from Trott & Palmer (2002), J. Magn. Reson. 154, 157–160.*
 
@@ -176,7 +198,11 @@ where:
 K^2 = k_{\text{ex}}^2 + 4\pi^2 \Delta\nu^2
 ```
 
-To assess whether exchange contributes significantly, a null model excluding ``R_\mathrm{ex}`` is also fit and compared using an F-test.
+$$
+K^2 = k_{\text{ex}}^2 + 4\pi^2 \Delta\nu^2
+$$
+
+To assess whether exchange contributes significantly, a null model excluding `Rex` is also fit and compared using an F-test.
 
 #### Dispersion Curve
 
@@ -186,15 +212,15 @@ The GUI plots ``R_{1ρ}`` as a function of ``ν_{SL}`` using fitted parameters:
 R_{1\rho} = R_{2,0} + \frac{R_{\text{ex}} \cdot K^2}{K^2 + 4\pi^2 \nu_{\text{SL}}^2}
 ```
 
-This curve is overlaid with ``R_{1ρ}`` values obtained from exponential fits at individual spin-lock field strengths, enabling visual comparison of model performance.
+This curve is overlaid with $R_{1ρ}$ values obtained from exponential fits at individual spin-lock field strengths, enabling visual comparison of model performance.
 
 #### Chemical Shift Correction
 
 To account for uncertainty in the chemical shift difference ($Δδ$), a particle-based Monte Carlo correction is applied to $K$. For each particle, ``k_\mathrm{off}`` is calculated as:
 
-```math
-k_\mathrm{off} \approx k_\mathrm{ex} = \sqrt{K^2 - 4\pi^2 \Delta\nu^2}
-```
+$$
+k_{\text{off}} \approx k_{\text{ex}} = \sqrt{K^2 - 4\pi^2 \Delta\nu^2}
+$$
 
 Samples yielding nonphysical values are excluded, and the final estimate is reported as the mean ± standard deviation of valid particles.
 
@@ -210,8 +236,7 @@ These files correspond to the global fit of ``R_{1ρ}`` versus spinlock field st
 - `dispersion-fit.csv`: Fitted ``R_{1ρ}`` values based on the global model
 - `dispersion.pdf`: Plot of the dispersion curve with overlaid model fit
 
-![dispersion.pdf](../assets/example_results_file.png)
-
+![dispersion.pdf](../assets/r1rho-dispersion-plot.png)
 
 #### Peak Integral Outputs
 
@@ -238,5 +263,11 @@ This file provides a concise summary of the analysis, including:
 ![results_file](../assets/example_results_file.png)
 
 > This file is useful for quick reference and record-keeping, especially when comparing fits across multiple datasets or conditions.
+
+### Video walkthrough (~ 1 minute)
+
+Click the image below to watch a short screen-recorded tutorial demonstrating how to launch and navigate the R1ρ GUI.
+
+[![R1ρ GUI video tutorial](../assets/r1rho-video-thumbnail.png)](https://liveuclac-my.sharepoint.com/:v:/g/personal/ucbthaz_ucl_ac_uk/IQB9sDYwVCGRQIMgPrloJr6CAXxOLHy9YJNxgkdVYA3qob0)
 
 
