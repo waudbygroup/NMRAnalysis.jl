@@ -12,7 +12,7 @@ Acquire a 1D broadband ``^{19}``F NMR experiment to identify the chemical shift 
 
 The pulse program used for on-resonance ``R_{1ρ}`` experiments is available on GitHub:
 
-- **[`19F_onresR1p.cw`](https://github.com/chriswaudby/pp/blob/master/19F_onresR1p.cw)**  
+- **[`19F_onresR1p.cw`](https://waudbylab.org/pulseprograms/sequences/19f_onresR1p.cw/)**  
 
 This sequence is adapted from Overbeck et al. (J. Magn. Reson. 2020, **74**, 753–766) and includes improved temperature compensation. It supports pseudo-3D acquisition with variable spinlock lengths and powers, read in via `VPLIST` and `VALIST`.
 
@@ -115,7 +115,13 @@ This dataset contains two experiments (11 and 12) that should be analysed togeth
 
 ### Launching the Interface
 
-Open a Julia session in the terminal and launch the analysis interface:
+Open a Julia session in the terminal.
+
+> **Tip:** For reproducible analyses, consider activating a dedicated Julia environment 
+> (e.g., in VS Code using `] activate .`). 
+> This ensures that the exact package versions used are tracked.
+
+Launch the analysis interface:
 
 ```julia
 using NMRAnalysis
@@ -128,6 +134,22 @@ r1rho("example/R1rho")
 
 # provide path to specific experiments
 r1rho(["example/R1rho/11", "example/R1rho/12"])
+```
+
+### Optional arguments
+
+You can restrict the range of spin-lock field strengths included in the analysis using keyword arguments:
+
+```julia
+r1rho("example/R1rho"; minvSL=250, maxvSL=100000)
+```
+
+This is useful for excluding low spin-lock fields that are poorly aligned or high spin-lock fields that may be affected by detuning.
+
+To view all available options and their default values, use Julia’s built-in help system:
+
+```julia
+?r1rho
 ```
 
  Once loaded, the GUI displays the first spectrum of the dataset.
