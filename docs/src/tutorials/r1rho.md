@@ -154,7 +154,7 @@ To view all available options and their default values, use Julia’s built-in h
 
  Once loaded, the GUI displays the first spectrum of the dataset.
 
-![R1ρ Analysis Interface](../assets/r1rho-interface.png)
+![R1ρ Analysis Interface](../assets/r1rho-gui.png)
 
 - **Series Toggle**: Switch between measurements at different spin-lock field strengths.
 - **Integration Width**: Manually input a value or click **Optimise** to automatically minimize fitting error.
@@ -236,7 +236,7 @@ These files correspond to the global fit of ``R_{1ρ}`` versus spinlock field st
 - `dispersion-fit.csv`: Fitted ``R_{1ρ}`` values based on the global model
 - `dispersion.pdf`: Plot of the dispersion curve with overlaid model fit
 
-![dispersion.pdf](../assets/example_results_file.png)
+![dispersion.pdf](../assets/r1rho-dispersion-plot.png)
 
 #### Peak Integral Outputs
 
