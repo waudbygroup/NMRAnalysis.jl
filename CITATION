@@ -1,0 +1,32 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the software and, if used, also the paper describing the R1rho relaxation dispersion methodology."
+type: software
+title: "NMRAnalysis.jl"
+abstract: "A Julia package for analysis of NMR spectroscopy data"
+repository-code: "https://github.com/waudbygroup/NMRAnalysis.jl"
+license: MIT
+authors:
+  - family-names: Hazlett
+    given-names: Sophia
+  - family-names: Waudby
+    given-names: Christopher Andrew
+identifiers:
+  - type: doi
+    value: "10.5281/zenodo.15667046"
+    description: "Zenodo archive of NMRAnalysis.jl"
+preferred-citation:
+  type: article
+  title: "Kinetic NMR screening: rapidly quantifying fast ligand dissociation in fragment mixtures using 19F relaxation dispersion"
+  authors:
+    - family-names: Hazlett
+      given-names: Sophia
+    - family-names: Harvey
+      given-names: Nikita
+    - family-names: Davis
+      given-names: Ben
+    - family-names: Waudby
+      given-names: Christopher Andrew
+  year: 2025
+  doi: "10.26434/chemrxiv-2025-vt1wg"
+  journal: ChemRxiv
+  notes: "Preprint describing the R1rho relaxation dispersion methodology implemented in NMRAnalysis.jl"
