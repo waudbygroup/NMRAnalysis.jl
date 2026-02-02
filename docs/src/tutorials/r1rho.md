@@ -254,7 +254,7 @@ This file provides a concise summary of the analysis, including:
 
 **Example:**
 
-![results_file](../assets/example_results_file.png)
+![results_file](../assets/r1rho-results-file.png)
 
 > This file is useful for quick reference and record-keeping, especially when comparing fits across multiple datasets or conditions.
 
