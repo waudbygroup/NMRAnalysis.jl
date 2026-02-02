@@ -82,4 +82,4 @@ r1rho(["data/R1rho/11", "data/R1rho/12"], scalefactor=1.5)
 
 ## Citation
 
-*Placeholder for the associated publication. Please insert citation details here.*
+* Hazlett, Harvey, Davis and Waudby (preprint). Kinetic NMR screening: rapidly quantifying fast ligand dissociation in fragment mixtures using 19F relaxation dispersion. https://chemrxiv.org/doi/full/10.26434/chemrxiv-2025-vt1wg.

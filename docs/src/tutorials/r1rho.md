@@ -8,13 +8,14 @@ This tutorial walks through the graphical interface for analysing R1ρ relaxatio
 
 Acquire a 1D broadband ``^{19}``F NMR experiment to identify the chemical shift of the ligand resonance. This value will serve as the O1 in the 90° pulse calibration experiment. Ensure that the pulse length (`p1`) is set appropriately in subsequent ``R_{1\rho}`` experiments.
 
-### 2. Pulse Program
+### 2. Pulse Programs
 
-The pulse program used for on-resonance ``R_{1ρ}`` experiments is available online:
+Bruker pulse programs used for on-resonance ``R_{1ρ}`` experiments, and pulse calibration, are available online:
 
-- **[`19F_onresR1p.cw`](https://waudbylab.org/pulseprograms/sequences/19f_onresR1p.cw/)**  
+- On-resonance 19F R1ρ dispersion **[`19f_onresR1p.cw`](https://waudbylab.org/pulseprograms/sequences/19f_onresR1p.cw/)**  
+- Pulse calibration **[`19f_calib_nut.cw`](https://waudbylab.org/pulseprograms/sequences/19f_calib_nut.cw/)**  
 
-This sequence is adapted from Overbeck et al. (J. Magn. Reson. 2020, **74**, 753–766) and includes improved temperature compensation. It supports pseudo-3D acquisition with variable spinlock lengths and powers, read in via `VPLIST` and `VALIST`.
+The R1ρ sequence is adapted from Overbeck et al. (J. Magn. Reson. 2020, **74**, 753–766) and includes improved temperature compensation. It supports pseudo-3D acquisition with variable spinlock lengths and powers, read in via `VPLIST` and `VALIST`.
 
 > Make sure to calibrate your hard pulse and spinlock powers before running the sequence. See the calibration section below for details.
 
@@ -24,7 +25,7 @@ NMRAnalysis.jl provides the function `setupR1rhopowers()` for calculating spinlo
 
 #### Option A: Using a Calibration Experiment (Recommended)
 
-The simplest approach is to provide a path to a nutation calibration experiment. The pulse parameters will be extracted automatically:
+The simplest approach is to provide a path to a nutation calibration experiment. See the [Calibration documentation](../analyses/calibration.md) for details on acquiring nutation calibration experiments. The pulse parameters will then be extracted automatically:
 
 ```julia
 setupR1rhopowers("examples/calibration/1")
@@ -79,8 +80,6 @@ dB
 0.19
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 ```
-
-See the [Calibration documentation](../analyses/calibration.md) for details on acquiring nutation calibration experiments.
 
 #### Option B: Manual Input
 
@@ -258,10 +257,12 @@ This file provides a concise summary of the analysis, including:
 
 > This file is useful for quick reference and record-keeping, especially when comparing fits across multiple datasets or conditions.
 
-### Video walkthrough (~ 1 minute)
+### Video walkthrough (1.5 min)
 
-Click the image below to watch a short screen-recorded tutorial demonstrating how to launch and navigate the R1ρ GUI.
+Watch a short screen-recorded tutorial demonstrating how to launch and navigate the R1ρ GUI:
 
-[![R1ρ GUI video tutorial](../assets/r1rho-video-thumbnail.png)](https://liveuclac-my.sharepoint.com/:v:/g/personal/ucbthaz_ucl_ac_uk/IQB9sDYwVCGRQIMgPrloJr6CAXxOLHy9YJNxgkdVYA3qob0)
-
-
+```@raw html
+<center>
+<iframe width="560" height="315" style="height:315px" src="https://www.youtube.com/embed/eTg8yxricl4?si=_iPVjnQPMFvATpz0" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+</center>
+```
