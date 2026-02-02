@@ -31,10 +31,10 @@ function setupR1rhopowers(calibration_experiment_file="")
     input = readline()
 
     if input == ""
-        target_spinlock_strengths = [100, 200, 300, 500, 750, 1000, 1500, 2000, 3000, 4000,
+        target_spinlock_strengths = [300, 500, 750, 1000, 1500, 2000, 3000, 4000,
                                      5000, 6000, 7000, 8000, 9000, 10000, 11000, 12000,
                                      13000, 14000, 15000]
-        println("Using default spinlock strengths (in Hz):\n[100, 200, 300, 500, 750, 1000, 1500, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000, 11000, 12000, 13000, 14000, 15000]")
+        println("Using default spinlock strengths (in Hz):\n[300, 500, 750, 1000, 1500, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000, 11000, 12000, 13000, 14000, 15000]")
     else
         target_spinlock_strengths = parse.(Float64, strip.(split(input, ",")))
     end
