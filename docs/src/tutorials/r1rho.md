@@ -10,7 +10,7 @@ Acquire a 1D broadband ``^{19}``F NMR experiment to identify the chemical shift 
 
 ### 2. Pulse Program
 
-The pulse program used for on-resonance ``R_{1ρ}`` experiments is available on GitHub:
+The pulse program used for on-resonance ``R_{1ρ}`` experiments is available online:
 
 - **[`19F_onresR1p.cw`](https://waudbylab.org/pulseprograms/sequences/19f_onresR1p.cw/)**  
 
@@ -43,7 +43,7 @@ This first analyses the calibration experiment and then prompts for spinlock str
 Input a list of spinlock strengths (in Hz) separated by commas, or press ENTER for a default list (100-15000 Hz):
 >
 Using default spinlock strengths (in Hz):
-[100, 200, 300, 500, 750, 1000, 1500, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000, 11000, 12000, 13000, 14000, 15000]
+[300, 500, 750, 1000, 1500, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000, 11000, 12000, 13000, 14000, 15000]
 
 WARNING - high spin-lock powers may cause damage to your probe!
 Check the spin-lock duration is within acceptable power limits.
@@ -53,7 +53,7 @@ Type 'yes' to proceed. Do you want to proceed? (yes/no):
 > yes
 
 The list corresponds to the following spinlock strengths (Hz):
-[14000, 12000, 8000, 4000, 15000, 200, 13000, 10000, 1000, 2000, 11000, 1500, 9000, 5000, 100, 750, 3000, 300, 500, 6000, 7000]
+[14000, 12000, 8000, 4000, 15000, 13000, 10000, 1000, 2000, 11000, 1500, 9000, 5000, 750, 3000, 300, 500, 6000, 7000]
 
 Copy & paste the list provided between the dashed lines.
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -63,7 +63,6 @@ dB
 -0.97
 5.05
 -6.43
-31.07
 -5.19
 -2.91
 17.09
@@ -72,7 +71,6 @@ dB
 13.57
 -2.00
 3.11
-37.09
 19.59
 7.55
 27.55
@@ -136,7 +134,7 @@ r1rho("example/R1rho")
 r1rho(["example/R1rho/11", "example/R1rho/12"])
 ```
 
-#### Optional arguments
+### Optional arguments
 
 You can restrict the range of spin-lock field strengths included in the analysis using keyword arguments:
 
@@ -186,30 +184,26 @@ To view all available options and their default values, use Julia’s built-in h
 
 Signal intensities are fit globally as a function of relaxation time and spin-lock field strength:
 
-$$
-I(T_{\text{SL}}, \nu_{\text{SL}}) = I_0 \cdot \exp\left(-\left[R_{2,0} + \frac{R_{\text{ex}} \cdot K^2}{K^2 + 4\pi^2 \nu_{\text{SL}}^2}\right] \cdot T_{\text{SL}}\right)
-$$
+```math
+I(T_{\mathrm{SL}}, \nu_{\mathrm{SL}}) = I_0 \cdot \exp\left(-\left[R_{2,0} + \frac{R_{\mathrm{ex}} \cdot K^2}{K^2 + 4\pi^2 \nu_{\mathrm{SL}}^2}\right] \cdot T_{\mathrm{SL}}\right)
+```
 
 *Adapted from Trott & Palmer (2002), J. Magn. Reson. 154, 157–160.*
 
 where:
 
 ```math
-K^2 = k_{\text{ex}}^2 + 4\pi^2 \Delta\nu^2
+K^2 = k_{\mathrm{ex}}^2 + 4\pi^2 \Delta\nu^2
 ```
 
-$$
-K^2 = k_{\text{ex}}^2 + 4\pi^2 \Delta\nu^2
-$$
-
-To assess whether exchange contributes significantly, a null model excluding `Rex` is also fit and compared using an F-test.
+To assess whether exchange contributes significantly, a null model excluding ``R_\mathrm{ex}`` is also fit and compared using an F-test.
 
 #### Dispersion Curve
 
 The GUI plots ``R_{1ρ}`` as a function of ``ν_{SL}`` using fitted parameters:
 
 ```math
-R_{1\rho} = R_{2,0} + \frac{R_{\text{ex}} \cdot K^2}{K^2 + 4\pi^2 \nu_{\text{SL}}^2}
+R_{1\rho} = R_{2,0} + \frac{R_{\mathrm{ex}} \cdot K^2}{K^2 + 4\pi^2 \nu_{\mathrm{SL}}^2}
 ```
 
 This curve is overlaid with $R_{1ρ}$ values obtained from exponential fits at individual spin-lock field strengths, enabling visual comparison of model performance.
@@ -218,9 +212,9 @@ This curve is overlaid with $R_{1ρ}$ values obtained from exponential fits at i
 
 To account for uncertainty in the chemical shift difference ($Δδ$), a particle-based Monte Carlo correction is applied to $K$. For each particle, ``k_\mathrm{off}`` is calculated as:
 
-$$
-k_{\text{off}} \approx k_{\text{ex}} = \sqrt{K^2 - 4\pi^2 \Delta\nu^2}
-$$
+```math
+k_{\mathrm{off}} \approx k_{\mathrm{ex}} = \sqrt{K^2 - 4\pi^2 \Delta\nu^2}
+```
 
 Samples yielding nonphysical values are excluded, and the final estimate is reported as the mean ± standard deviation of valid particles.
 
