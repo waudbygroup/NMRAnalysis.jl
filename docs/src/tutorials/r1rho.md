@@ -257,7 +257,7 @@ This file provides a concise summary of the analysis, including:
 
 > This file is useful for quick reference and record-keeping, especially when comparing fits across multiple datasets or conditions.
 
-### Video walkthrough (1.5 min)
+## Video walkthrough (1.5 min)
 
 Watch a short screen-recorded tutorial demonstrating how to launch and navigate the R1ρ GUI:
 
