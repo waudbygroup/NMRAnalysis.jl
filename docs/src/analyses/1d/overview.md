@@ -147,29 +147,48 @@ It defaults to `out`.
 
 ## What gets saved
 
-**Save** writes four kinds of file into the output folder, backing up an existing
-`results.csv` as `results.csv.bak` first:
+**Save** writes these files into the output folder, backing up any it would overwrite as
+`.bak` first:
 
 | File | Contents |
 |---|---|
 | `results.csv` | One row per region (and per series, where an experiment has more than one), with every fitted and derived parameter and its uncertainty |
+| `intensities.csv` | The integrals themselves: one row per spectrum, one column per region, with uncertainties |
 | `summary.txt` | The same numbers laid out to be read, with the region and noise positions |
 | `fit.pdf` | The fit for every region on one set of axes |
 | `fit_<region>.pdf` | The fit for each region on its own |
 
-`results.csv` carries the experiment details as `#` comment lines above an ordinary header
-row, so it opens directly in a spreadsheet or `pandas`. It is also what **Load** reads: it
-restores the regions and the noise position, so a session with several named regions can
-be picked up again later rather than picked out by hand.
+Both CSVs carry the experiment details as `#` comment lines above an ordinary header row,
+so they open directly in a spreadsheet or `pandas`. `results.csv` is also what **Load**
+reads: it restores the regions and the noise position, so a session with several named
+regions can be picked up again later rather than picked out by hand.
+
+`intensities.csv` is the data behind the fit, laid out as the evolution parameter down the
+side and the regions across the top:
+
+```
+time,reactant,reactant_err,product,product_err
+0.0,9421.3,12.4,0.0,12.4
+60.0,7724.5,12.4,1702.1,12.4
+120.0,6013.8,12.4,3399.7,12.4
+```
+
+For a kinetics experiment, where nothing is fitted, this *is* the result. For everything
+else it is the decay or buildup the fitted parameters came from, which is what you want if
+you would rather plot or fit it yourself.
 
 ## Repeating an analysis
 
 Each routine returns a vector of results, one per region and series, whether you used the
-window or not:
+window or not. They print as one line each rather than dumping their contents:
 
 ```julia
-results = relaxation1d("11")
-param(results[1], :R)     # the fitted rate, with its uncertainty
+julia> results = relaxation1d("11")
+1-element Vector{RegionResult}:
+ signal: A = 9421.0 ± 12.0, R = 0.866 ± 0.025
+
+julia> param(results[1], :R)     # the fitted rate, with its uncertainty
+0.866 ± 0.025
 ```
 
 `param` reads both the fitted parameters and anything derived from them, so

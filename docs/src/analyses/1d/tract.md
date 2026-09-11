@@ -57,7 +57,8 @@ from which the cross-correlated cross-relaxation rate follows as
 and τc by inverting
 
 ```math
-\eta_{xy} = f \left[ \frac{4}{5}\tau_c + \frac{3}{5}\frac{\tau_c}{1 + \omega_N^2\tau_c^2} \right],
+\eta_{xy} = f \left[ 4 J(0) + 3 J(\omega_N) \right],
+\qquad J(\omega) = \frac{2}{5} \frac{\tau_c}{1 + \omega^2\tau_c^2},
 ```
 
 where ``f`` collects the dipolar and CSA constants for the amide group: the N-H bond

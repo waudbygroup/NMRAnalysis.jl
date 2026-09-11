@@ -78,6 +78,29 @@ function groupname(group::NamedTuple)
     return join((string(v) for v in values(group)), ", ")
 end
 
+"""
+    show(io, result::RegionResult)
+
+One line per result: the region (and group, where there is one) followed by its fitted and
+derived values.
+
+A `RegionResult` holds every reduced point and its whole parameter dictionaries, so the
+struct display Julia generates by default is pages of numbers - which is what a routine
+returning results would dump into the REPL the moment its window closed. This is the whole
+answer to that: the results are still returned, and still indexable for a script or a test,
+but a vector of them prints as a short table. Units are deliberately absent, being the one
+thing a `RegionResult` cannot know (`paramunit` is dispatched on the experiment); the
+results panel, `summary.txt` and the CSVs all carry them.
+"""
+function Base.show(io::IO, r::RegionResult)
+    print(io, isempty(r.group) ? r.region : "$(r.region) ($(groupname(r.group)))")
+    print(io, r.converged ? ": " : " (not converged): ")
+    params = collect(pairs(r.parameters))
+    append!(params, collect(pairs(r.postparameters)))
+    isempty(params) && return print(io, "$(length(r.y)) points, unfitted")
+    return print(io, join(("$name = $value" for (name, value) in params), ", "))
+end
+
 "axis labels for the result panel"
 resultlabels(::Experiment1D) = ("x", "Integrated intensity (a.u.)")
 

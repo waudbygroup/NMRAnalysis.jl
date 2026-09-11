@@ -83,27 +83,101 @@ function resultstable(expt::Experiment1D, results, regs)
 end
 
 """
-    writeresults!(expt, state, folder) -> String
+    seriescolumn(result) -> String
 
-Write `results.csv` into `folder`, backing up any existing one first. Returns the path.
+Column name for one series in `intensities.csv`: the region label, suffixed with the group
+where an experiment has more than one series per region (`amide_trosy`).
 """
-function writeresults!(expt::Experiment1D, state, folder::AbstractString)
-    filepath = joinpath(folder, "results.csv")
+function seriescolumn(r::RegionResult)
+    return isempty(r.group) ? r.region : "$(r.region)_$(groupname(r.group))"
+end
+
+"""
+    intensitiestable(expt, results) -> (header, rows)
+
+Column names and rows for `intensities.csv`: the reduced quantity of every series against
+the evolution parameter. One row per value of the fit axis, one pair of columns (value and
+uncertainty) per series, i.e. times down the side and regions across the top - which is
+the shape a kinetics experiment wants, and readable straight into a spreadsheet or
+`DataFrame` for plotting.
+
+Written for every experiment, not just the unfitted ones: the integrals behind a fit are
+worth having whether or not one was performed. For a `NoFitting` experiment it is the
+*only* place the deliverable appears, `results.csv` carrying fitted parameters of which
+such an experiment has none.
+
+Series need not share a fit axis (separate kinetics runs generally do not), so the rows
+are the sorted union of every series' own values and a series missing one reads `NA`
+there.
+"""
+function intensitiestable(expt::Experiment1D, results)
+    header = [string(fitaxis(expt))]
+    isempty(results) && return (header, Vector{String}[])
+
+    xs = sort(unique(Float64[x for r in results for x in r.x]))
+    for r in results
+        name = seriescolumn(r)
+        append!(header, [name, "$(name)_err"])
+    end
+
+    rows = Vector{String}[]
+    for x in xs
+        row = [string(x)]
+        for r in results
+            i = findfirst(==(x), r.x)
+            if isnothing(i)
+                append!(row, ["NA", "NA"])
+            else
+                append!(row, [string(Measurements.value(r.y[i])),
+                              string(Measurements.uncertainty(r.y[i]))])
+            end
+        end
+        push!(rows, row)
+    end
+    return header, rows
+end
+
+"""
+    writetable(filepath, expt, header, rows; extra=String[]) -> String
+
+Write one CSV: the experiment description as `#` comment lines (plus any `extra` comment
+lines), then `header`, then `rows`. Any existing file is backed up first. Returns the path.
+"""
+function writetable(filepath::AbstractString, expt::Experiment1D, header, rows;
+                    extra=String[])
     backupfile(filepath)
-    header, rows = resultstable(expt, state[:result][], state[:regions][])
     open(filepath, "w") do f
         for line in split(experimentinfo(expt), '\n')
             isempty(strip(line)) && continue
             println(f, "# ", line)
         end
-        # Recorded so `readregions!` can restore it: the noise position is a user choice
-        # that the region bounds alone do not capture.
-        println(f, "# Noise position / ppm: ", round(state[:noisec][]; digits=4))
+        for line in extra
+            println(f, "# ", line)
+        end
         println(f, join(header, ","))
         for row in rows
             println(f, join(row, ","))
         end
     end
+    return filepath
+end
+
+"""
+    writeresults!(expt, state, folder) -> String
+
+Write `results.csv` (fitted and derived parameters) and `intensities.csv` (the reduced
+series they were fitted to) into `folder`, backing up any existing ones first. Returns the
+path of `results.csv`.
+"""
+function writeresults!(expt::Experiment1D, state, folder::AbstractString)
+    results, regs = state[:result][], state[:regions][]
+    # The noise position is a user choice the region bounds do not capture, so it is
+    # recorded for `readregions!` to restore.
+    noise = ["Noise position / ppm: $(round(state[:noisec][]; digits=4))"]
+    filepath = writetable(joinpath(folder, "results.csv"), expt,
+                          resultstable(expt, results, regs)...; extra=noise)
+    writetable(joinpath(folder, "intensities.csv"), expt,
+               intensitiestable(expt, results)...; extra=noise)
     return filepath
 end
 

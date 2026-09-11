@@ -366,12 +366,41 @@ Phase 3.10 — **parameters must not depend on annotations**  ✓
       which had none) and `docs/src/api/analysis1d.md`, which renders these docstrings for
       the first time
 
+Phase 3.11 — **the reduced series is an output; results print, not dump; tests**  ✓
+- [x] `intensities.csv`, written beside `results.csv` for every experiment: the evolution
+      parameter down the side, one value/uncertainty column pair per series across the top.
+      For a `NoFitting` experiment (kinetics) this is the entire deliverable, which
+      `results.csv` could not carry - it holds fitted parameters, of which such an
+      experiment has none, so a kinetics row was the region bounds and nothing else. For a
+      fitted experiment it is the decay the parameters came from, worth having regardless.
+      Series need not share a fit axis (separate kinetics runs generally do not), so the
+      rows are the union and a gap reads `NA`. `writetable` now writes both files
+- [x] `show(io, ::RegionResult)`: one line per result, so a routine returning its results
+      no longer dumps every reduced point into the REPL when its window closes. The
+      results are still returned - a `Vector{RegionResult}` is what a script or a test
+      needs, and returning `nothing` would close off both - but they *print* as a short
+      table. Units are absent from that line, being the one thing a `RegionResult` cannot
+      know (`paramunit` dispatches on the experiment); the panel, `summary.txt` and the
+      CSVs all carry them
+- [x] `test/analysis1d_test.jl`: the analysis core tested end to end with no GUI, no
+      NMRData and no data files, by building `Trace`s in memory - which is exactly what
+      the "keep the science pure" split was for. Covers region/plane/grouping semantics,
+      integration and the noise estimate, parameter recovery for all four fitted
+      experiments, the derived quantities and the units they are stored in, both CSV
+      tables, the compact display, and the prompt helpers under `prompt=false`
+- [x] fixed, via that suite: `tracttauc`'s docstring quoted `ηxy = f·(4/5·τc + 3/5·τc/…)`,
+      a factor of two out from the relation the inversion actually solves (the correct
+      `J(ω) = (2/5)τc/(1+ω²τc²)` convention gives `8/5` and `6/5`). The code was right and
+      the docs page it was copied into was wrong; the round-trip test now pins the two
+      together
+
 Still open after this iteration:
-- **Series-valued results are not written to `results.csv`.** A `NoFitting` experiment
-  (kinetics) fits no parameters, so its row carries the region bounds and nothing else:
-  the intensity-vs-time trace, which is the whole deliverable, reaches the caller only
-  through `RegionResult.x`/`.y`. Needs the output-format decision below before it can be
-  fixed properly (a long-format second file? extra columns per plane?).
+- **Data-driven tests.** Everything above the analysis core - annotation lookup, `vdlist` /
+  `p30` / `d20` / `gpnam6` reading, `tracesfromspec`'s N-D plane flattening,
+  `nplanesfromspec` - is untested, because it needs real Bruker directories. The seam is
+  ready (`prompt=false` plus an `integration` triple runs an entry point end to end with
+  no interaction); it needs a small relaxation, diffusion and TRACT dataset under
+  `examples/`.
 - **Canonical output format across 1D and 2D** (text vs CSV, units, precision). 1D now has
   a `results.csv` following 2D's conventions and a small shared units/labels table (plus
   one per experiment for what isn't shared), but the 1D and 2D tables have not been

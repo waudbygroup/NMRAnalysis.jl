@@ -45,17 +45,24 @@ kinetics1d("21", times; model=ExponentialModel())
 
 ## Reading the traces
 
-The returned results carry the trace itself, one entry per region and run:
+**Save** writes `intensities.csv`, which for a kinetics run is the whole result: times
+down the side, regions across the top.
+
+```
+time,reactant,reactant_err,product,product_err
+0.0,9421.3,12.4,0.0,12.4
+60.0,7724.5,12.4,1702.1,12.4
+120.0,6013.8,12.4,3399.7,12.4
+```
+
+Where a series has several runs, each gets its own pair of columns (`reactant_1`,
+`reactant_2`, …). Runs need not share the same times: the rows are the union of all of
+them, and a run with no measurement at a given time reads `NA` there.
+
+The returned results carry the same traces:
 
 ```julia
 results = kinetics1d("21", times)
-r = results[1]
-r.x        # times
-r.y        # integrated intensities, with uncertainties
+results[1].x        # times
+results[1].y        # integrated intensities, with uncertainties
 ```
-
-!!! note "The traces are not written to `results.csv` yet"
-    `results.csv` holds one row per region and run with the fitted parameters, which for
-    an unfitted kinetics series means the region bounds alone. Take the traces from the
-    returned results, as above, until the output format for a series-valued result is
-    settled.

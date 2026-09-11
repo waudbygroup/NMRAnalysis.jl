@@ -143,8 +143,17 @@ end
     tracttauc(f, ωN, ηxy) -> Float64
 
 Rotational correlation time τc (ns) from the cross-correlated cross-relaxation rate
-`ηxy`, by the analytic inversion of `ηxy = f·(4/5·τc + 3/5·τc/(1+(ωN·τc)²))` used in the
-existing `tract` routine.
+`ηxy`, by the analytic inversion of
+
+    ηxy = f · [4·J(0) + 3·J(ωN)],   J(ω) = (2/5)·τc / (1 + ω²τc²)
+
+i.e. `ηxy = f·(8/5·τc + 6/5·τc/(1+(ωN·τc)²))`, as in the routine this replaces.
+
+The `(2/5)` spectral-density convention is the easy thing to lose here: an earlier version
+of this docstring quoted the relation as `4/5·τc + 3/5·τc/(1+(ωN·τc)²)`, a factor of two
+out from what the inversion below actually solves (the code was right, the docstring was
+not). `test/analysis1d_test.jl` now round-trips this against the forward relation above, so
+the two cannot drift apart again silently.
 """
 function tracttauc(f, ωN, ηxy)
     x = sqrt(21952 * f^6 * ωN^6 - 3025 * f^4 * ηxy^2 * ωN^8 + 625 * f^2 * ηxy^4 * ωN^10)
