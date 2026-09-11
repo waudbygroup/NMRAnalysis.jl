@@ -36,6 +36,7 @@ relaxation1d("11"; model=:recovery)                  # inversion recovery
 """
 function relaxation1d(spec; tau=nothing, model=nothing, regions=nothing,
                       integration=nothing, prompt::Bool=isinteractive())
+    given = spec                       # the argument as written, for the reproduce line
     spec = loadspec(spec)
     times = @something(tau,
                        annotation(spec, :relaxation, :duration),
@@ -48,7 +49,8 @@ function relaxation1d(spec; tau=nothing, model=nothing, regions=nothing,
     ds = datasetfromspec(spec, [(; time=Float64(t)) for t in times])
     expt = isnothing(regions) ? RelaxationExperiment(ds; model) :
            RelaxationExperiment(ds; model, regions)
-    return run1d(expt; integration)
+    return run1d(expt; integration,
+                 call=analysiscall("relaxation1d", given; tau=times, model))
 end
 
 """

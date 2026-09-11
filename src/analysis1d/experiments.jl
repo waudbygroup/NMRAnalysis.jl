@@ -252,18 +252,21 @@ const Integration = NamedTuple{(:peakppm, :noiseppm, :ppmwidth)}
 regionsfrom(i) = [Region("signal", i.peakppm - i.ppmwidth / 2, i.peakppm + i.ppmwidth / 2)]
 
 """
-    run1d(expt; integration=nothing) -> Vector{RegionResult}
+    run1d(expt; integration=nothing, call=nothing) -> Vector{RegionResult}
 
 Launch the GUI for `expt` and return the results standing when its window is closed, or -
 when an `integration` triple is supplied - skip the GUI and return the analysis for that
 region directly.
 
+`call` is the [`AnalysisCall`](@ref) the entry point recorded, carried through to
+`summary.txt`. It is unused on the scripted path, which writes no files.
+
 Both paths return the same thing, so what a routine gives back does not depend on how it
 was called. [`gui!`](@ref) itself returns the whole GUI state, of which this is one entry;
 call it directly where the rest of that state is wanted.
 """
-function run1d(expt::Experiment1D; integration=nothing)
-    isnothing(integration) && return gui!(expt)[:result][]
+function run1d(expt::Experiment1D; integration=nothing, call=nothing)
+    isnothing(integration) && return gui!(expt; call)[:result][]
     d = dataset(expt)
     ds = Dataset1D(d.planes, Float64(integration.noiseppm), d.label, d.sources)
     return analyse(expt, ds, regionsfrom(integration))

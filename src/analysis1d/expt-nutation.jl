@@ -27,6 +27,7 @@ else the `calibration.model` annotation, else a question. Neither annotation is 
 """
 function calibration1d(spec; durations=nothing, phase=nothing, regions=nothing,
                        integration=nothing, prompt::Bool=isinteractive())
+    given = spec                       # the argument as written, for the reproduce line
     spec = loadspec(spec)
     t = @something(durations,
                    annotation(spec, :calibration, :duration),
@@ -37,7 +38,8 @@ function calibration1d(spec; durations=nothing, phase=nothing, regions=nothing,
     ds = datasetfromspec(spec, [(; duration=Float64(d)) for d in t])
     expt = isnothing(regions) ? NutationExperiment(ds; phase) :
            NutationExperiment(ds; phase, regions)
-    return run1d(expt; integration)
+    return run1d(expt; integration,
+                 call=analysiscall("calibration1d", given; durations=t, phase))
 end
 
 """Pulse durations, asked for in µs (as they are set on the spectrometer) but returned in

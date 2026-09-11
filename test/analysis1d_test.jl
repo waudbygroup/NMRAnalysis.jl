@@ -17,6 +17,7 @@ using NMRAnalysis.Analysis1D: relaxationmodel, relaxationseriesmodel, nutationph
                               shapefactor, solventname, tractf, tracttauc
 using NMRAnalysis.Analysis1D: resultstable, seriestable, globaltable, experimentinfo,
                               writeresults!, csvcolumn, safename, sources, postscope
+using NMRAnalysis.Analysis1D: analysiscall, callstring, callvalue, writesummary
 using NMRAnalysis.Analysis1D: ask, askvector, askchoice, parsevector, acqusvalue
 using Measurements
 using Random
@@ -336,6 +337,47 @@ signalregion(δ0=8.0) = [Region("signal", δ0 - 0.3, δ0 + 0.3)]
         @test startswith(text, "signal: ")
         @test occursin("R = ", text)
         @test length(sprint(show, res)) < 500
+    end
+
+    @testset "The reproduce line" begin
+        call = analysiscall("relaxation1d", "11"; tau=[0.01, 0.03], model=:exponential)
+        text = callstring(call, [Region("signal", 7.9, 8.5)], -1.0)
+        @test occursin("relaxation1d(\"11\";", text)
+        @test occursin("tau=[0.01, 0.03]", text)
+        @test occursin("model=:exponential", text)
+        # a single region is expressible as one integration triple, so the line repeats the
+        # whole analysis without the window opening
+        @test occursin("integration=(peakppm=8.2, noiseppm=-1.0, ppmwidth=0.6)", text)
+
+        # several regions are not, so they are left out and the summary points at Load
+        multi = callstring(call, [Region("a", 1.0, 2.0), Region("b", 3.0, 4.0)], -1.0)
+        @test !occursin("integration", multi)
+
+        # values with no literal are left out rather than printed misleadingly
+        @test isempty(analysiscall("kinetics1d", "21"; model=NoFitting()).kwargs)
+        @test callvalue(NoFitting()) === nothing
+        @test callvalue(0.05:0.05:0.15) == repr([0.05, 0.1, 0.15])
+
+        # a spectrum passed as an object has no literal either, so no line is printed at all
+        @test isnothing(callstring(analysiscall("relaxation1d", Dict()), Region[], 0.0))
+
+        # and it reaches summary.txt
+        times = [0.0, 0.1, 0.2, 0.4]
+        ds = peakdataset([100 * exp(-2.0t) for t in times], :time, times; noise=0.5)
+        expt = RelaxationExperiment(ds; regions=signalregion())
+        res = analyse1d(expt)
+        path = joinpath(mktempdir(), "summary.txt")
+        writesummary(path, expt, ds, res, expt.regions, call)
+        written = read(path, String)
+        @test occursin("Reproduce:", written)
+        @test occursin("relaxation1d(", written)
+        @test occursin("Relaxation rate", written)
+        @test occursin("NMRAnalysis.jl", written)
+
+        # without a recorded call there is simply no such section
+        path2 = joinpath(mktempdir(), "summary.txt")
+        writesummary(path2, expt, ds, res, expt.regions)
+        @test !occursin("Reproduce:", read(path2, String))
     end
 
     @testset "Parameter prompts" begin

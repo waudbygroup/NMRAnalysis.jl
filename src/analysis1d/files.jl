@@ -308,6 +308,133 @@ function writeresults!(expt::Experiment1D, ds::Dataset1D, results, regs,
     return filepath
 end
 
+# ---- the call that produced an analysis ---------------------------------------
+
+"""
+    AnalysisCall
+
+The call that produced an analysis, recorded by the entry point so `summary.txt` can print
+a line that repeats it. `reproducible` is false where one of the positional arguments has
+no Julia literal - a spectrum passed as an `NMRData` rather than as a path - in which case
+no such line is printed at all rather than a misleading one.
+"""
+struct AnalysisCall
+    func::String
+    args::Vector{String}
+    kwargs::Vector{Pair{Symbol,String}}
+    reproducible::Bool
+end
+
+"""
+    analysiscall(func, args...; kwargs...) -> AnalysisCall
+
+Record a call. Keyword arguments whose values have no literal (a `SeriesModel` object, say)
+are left out, since the point of the record is that it can be pasted back into Julia.
+"""
+function analysiscall(func::AbstractString, args...; kwargs...)
+    rendered = Pair{Symbol,String}[]
+    for (name, value) in pairs(kwargs)
+        text = callvalue(value)
+        isnothing(text) || push!(rendered, name => text)
+    end
+    args_ = [callvalue(a) for a in args]
+    return AnalysisCall(String(func), String[something(a, "spec") for a in args_],
+                        rendered, !any(isnothing, args_))
+end
+
+"""
+    callvalue(x) -> String or nothing
+
+`x` as a Julia literal, or `nothing` where it has none. Vectors of numbers are written out
+in full: a gradient ramp or a delay list is exactly what has to be repeated, so abbreviating
+it would defeat the purpose.
+"""
+callvalue(x::Union{Real,Bool,Symbol,AbstractString}) = repr(x)
+callvalue(x::AbstractVector{<:Real}) = repr(collect(x))
+callvalue(x::NamedTuple) = repr(x)
+callvalue(::Nothing) = nothing
+callvalue(x) = nothing
+
+"""
+    callstring(call, regions, noisecentre) -> String or nothing
+
+The `Reproduce:` line for `summary.txt`: the recorded call with the region actually used
+appended as an `integration` triple, so pasting it back repeats the analysis without the
+window opening.
+
+Only a single-region analysis can be repeated in one call, the integration triple carrying
+one region and one noise position. With several regions the call is still printed, without
+them, and [`writesummary`](@ref) adds a line pointing at the **Load** button, which restores
+every region *and* the noise position from `results.csv`.
+"""
+function callstring(call::AnalysisCall, regs, noisecentre)
+    call.reproducible || return nothing
+    kwargs = copy(call.kwargs)
+    if length(regs) == 1
+        r = only(regs)
+        push!(kwargs,
+              :integration => "(peakppm=$(round(centre(r); digits=3)), " *
+                              "noiseppm=$(round(noisecentre; digits=3)), " *
+                              "ppmwidth=$(round(width(r); digits=3)))")
+    end
+    io = IOBuffer()
+    print(io, call.func, "(", join(call.args, ", "))
+    if isempty(kwargs)
+        print(io, ")")
+    else
+        isempty(call.args) || print(io, ";")
+        println(io)
+        pad = " "^(length(call.func) + 1)
+        for (i, (name, value)) in enumerate(kwargs)
+            print(io, pad, name, "=", value, i == length(kwargs) ? ")" : ",\n")
+        end
+    end
+    return String(take!(io))
+end
+
+# ---- summary.txt --------------------------------------------------------------
+
+"""
+    writesummary(filepath, expt, dataset, results, regions, call=nothing)
+
+Write `summary.txt`: the human-readable record of the analysis, and the one output where
+numbers are rounded for reading rather than written at full precision.
+"""
+function writesummary(filepath::AbstractString, expt::Experiment1D, ds::Dataset1D, results,
+                      regs, call=nothing)
+    backupfile(filepath)
+    open(filepath, "w") do f
+        for line in split(experimentinfo(expt, ds), '\n')
+            isempty(strip(line)) && continue
+            println(f, line)
+        end
+        println(f)
+        println(f, "Integration regions / ppm:")
+        for r in regs
+            println(f, "  $(r.label): $(round(r.lo; digits=4)) to $(round(r.hi; digits=4))")
+        end
+        println(f)
+        for r in regs
+            print(f, summarytext(expt, results, r.label))
+        end
+        isnothing(call) && return nothing
+        text = callstring(call, regs, ds.noisecenter)
+        isnothing(text) && return nothing
+        println(f, "Reproduce:")
+        for line in split(text, '\n')
+            println(f, "    ", line)
+        end
+        if length(regs) != 1
+            println(f)
+            println(f,
+                    "Then press Load in the analysis window to restore the " *
+                    "$(length(regs)) regions and the noise position from results.csv.")
+        end
+        return nothing
+    end
+    return filepath
+end
+
 """
     readregions!(state, filepath) -> Int
 

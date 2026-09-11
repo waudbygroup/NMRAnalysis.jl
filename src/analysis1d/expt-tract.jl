@@ -27,6 +27,8 @@ are asked for them.
 """
 function tract(trosy, antitrosy; tau=nothing, regions=nothing, integration=nothing,
                prompt::Bool=isinteractive())
+    # the arguments as written, for the reproduce line
+    giventrosy, givenanti = trosy, antitrosy
     trosy, antitrosy = loadspec(trosy), loadspec(antitrosy)
     ttau = @something(tau, acqusvalue(trosy, :vdlist),
                       askvector("TROSY relaxation delays", nplanesfromspec(trosy);
@@ -46,12 +48,17 @@ function tract(trosy, antitrosy; tau=nothing, regions=nothing, integration=nothi
     # Per-plane sources: this is the experiment that actually combines two files, so
     # `series.csv` should say which spectrum each row came from rather than naming the
     # TROSY one for both.
-    src = vcat(fill(speclabel(trosy), length(ttau)), fill(speclabel(antitrosy), length(atau)))
+    src = vcat(fill(speclabel(trosy), length(ttau)),
+               fill(speclabel(antitrosy), length(atau)))
     ds = Dataset1D(Planes(traces, vars), defaultnoisecentre(trosy),
                    speclabel(trosy), src)
     expt = isnothing(regions) ? TractExperiment(ds; ωN, f) :
            TractExperiment(ds; ωN, f, regions)
-    return run1d(expt; integration)
+    # `tau` applies to both experiments, so it is only worth recording when the two lists
+    # agree; where they differ, each spectrum's own vdlist is what reproduces the analysis.
+    return run1d(expt; integration,
+                 call=analysiscall("tract", giventrosy, givenanti;
+                                   tau=(ttau == atau ? ttau : nothing)))
 end
 
 function tract(; kwargs...)

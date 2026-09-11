@@ -35,9 +35,11 @@ function stepslice!(sl, nplanes, delta)
 end
 
 """
-    gui!(expt::Experiment1D)
+    gui!(expt::Experiment1D; call=nothing)
 
-Launch the interactive analysis window for `expt`. The left column overlays all spectral
+Launch the interactive analysis window for `expt`. `call` is the [`AnalysisCall`](@ref) the
+entry point recorded, which `summary.txt` prints as a line repeating the analysis; it is
+`nothing` when `gui!` is driven directly rather than through an entry point. The left column overlays all spectral
 planes with draggable integration region(s) and a noise marker; the result panel below
 shows the live fit for the active region. The active region is whichever the mouse is over
 (or was last clicked), named in the right-hand column. Returns the GUI state when the
@@ -52,11 +54,12 @@ window closes.
 - Up/Down arrows: scale the spectrum's y-axis (×2 / ÷2).
 - Shift+scroll: resize the active region, about its own centre.
 """
-function gui!(expt::Experiment1D)
+function gui!(expt::Experiment1D; call=nothing)
     # the analysis type is already shown as a large bold label inside the window, so the
     # OS titlebar just carries the application identity rather than repeating it
     GLMakie.activate!(; focus_on_show=true, title="NMRAnalysis.jl")
     state = preparestate(expt)
+    state[:call] = call
     state[:gui] = Dict{Symbol,Any}()
     gui = state[:gui]
     cols = Makie.wong_colors()
@@ -736,35 +739,9 @@ function saveresults(state)
         save(joinpath(regionsdir, "$(safename(label)).pdf"), fig1; backend=CairoMakie)
     end
 
-    writesummary(joinpath(dir, "summary.txt"), expt, ds, result, regs)
+    writesummary(joinpath(dir, "summary.txt"), expt, ds, result, regs, state[:call])
     writeresults!(expt, ds, result, regs, dir)
     @info "Saved results to $dir"
     return dir
 end
 
-"""
-    writesummary(filepath, expt, dataset, results, regions)
-
-Write `summary.txt`: the human-readable record of the analysis, and the one output where
-numbers are rounded for reading rather than written at full precision.
-"""
-function writesummary(filepath, expt::Experiment1D, ds::Dataset1D, results, regs)
-    backupfile(filepath)
-    open(filepath, "w") do f
-        for line in split(experimentinfo(expt, ds), '\n')
-            isempty(strip(line)) && continue
-            println(f, line)
-        end
-        println(f)
-        println(f, "Integration regions / ppm:")
-        for r in regs
-            println(f,
-                    "  $(r.label): $(round(r.lo; digits=4)) to $(round(r.hi; digits=4))")
-        end
-        println(f)
-        for r in regs
-            print(f, summarytext(expt, results, r.label))
-        end
-    end
-    return filepath
-end

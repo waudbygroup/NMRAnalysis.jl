@@ -46,6 +46,7 @@ diffusion1d("106", g; δ=4e-3, Δ=0.1, σ=0.9, Gmax=0.55)  # nothing left to ask
 function diffusion1d(spec, gradients=nothing; coherence=SQ(H1), δ=nothing, Δ=nothing,
                      σ=nothing, Gmax=nothing, regions=nothing, integration=nothing,
                      prompt::Bool=isinteractive())
+    given = spec                       # the argument as written, for the reproduce line
     spec = loadspec(spec)
     γ = gyromagneticratio(coherence)
     n = nplanesfromspec(spec)
@@ -77,7 +78,8 @@ function diffusion1d(spec, gradients=nothing; coherence=SQ(H1), δ=nothing, Δ=n
     kw = (; γ, δ, Δ, σ, Gmax, temp, solvent)
     expt = isnothing(regions) ? DiffusionExperiment(ds; kw...) :
            DiffusionExperiment(ds; kw..., regions)
-    return run1d(expt; integration)
+    return run1d(expt; integration,
+                 call=analysiscall("diffusion1d", given, gradients; δ, Δ, σ, Gmax))
 end
 
 diffusion1d(; kwargs...) = diffusion1d(askpath("diffusion experiment"); kwargs...)
