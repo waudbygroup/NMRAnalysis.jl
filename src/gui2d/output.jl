@@ -168,6 +168,48 @@ function resultstable(expt)
     return header, rows
 end
 
+# ---- peaklist.csv: the user's input -------------------------------------------
+
+"""
+    peaklisttable(expt) -> (header, rows)
+
+Column names and rows for `peaklist.csv`: where the user *put* each peak, as opposed to
+where the fit moved it to. One row per peak, or one row per peak per plane where the
+positions were placed plane by plane.
+
+The distinction matters because these are different things with different lives. A peak
+list is an input: you pick it once, reuse it on another dataset, hand it to a colleague, or
+import it from elsewhere. A fitted position is an output of one particular fit. Reading
+back the fitted positions as the next run's starting point - which is what loading
+`results.csv` used to do - conflates the two, and for a moving-peak experiment there is no
+single fitted position to read.
+
+`plane` is left blank for a peak whose initial position is one value for the whole
+experiment, meaning the row applies to every plane, and carries the plane number where the
+peak was tracked across them. The radii are per-peak and repeat down that peak's rows.
+"""
+function peaklisttable(expt)
+    header = ["label", "plane", csvcolumn("x", "ppm"), csvcolumn("y", "ppm"),
+              csvcolumn("xradius", "ppm"), csvcolumn("yradius", "ppm")]
+    rows = Vector{String}[]
+    for peak in sortedpeaks(expt)
+        x0 = peak.parameters[:x].initialvalue[]
+        y0 = peak.parameters[:y].initialvalue[]
+        rx, ry = csvvalue(peak.xradius[]), csvvalue(peak.yradius[])
+        # A `SingleElementVector` holds one position for the whole experiment; a peak
+        # tracked plane by plane holds one per plane.
+        if x0 isa SingleElementVector && y0 isa SingleElementVector
+            push!(rows, [peak.label[], "", csvvalue(x0[1]), csvvalue(y0[1]), rx, ry])
+        else
+            for i in 1:nslices(expt)
+                push!(rows,
+                      [peak.label[], string(i), csvvalue(x0[i]), csvvalue(y0[i]), rx, ry])
+            end
+        end
+    end
+    return header, rows
+end
+
 # ---- series.csv ---------------------------------------------------------------
 
 """
@@ -232,13 +274,17 @@ end
 """
     writeresults!(expt, folder) -> String
 
-Write `results.csv`, `series.csv`, `global.csv` (where the experiment fits anything
-globally) and one `peaks/<label>.csv` per peak into `folder`, and return the path of
-`results.csv`. The per-peak files hold that peak's own rows of `series.csv`, so the data
+Write `peaklist.csv` (what was picked), `results.csv`, `series.csv`, `global.csv` (where
+the experiment fits anything globally) and one `peaks/<label>.csv` per peak into `folder`,
+and return the path of `results.csv`. The per-peak files hold that peak's own rows of `series.csv`, so the data
 behind each plot sits beside it under the same basename.
 """
 function writeresults!(expt, folder)
     comments = resultcomments(expt)
+
+    # What the user picked, kept apart from what the fit produced - see `peaklisttable`.
+    writetable(joinpath(folder, "peaklist.csv"), comments, peaklisttable(expt)...)
+
     filepath = writetable(joinpath(folder, "results.csv"), comments, resultstable(expt)...)
 
     header, rows = seriestable(expt)

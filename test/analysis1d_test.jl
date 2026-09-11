@@ -16,7 +16,8 @@ using NMRAnalysis.Analysis1D: fitaxis, groupcols, primaryparam
 using NMRAnalysis.Analysis1D: relaxationmodel, relaxationseriesmodel, nutationphase,
                               shapefactor, solventname, tractf, tracttauc
 using NMRAnalysis.Analysis1D: resultstable, seriestable, globaltable, experimentinfo,
-                              writeresults!, csvcolumn, safename, sources, postscope
+                              writeresults!, csvcolumn, safename, sources, postscope,
+                              regionlisttable, readregions!, NOISE_LABEL
 using NMRAnalysis.Analysis1D: analysiscall, callstring, callvalue, writesummary
 using NMRAnalysis.Analysis1D: ask, askvector, askchoice, parsevector, acqusvalue
 using Measurements
@@ -265,7 +266,7 @@ signalregion(δ0=8.0) = [Region("signal", δ0 - 0.3, δ0 + 0.3)]
         @test all(row[6] == "NA" for row in rows)        # NoFitting: no fitted curve
 
         rheader, rrows = resultstable(expt, res, expt.regions)
-        @test rheader == ["label", "lo (ppm)", "hi (ppm)"]
+        @test rheader == ["label"]      # bounds are input, and live in regionlist.csv
         @test length(rrows) == 2
         @test occursin("Kinetics", experimentinfo(expt))
         @test occursin("Number of spectra: 4", experimentinfo(expt))
@@ -290,7 +291,7 @@ signalregion(δ0=8.0) = [Region("signal", δ0 - 0.3, δ0 + 0.3)]
         @test [parse(Float64, row[4]) for row in rows] == [0.0, 1.0, 0.0, 2.0]
 
         rheader, _ = resultstable(expt, res, expt.regions)
-        @test rheader == ["label", "lo (ppm)", "hi (ppm)", "run"]
+        @test rheader == ["label", "run"]
     end
 
     @testset "Column headers, scopes and global parameters" begin
@@ -312,14 +313,14 @@ signalregion(δ0=8.0) = [Region("signal", δ0 - 0.3, δ0 + 0.3)]
         res = analyse1d(TractExperiment(ds; ωN, f, regions=signalregion()))
         expt = TractExperiment(ds; ωN, f, regions=signalregion())
         header, rows = resultstable(expt, res, signalregion())
-        @test header[1:4] == ["label", "lo (ppm)", "hi (ppm)", "which"]
+        @test header[1:2] == ["label", "which"]
         @test "R (s-1)" in header && "R_err (s-1)" in header
         @test "tauc (ns)" in header && "tauc_err (ns)" in header
 
         # one row per series, plus one region-scoped row with the group key left blank
         @test length(rows) == 3
-        @test rows[end][4] == ""
-        @test rows[1][4] in ("trosy", "anti")
+        @test rows[end][2] == ""
+        @test rows[1][2] in ("trosy", "anti")
 
         # per-plane sources reach series.csv
         sheader, srows = seriestable(expt, ds, res)
@@ -337,6 +338,57 @@ signalregion(δ0=8.0) = [Region("signal", δ0 - 0.3, δ0 + 0.3)]
         @test startswith(text, "signal: ")
         @test occursin("R = ", text)
         @test length(sprint(show, res)) < 500
+    end
+
+    @testset "Region list" begin
+        regs = [Region("signal", 7.9, 8.5), Region("wide", 1.0, 3.0)]
+        header, rows = regionlisttable(regs, -1.0, 0.28)
+        @test header == ["label", "lo (ppm)", "hi (ppm)"]
+        @test length(rows) == 3                       # two regions plus the noise marker
+        @test rows[1] == ["signal", "7.9", "8.5"]
+
+        # the noise marker is written as a region as wide as the widest signal region, so
+        # the row means something on its own; only its centre is read back
+        noise = rows[end]
+        @test noise[1] == NOISE_LABEL
+        @test parse(Float64, noise[2]) ≈ -2.0
+        @test parse(Float64, noise[3]) ≈ 0.0
+
+        # with no regions at all it falls back to the default width
+        _, narrow = regionlisttable(Region[], 5.0, 0.28)
+        @test parse(Float64, narrow[end][3]) - parse(Float64, narrow[end][2]) ≈ 0.28
+
+        # round trip
+        dir = mktempdir()
+        path = joinpath(dir, "regionlist.csv")
+        open(path, "w") do f
+            println(f, "# NMRAnalysis.jl test")
+            println(f, join(header, ","))
+            for row in rows
+                println(f, join(row, ","))
+            end
+        end
+        state = Dict{Symbol,Any}(:regions => Ref(Region[]), :active => Ref(0),
+                                 :noisec => Ref(0.0))
+        @test readregions!(state, path) == 2          # the noise row is not a region
+        @test [r.label for r in state[:regions][]] == ["signal", "wide"]
+        @test state[:regions][][1].lo ≈ 7.9
+        @test state[:noisec][] ≈ -1.0
+
+        # a results.csv from before the two files were separated still loads: label/lo/hi
+        # columns and a noise comment
+        legacy = joinpath(dir, "results.csv")
+        open(legacy, "w") do f
+            println(f, "# Noise position / ppm: 4.25")
+            println(f, "region,lo,hi,A,A_err")
+            println(f, "signal,7.9,8.5,1.0,0.1")
+        end
+        state2 = Dict{Symbol,Any}(:regions => Ref(Region[]), :active => Ref(0),
+                                  :noisec => Ref(0.0))
+        @test readregions!(state2, legacy) == 1
+        @test state2[:noisec][] ≈ 4.25
+
+        @test_throws ArgumentError readregions!(state2, joinpath(dir, "nope.csv"))
     end
 
     @testset "The reproduce line" begin
@@ -417,6 +469,7 @@ signalregion(δ0=8.0) = [Region("signal", δ0 - 0.3, δ0 + 0.3)]
 
         @test isfile(joinpath(dir, "results.csv"))
         @test isfile(joinpath(dir, "series.csv"))
+        @test isfile(joinpath(dir, "regionlist.csv"))
         @test isfile(joinpath(dir, "regions", "signal.csv"))
         # nothing is fitted globally by a plain relaxation experiment
         @test !isfile(joinpath(dir, "global.csv"))

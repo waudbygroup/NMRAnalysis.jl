@@ -81,9 +81,14 @@ end
 """
     resultstable(expt, results, regions) -> (header, rows)
 
-Column names and rows for `results.csv`: one row per series, carrying the region's bounds,
-the fit's own parameters and the quantities derived from them, with the experiment's
+Column names and rows for `results.csv`: one row per series, carrying the fit's own
+parameters and the quantities derived from them, with the experiment's
 [`primaryparam`](@ref) first among the derived columns.
+
+The region *bounds* are not here: where a region sits is something the user chose, not
+something the fit produced, and it lives in `regionlist.csv` (see
+[`regionlisttable`](@ref)). Keeping the two apart is what lets a region list be reused on
+another dataset.
 
 Quantities recorded with `scope=:region` (TRACT's η and τc, which describe the
 TROSY/anti-TROSY pair rather than either component) get a row of their own per region, with
@@ -91,7 +96,6 @@ the grouping keys left blank to say so. Columns are the union of everything pres
 table stays rectangular and missing cells read `NA`.
 """
 function resultstable(expt::Experiment1D, results, regs)
-    bounds = Dict(r.label => r for r in regs)
     keycols = resultkeys(expt)
     fitkeys = unique(Iterators.flatten(keys(r.parameters) for r in results))
     serieskeys = scopedkeys(results, :series)
@@ -103,20 +107,15 @@ function resultstable(expt::Experiment1D, results, regs)
         isnothing(i) || (pushfirst!(keys_, popat!(keys_, i)))
     end
 
-    header = ["label", csvcolumn("lo", "ppm"), csvcolumn("hi", "ppm")]
+    header = ["label"]
     append!(header, [csvcolumn(k, coordinateunit(expt, k)) for k in keycols])
     for k in Iterators.flatten((fitkeys, serieskeys, regionkeys))
         append!(header, collect(csvcolumns(k, paramunit(expt, k))))
     end
 
-    boundcells(label) = begin
-        reg = get(bounds, label, nothing)
-        isnothing(reg) ? ["NA", "NA"] : [csvvalue(reg.lo), csvvalue(reg.hi)]
-    end
-
     rows = Vector{String}[]
     for r in results
-        row = [r.region; boundcells(r.region)]
+        row = [r.region]
         append!(row, [csvvalue(get(r.group, k, nothing)) for k in keycols])
         for k in fitkeys
             append!(row, collect(valueerr(r.parameters, k)))
@@ -136,7 +135,7 @@ function resultstable(expt::Experiment1D, results, regs)
                            results)
         isnothing(holder) && continue
         r = results[holder]
-        row = [label; boundcells(label)]
+        row = [label]
         append!(row, repeat([""], length(keycols)))          # blank key: spans every group
         append!(row, repeat(["NA"], 2 * (length(fitkeys) + length(serieskeys))))
         for k in regionkeys
@@ -226,13 +225,21 @@ end
 """
     writeresults!(expt, dataset, results, regions, folder) -> String
 
-Write the whole result set into `folder`: `results.csv`, `series.csv`, `global.csv` (only
-where the analysis fits something globally), and one `regions/<label>.csv` per region
-holding that region's own rows of `series.csv`. Returns the path of `results.csv`.
+Write the whole result set into `folder`: `regionlist.csv` (what was picked),
+`results.csv`, `series.csv`, `global.csv` (only where the analysis fits something globally),
+and one `regions/<label>.csv` per region holding that region's own rows of `series.csv`.
+Returns the path of `results.csv`.
 """
 function writeresults!(expt::Experiment1D, ds::Dataset1D, results, regs,
                        folder::AbstractString)
     comments = split(experimentinfo(expt, ds), '\n')
+
+    # What the user picked, kept apart from what the fit produced, so a region list can be
+    # reused on another dataset (and is what `readregions!` reads back).
+    defaultwidth = defaultregionwidth(first(ds.planes.traces).δ)
+    writetable(joinpath(folder, "regionlist.csv"), comments,
+               regionlisttable(regs, ds.noisecenter, defaultwidth)...)
+
     filepath = writetable(joinpath(folder, "results.csv"), comments,
                           resultstable(expt, results, regs)...)
 
@@ -249,6 +256,91 @@ function writeresults!(expt::Experiment1D, ds::Dataset1D, results, regs,
     gheader, grows = globaltable(expt, results)
     isempty(grows) || writetable(joinpath(folder, "global.csv"), comments, gheader, grows)
     return filepath
+end
+
+# ---- regionlist.csv: the user's input -----------------------------------------
+
+"""
+    NOISE_LABEL
+
+The label of the row in `regionlist.csv` that records the noise position rather than a
+signal region. Reserved: a signal region of this name would be read back as the noise
+marker.
+"""
+const NOISE_LABEL = "noise"
+
+"""
+    regionlisttable(regions, noisecentre, defaultwidth) -> (header, rows)
+
+Column names and rows for `regionlist.csv`: what the user picked, as opposed to what the
+fit produced. One row per region, plus one for the noise position.
+
+The noise marker has a position but no width of its own - the width used to estimate a
+region's uncertainty always matches that region's own (see [`reduceregion`](@ref)) - so it
+is written as a region `defaultwidth` wide, or as wide as the widest signal region where
+that is wider. Reading its centre back is what matters; the width is there so the row means
+something on its own and so the file needs no separate convention for it.
+"""
+function regionlisttable(regs, noisecentre, defaultwidth)
+    header = ["label", csvcolumn("lo", "ppm"), csvcolumn("hi", "ppm")]
+    rows = [[r.label, csvvalue(r.lo), csvvalue(r.hi)] for r in regs]
+    w = maximum([defaultwidth; [width(r) for r in regs]])
+    push!(rows, [NOISE_LABEL, csvvalue(noisecentre - w / 2), csvvalue(noisecentre + w / 2)])
+    return header, rows
+end
+
+"""
+    readregions!(state, filepath) -> Int
+
+Restore a saved region list, replacing whatever is currently set, and return the number of
+signal regions read. The row labelled `noise` sets the noise position from its centre;
+every other row is a region.
+
+Written for `regionlist.csv` but deliberately tolerant, so that a hand-made list works and
+so does a `results.csv` from before the region bounds moved out of it: any file with a
+label column and `lo`/`hi` columns is read, and a `# Noise position / ppm:` comment is
+honoured where there is no `noise` row.
+"""
+function readregions!(state, filepath::AbstractString)
+    isfile(filepath) || throw(ArgumentError("no such region list: $filepath"))
+    regs = Region[]
+    seen = Set{String}()
+    colmap = nothing
+    labelcol = nothing
+    for line in eachline(filepath)
+        sline = strip(line)
+        isempty(sline) && continue
+        if startswith(sline, '#')
+            m = match(r"Noise position / ppm:\s*(\S+)", sline)
+            isnothing(m) || (state[:noisec][] = parse(Float64, m.captures[1]))
+            continue
+        end
+        fields = strip.(split(sline, ','))
+        if isnothing(colmap)
+            # Units are part of the header (`lo (ppm)`), so columns are located by their
+            # name with any parenthesised unit stripped.
+            colmap = Dict(lowercase(strip(replace(name, r"\s*\(.*\)$" => ""))) => i
+                          for (i, name) in enumerate(fields))
+            labelcol = get(colmap, "label", get(colmap, "region", nothing))
+            (isnothing(labelcol) || !haskey(colmap, "lo") || !haskey(colmap, "hi")) &&
+                throw(ArgumentError("$filepath has no label/lo/hi columns"))
+            continue
+        end
+        label = String(fields[labelcol])
+        (isempty(label) || label in seen) && continue
+        lo, hi = fields[colmap["lo"]], fields[colmap["hi"]]
+        (lo == "NA" || hi == "NA") && continue
+        push!(seen, label)
+        if lowercase(label) == NOISE_LABEL
+            state[:noisec][] = (parse(Float64, lo) + parse(Float64, hi)) / 2
+        else
+            push!(regs, Region(label, parse(Float64, lo), parse(Float64, hi)))
+        end
+    end
+    isempty(regs) && throw(ArgumentError("$filepath contains no regions"))
+    state[:regions][] = regs
+    state[:active][] = 1
+    return length(regs)
 end
 
 # ---- the call that produced an analysis ---------------------------------------
@@ -376,55 +468,5 @@ function writesummary(filepath::AbstractString, expt::Experiment1D, ds::Dataset1
         return nothing
     end
     return filepath
-end
-
-"""
-    readregions!(state, filepath) -> Int
-
-Restore a saved region list (and the noise position) from a `results.csv`, replacing
-whatever is currently set, and return the number of regions read. Regions are taken from
-the `label` (or, in files written before the column was renamed, `region`) and `lo`/`hi`
-columns, de-duplicated by label and kept in file order - a grouped experiment writes one
-row per (region, group), so the same region appears several times.
-
-Nothing else is read back: the parameter columns are outputs, recomputed from the restored
-regions the moment they are set.
-"""
-function readregions!(state, filepath::AbstractString)
-    isfile(filepath) || throw(ArgumentError("no such results file: $filepath"))
-    regs = Region[]
-    seen = Set{String}()
-    colmap = nothing
-    labelcol = nothing
-    for line in eachline(filepath)
-        sline = strip(line)
-        isempty(sline) && continue
-        if startswith(sline, '#')
-            m = match(r"Noise position / ppm:\s*(\S+)", sline)
-            isnothing(m) || (state[:noisec][] = parse(Float64, m.captures[1]))
-            continue
-        end
-        fields = strip.(split(sline, ','))
-        if isnothing(colmap)
-            # Units are part of the header (`lo (ppm)`), so columns are located by their
-            # name with any parenthesised unit stripped.
-            colmap = Dict(lowercase(strip(replace(name, r"\s*\(.*\)$" => ""))) => i
-                          for (i, name) in enumerate(fields))
-            labelcol = get(colmap, "label", get(colmap, "region", nothing))
-            (isnothing(labelcol) || !haskey(colmap, "lo") || !haskey(colmap, "hi")) &&
-                throw(ArgumentError("$filepath has no label/lo/hi columns"))
-            continue
-        end
-        label = String(fields[labelcol])
-        (isempty(label) || label in seen) && continue
-        lo, hi = fields[colmap["lo"]], fields[colmap["hi"]]
-        (lo == "NA" || hi == "NA") && continue
-        push!(seen, label)
-        push!(regs, Region(label, parse(Float64, lo), parse(Float64, hi)))
-    end
-    isempty(regs) && throw(ArgumentError("$filepath contains no regions"))
-    state[:regions][] = regs
-    state[:active][] = 1
-    return length(regs)
 end
 

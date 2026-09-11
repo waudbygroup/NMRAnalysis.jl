@@ -13,6 +13,8 @@ produced it, and that a script written against one analysis should work against 
 ```
 out/
   summary.txt          human-readable record of the whole analysis
+  peaklist.csv         2D: the peaks the user picked, and where they were placed
+  regionlist.csv       1D: the regions the user picked, and the noise position
   results.csv          fitted and derived parameters, one row per entity
   series.csv           the measurements, one row per entity per coordinate point
   global.csv           parameters fitted once for the whole analysis (when there are any)
@@ -42,6 +44,32 @@ and it means a mistyped folder name never destroys what was there.
 Cluster plots have no CSV of their own: a cluster is a group of overlapping peaks rather
 than an entity with its own parameters, so it stays at the top level under its existing
 `cluster_LABEL.pdf` name.
+
+## Input and output are separate files
+
+`peaklist.csv` and `regionlist.csv` record what the *user* specified: where each peak was
+placed, where each region sits, the fitting radii, the noise position. Everything else in
+the folder records what the *fit* produced.
+
+They are different things with different lives. A peak list is picked once and then reused:
+on a second dataset, for a different kind of analysis, handed to a colleague, or imported
+from elsewhere. A fitted position belongs to one particular fit. Reading fitted positions
+back as the next run's starting point conflates the two, and for a moving-peak experiment
+there is no single fitted position to read.
+
+So the input file is what **Load** reads, and it is written on every save. It holds one row
+per entity, or one row per entity per plane where positions were placed plane by plane, with
+a blank `plane` key meaning the row applies to every plane.
+
+The 1D noise marker travels in `regionlist.csv` as a region named `noise`, as wide as the
+widest signal region. Only its centre is read back; the width used to estimate a region's
+uncertainty always matches that region's own.
+
+2D peak lists in **Sparky** format can be imported. Sparky carries one position per peak
+and nothing else, so it is an import format rather than the one written here: a trajectory,
+the fitting radii and the uncertainties have nowhere to go in it. Its `w1`/`w2` columns are
+matched to the direct and indirect axes by where the shifts actually fall, since reading
+them in order would transpose every peak in a list written the other way round.
 
 ## Entities, coordinates and scope
 

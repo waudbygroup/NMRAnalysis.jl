@@ -229,7 +229,11 @@ function gui!(expt::Experiment1D; call=nothing)
     # session can be picked up again rather than re-picked by hand.
     btnload = outputrow[1, 3] = Button(fig; label="Load")
     on(btnload.clicks) do _
-        path = joinpath(pwd(), state[:outputdir][], "results.csv")
+        folder = joinpath(pwd(), state[:outputdir][])
+        # `regionlist.csv` is the region list proper; `results.csv` is read as a fallback
+        # for folders saved before the two were separated.
+        path = joinpath(folder, "regionlist.csv")
+        isfile(path) || (path = joinpath(folder, "results.csv"))
         try
             n = readregions!(state, path)
             @info "Restored $n region(s) from $path"

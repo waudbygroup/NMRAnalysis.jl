@@ -39,11 +39,55 @@ I13   7.65   119.3
 Fields may be separated by spaces, tabs, or commas. Lines beginning with `#`
 are ignored. No header is required.
 
-You can also load a previously saved `results.csv` (see below) to resume work or
-to seed a new analysis from existing positions — the reader takes the `label`,
-`x` and `y` columns and ignores the rest. For a moving-peak experiment, whose
-positions vary plane by plane and so are not in `results.csv`, the reader looks
-for `series.csv` beside it and restores the whole trajectory from there.
+You can also load a previously saved `peaklist.csv` (see below) to resume work or
+to seed a new analysis from existing positions. Where peaks were tracked plane by
+plane, the whole trajectory comes back; a list with one position per peak seeds
+every plane with it.
+
+If you point the loader at a `results.csv` instead, it looks for the `peaklist.csv`
+beside it, falling back to `series.csv`. Fitted positions are an output of one
+particular fit, not a peak list, so the peak list is the file to reach for.
+
+## Sparky peak lists
+
+A Sparky peak list can be loaded directly:
+
+```
+      Assignment         w1         w2
+       G10N-G10H    121.000      8.400
+       T11N-T11H    118.200      9.120
+```
+
+The assignment becomes the peak label unchanged, so `G10N-G10H` and a plain `G10`
+both work and the residue number and atom are derived from either.
+
+Sparky names its dimensions in the spectrum's own order, which conventionally puts
+the indirect dimension (`w1`) first — the opposite way round from this program,
+whose `x` is the direct dimension. Rather than trusting that convention, the loader
+checks where the shifts actually fall on each axis and reads the columns whichever
+way round puts the peaks on the spectrum, reporting when it has to transpose a
+list. A list whose two dimensions cover similar ranges, as in a NOESY, falls back
+to Sparky's convention.
+
+Sparky format carries one position per peak and nothing else: no trajectory, no
+fitting radii, no uncertainties. It is therefore an import format only; saving
+writes `peaklist.csv`.
+
+## Input: `peaklist.csv`
+
+Clicking **Save to folder** writes the peaks you picked, separately from what the
+fit produced:
+
+```
+label,plane,x (ppm),y (ppm),xradius (ppm),yradius (ppm)
+G10,,8.400,121.000,0.03,0.3
+T11,,9.120,118.200,0.03,0.3
+```
+
+A blank `plane` means one position for every plane. Where a peak was tracked plane
+by plane — in a titration, a peak-tracking run, or an RDC series — it gets one row
+per plane instead, with the plane number filled in, so hand-tracking survives a
+save and reload.
 
 !!! note "Only label, x and y are read"
     When a file is loaded, **only the label and the two chemical shifts are
@@ -54,7 +98,7 @@ for `series.csv` beside it and restores the whole trajectory from there.
 
 ## Output: `results.csv` and `series.csv`
 
-Clicking **Save to folder** writes the [standard set of files](../../advanced/conventions.md).
+The rest of the folder is the [standard set of files](../../advanced/conventions.md).
 The two you will read most are `results.csv`, with one row per peak, and
 `series.csv`, with one row per peak per plane. Both carry the experiment metadata
 as `#`-comment lines above an ordinary header row:

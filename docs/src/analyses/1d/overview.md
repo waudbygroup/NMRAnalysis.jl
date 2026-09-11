@@ -154,6 +154,7 @@ since the last one does not leave its plot behind:
 ```
 out/
   summary.txt
+  regionlist.csv
   results.csv
   series.csv
   global.csv        (only when the analysis fits something globally)
@@ -166,6 +167,7 @@ out/
 | File | Contents |
 |---|---|
 | `summary.txt` | The record to read: where the data came from, the regions, and the results rounded and with units |
+| `regionlist.csv` | The regions you picked, and the noise position. This is what **Load** reads |
 | `results.csv` | One row per region (and per series, where an experiment has more than one), with every fitted and derived parameter and its uncertainty |
 | `series.csv` | The measurements themselves, one row per region per spectrum |
 | `global.csv` | Anything fitted once for the whole analysis. A plain relaxation fit has nothing global and the file is absent |
@@ -173,9 +175,21 @@ out/
 | `regions/<name>.pdf` and `.csv` | Each region's own fit, and the data behind it under the same name |
 
 Every CSV carries the experiment details as `#` comment lines above an ordinary header row,
-so they open directly in a spreadsheet or `pandas`. `results.csv` is also what **Load**
-reads: it restores the regions and the noise position, so a session with several named
-regions can be picked up again later rather than picked out by hand.
+so they open directly in a spreadsheet or `pandas`.
+
+`regionlist.csv` is what you picked, kept apart from what was fitted, so it can be reused on
+another dataset or edited by hand:
+
+```
+label,lo (ppm),hi (ppm)
+signal,7.91,8.51
+noise,-1.30,-0.70
+```
+
+The noise marker travels as a region named `noise`, as wide as the widest signal region;
+only its centre is read back. **Load** restores the regions and the noise position from
+this file, so a session with several named regions can be picked up again later rather than
+picked out by hand.
 
 `series.csv` is the data behind the fit, one row per measurement:
 

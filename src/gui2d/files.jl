@@ -5,7 +5,7 @@
 # Hand-made lists may instead be a bare, header-less `label x y` per line.
 
 function loadpeaks!(expt)
-    file = pick_file(; filterlist="csv;peaks;txt;old")
+    file = pick_file(; filterlist="csv;list;peaks;txt;bak")
     file == "" && return
 
     @info "Loading peak file $file"
@@ -136,16 +136,24 @@ comments. A malformed line is skipped with a warning rather than aborting the
 load — any labelling convention is tolerated.
 """
 function readpeaklist!(expt, filepath::AbstractString)
-    # A moving-peak experiment's positions vary plane by plane and so live in `series.csv`,
-    # not `results.csv` (see docs/src/advanced/conventions.md). Where the chosen file has no
-    # position columns at all, read them from the series file beside it instead.
+    issparkylist(filepath) && return readsparkylist!(expt, filepath)
+
     columns = headercolumns(filepath)
-    if !isnothing(columns) && !haskey(columns, "x") && !haskey(columns, "x[1]")
-        series = joinpath(dirname(filepath), "series.csv")
-        isfile(series) ||
+    if !isnothing(columns)
+        # A peak list written by this program carries a `plane` column, which is what
+        # distinguishes one position per peak from a whole hand-tracked trajectory.
+        haskey(columns, "plane") && return readtrackedpeaks!(expt, filepath, columns)
+        # A results.csv for a moving-peak experiment has no positions at all - they are
+        # input, not output (see docs/src/advanced/conventions.md) - so look for the peak
+        # list beside it, falling back to the series data.
+        if !haskey(columns, "x") && !haskey(columns, "x[1]")
+            for name in ("peaklist.csv", "series.csv")
+                beside = joinpath(dirname(filepath), name)
+                isfile(beside) && return readpeaklist!(expt, beside)
+            end
             throw(ArgumentError("$filepath has no peak positions, and there is no " *
-                                "series.csv beside it to read them from"))
-        return readseriespeaks!(expt, series)
+                                "peaklist.csv or series.csv beside it"))
+        end
     end
 
     peak_count = 0
@@ -210,14 +218,17 @@ function readpeaklist!(expt, filepath::AbstractString)
 end
 
 """
-    readseriespeaks!(expt, filepath) -> Int
+    readtrackedpeaks!(expt, filepath, columns) -> Int
 
-Restore peaks from a `series.csv`, which holds one row per peak per plane. Used where the
-positions vary plane by plane and so are not in `results.csv`; the peak is added at its
-first plane's position and the whole trajectory is then set on it.
+Restore peaks from a file holding one row per peak per plane - `peaklist.csv`, or a
+`series.csv` read as a fallback. Each peak is added at its first row's position and the
+whole trajectory is then set on it, so hand-tracking survives a save and reload.
+
+A `peaklist.csv` row whose `plane` is blank means one position for every plane, so such a
+peak is added with a single position rather than a trajectory; that is also what a
+hand-made list or an imported Sparky list produces.
 """
-function readseriespeaks!(expt, filepath::AbstractString)
-    columns = headercolumns(filepath)
+function readtrackedpeaks!(expt, filepath::AbstractString, columns=headercolumns(filepath))
     (isnothing(columns) || !haskey(columns, "x") || !haskey(columns, "y")) &&
         throw(ArgumentError("$filepath has no label/x/y columns"))
 
@@ -241,6 +252,7 @@ function readseriespeaks!(expt, filepath::AbstractString)
     end
 
     count = 0
+    n = nslices(expt)
     for label in labels
         points = positions[label]
         xs = [p[1] for p in points]
@@ -248,13 +260,22 @@ function readseriespeaks!(expt, filepath::AbstractString)
         (isempty(xs) || any(isnothing, xs) || any(isnothing, ys)) && continue
         addpeak!(expt, Point2f(xs[1], ys[1]), label)
         peak = expt.peaks[][end]
-        setperplane!(peak, :x, Float64.(xs))
-        setperplane!(peak, :y, Float64.(ys))
-        r2x = [p[3] for p in points]
-        r2y = [p[4] for p in points]
-        if !any(isnothing, r2x) && !any(isnothing, r2y)
-            setperplane!(peak, :R2x, Float64.(r2x))
-            setperplane!(peak, :R2y, Float64.(r2y))
+        # One row means one position for every plane, which `addpeak!` has already set.
+        # A full trajectory is only restored when it matches this experiment's plane count;
+        # a list carried over from a series of a different length seeds the first position
+        # instead of silently mis-assigning the rest.
+        if length(points) == n > 1
+            setperplane!(peak, :x, Float64.(xs))
+            setperplane!(peak, :y, Float64.(ys))
+            r2x = [p[3] for p in points]
+            r2y = [p[4] for p in points]
+            if !any(isnothing, r2x) && !any(isnothing, r2y)
+                setperplane!(peak, :R2x, Float64.(r2x))
+                setperplane!(peak, :R2y, Float64.(r2y))
+            end
+        elseif length(points) > 1
+            @warn "$label has $(length(points)) positions but this experiment has $n " *
+                  "planes - using the first"
         end
         count += 1
     end
@@ -407,4 +428,89 @@ function save_summary_plot!(expt, folder)
     finally
         GLMakie.activate!()
     end
+end
+# ---- Sparky peak lists --------------------------------------------------------
+# Sparky writes a whitespace-delimited list with an `Assignment w1 w2` header and, often,
+# further columns (data height, volume, notes) that are ignored here. It carries one
+# position per peak and nothing else: no trajectory, no fitting radii, no uncertainties.
+# That is why it is an import format rather than the peak list this program writes - see
+# `peaklisttable` in output.jl.
+
+"""
+    issparkylist(filepath) -> Bool
+
+Whether `filepath` looks like a Sparky peak list: a whitespace-delimited file whose first
+non-comment line names an `Assignment` column.
+"""
+function issparkylist(filepath::AbstractString)
+    for line in eachline(filepath)
+        sline = strip(line)
+        (isempty(sline) || startswith(sline, '#')) && continue
+        occursin(',', sline) && return false
+        return lowercase(first(split(sline))) == "assignment"
+    end
+    return false
+end
+
+"""
+    readsparkylist!(expt, filepath) -> Int
+
+Import a Sparky peak list, adding its peaks to `expt`.
+
+Sparky names its dimensions `w1`, `w2` in the spectrum's own order, which for a ¹⁵N-HSQC
+conventionally puts the indirect dimension first - the opposite way round from this
+program, whose `x` is the direct dimension. Reading the columns in order would therefore
+transpose every peak, so which column goes to which axis is decided by
+[`sparkyaxisorder`](@ref) from where the shifts actually fall, and only falls back to the
+convention when that cannot tell.
+
+The assignment string becomes the peak label unchanged: Sparky's `G10N-G10H` and a plain
+`G10` both survive a round trip, and `parse_label` already derives the residue number and
+atom from whatever form it is given.
+"""
+function readsparkylist!(expt, filepath::AbstractString)
+    entries = Tuple{String,Float64,Float64}[]
+    for line in eachline(filepath)
+        sline = strip(line)
+        (isempty(sline) || startswith(sline, '#')) && continue
+        fields = split(sline)
+        length(fields) < 3 && continue
+        lowercase(fields[1]) == "assignment" && continue        # header
+        w1 = tryparse(Float64, fields[2])
+        w2 = tryparse(Float64, fields[3])
+        (isnothing(w1) || isnothing(w2)) && continue
+        push!(entries, (String(fields[1]), w1, w2))
+    end
+    isempty(entries) && throw(ArgumentError("$filepath contains no Sparky peaks"))
+
+    swapped = sparkyaxisorder(expt, entries)
+    for (label, w1, w2) in entries
+        x, y = swapped ? (w1, w2) : (w2, w1)
+        addpeak!(expt, Point2f(x, y), label)
+    end
+    @debug "Added $(length(entries)) peaks from Sparky list $filepath"
+    return length(entries)
+end
+
+"""
+    sparkyaxisorder(expt, entries) -> Bool
+
+Whether a Sparky list's `w1` belongs on this experiment's `x` (direct) axis rather than its
+`y` axis - `true` for a list written the opposite way round from the usual convention.
+
+Decided by counting how many peaks land inside both axes' actual chemical-shift ranges each
+way round, because that is the thing that is really being asked and it needs no metadata
+beyond the spectrum itself. A tie (including the degenerate case of two dimensions covering
+similar ranges, as in a NOESY) keeps Sparky's convention of `w1` on the indirect axis.
+"""
+function sparkyaxisorder(expt, entries)
+    spec = expt.specdata.nmrdata[1]
+    xrange = extrema(data(spec, F1Dim))
+    yrange = extrema(data(spec, F2Dim))
+    inside(v, range) = range[1] ≤ v ≤ range[2]
+    conventional = count(e -> inside(e[3], xrange) && inside(e[2], yrange), entries)
+    swapped = count(e -> inside(e[2], xrange) && inside(e[3], yrange), entries)
+    swapped > conventional &&
+        @info "Sparky list appears transposed (w1 on the direct axis) - reading it that way"
+    return swapped > conventional
 end

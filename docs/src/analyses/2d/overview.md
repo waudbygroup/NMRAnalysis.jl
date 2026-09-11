@@ -79,6 +79,7 @@ Clicking **Save to folder** writes the following files:
 | File | Contents |
 |------|---------|
 | `summary.txt` | The record to read: where the data came from, the fitting radii, and the headline parameter for every peak |
+| `peaklist.csv` | The peaks you picked and where you placed them, with the fitting radii. This is what **Load** reads |
 | `results.csv` | One row per peak: identity, position and linewidths, and any derived parameters (relaxation rates, NOE values, …), each with uncertainties |
 | `series.csv` | The measurements, one row per peak per plane: the plane's own coordinate and the amplitude fitted there |
 | `global.csv` | Anything fitted once across every peak, such as a titration `Kd`. Absent when there is nothing global |
@@ -103,9 +104,10 @@ since the last one does not leave its plot behind. See
 ## Loading and Resuming Analysis
 
 The **Load peak list** button restores peak positions and labels from a saved
-`results.csv` (or a simple `label x y` text file), so you can resume work later or
-seed a new analysis from existing positions. Only the `label`, `x` and `y` columns
-are read — see [Peak Lists and Output Files](peaklistformats.md).
+`peaklist.csv`, a Sparky peak list, or a simple `label x y` text file, so you can resume
+work later or seed a new analysis from existing positions. Where peaks were tracked plane
+by plane, the whole trajectory is restored. See
+[Peak Lists and Output Files](peaklistformats.md).
 
 ## Summary plots
 

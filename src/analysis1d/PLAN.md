@@ -426,6 +426,28 @@ Phase 4 — **the shared output conventions, Analysis1D first**  ← THIS ITERAT
 - [x] `writeresults!` takes the dataset, results and regions rather than the GUI state bag,
       so it is callable and testable without a GUI
 
+Phase 5 — **user input is not a fitted result**  ✓
+- [x] The region list and the peak list are *inputs*: picked once, reused on another
+      dataset, handed to a colleague, imported from elsewhere. A fitted position belongs to
+      one particular fit. They had been conflated - 1D carried region bounds in
+      `results.csv` and read them back from there, and 2D recovered its peak list by reading
+      *fitted* positions out of the results file, which worked by accident for fixed peaks
+      and not at all once moving-peak positions moved to `series.csv`. Raised by CW
+- [x] `regionlist.csv` (1D) and `peaklist.csv` (2D) hold what the user picked, and are what
+      `Load` reads. `results.csv` loses the 1D region bounds entirely
+- [x] the 1D noise marker travels as a region named `noise`, as wide as the widest signal
+      region, rather than as a `#` comment to be regex-matched out again. Only its centre
+      is read back
+- [x] a 2D peak tracked plane by plane records its whole trajectory, one row per plane; a
+      blank `plane` key means one position for every plane. A trajectory whose length does
+      not match the experiment's plane count seeds the first position and warns, rather
+      than mis-assigning the rest
+- [x] Sparky peak lists can be imported. They carry one position per peak and nothing else,
+      so they are an import format rather than the one written. Their `w1`/`w2` columns are
+      matched to the direct and indirect axes by where the shifts actually fall: Sparky
+      conventionally puts the indirect dimension first, the opposite way round from this
+      program's `x`, so reading the columns in order would silently transpose every peak
+
 Still open after this iteration:
 - **The `Reproduce:` block in `summary.txt`.** The conventions page specifies it and
   nothing writes it yet: it needs each entry point to record the arguments it resolved and
