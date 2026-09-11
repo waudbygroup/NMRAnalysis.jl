@@ -56,6 +56,26 @@ function backupfile(filepath::AbstractString)
 end
 
 """
+    backupfolder(folder) -> String
+
+Move an existing output folder aside to `<folder>_previous` and return the (now empty)
+path, so that a save never silently destroys the last one and never leaves stale files from
+it behind. An earlier `_previous` is replaced.
+
+Folder-level rather than file-level, because the stale files are the problem: a region or a
+peak deleted between one save and the next would otherwise leave its plot and its data in
+place, looking like part of the current result.
+"""
+function backupfolder(folder::AbstractString)
+    if isdir(folder)
+        previous = rstrip(folder, ['/', '\\']) * "_previous"
+        mv(folder, previous; force=true)
+    end
+    mkpath(folder)
+    return folder
+end
+
+"""
     writetable(filepath, comments, header, rows) -> String
 
 Write one CSV: each line of `comments` as a `#` comment (the experiment description), then

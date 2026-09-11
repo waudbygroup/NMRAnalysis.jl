@@ -26,7 +26,8 @@ import ..NMRAnalysis  # module itself, for pkgversion(NMRAnalysis)
 using ..NMRAnalysis: analyse, register_analysis!, MultiFileRule
 using ..NMRAnalysis: select_expts
 # shared output rules - see src/output.jl and docs/src/advanced/conventions.md
-using ..NMRAnalysis: csvcolumn, csvvalue, safename, backupfile, writetable
+using ..NMRAnalysis: csvcolumn, csvvalue, safename, backupfile, backupfolder,
+                     writetable
 # Interactive region selection for `integrate!` (replaces the former readline prompts).
 using ..Analysis1D: pickregion
 

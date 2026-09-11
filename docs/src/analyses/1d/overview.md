@@ -147,8 +147,9 @@ It defaults to `out`.
 
 ## What gets saved
 
-**Save** writes these files into the output folder, backing up any it would overwrite as
-`.bak` first:
+**Save** writes these files into the output folder. An existing folder of the same name is
+moved aside to `<name>_previous` first, so each save starts clean and a region you deleted
+since the last one does not leave its plot behind:
 
 ```
 out/

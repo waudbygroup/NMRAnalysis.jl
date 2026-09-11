@@ -703,9 +703,11 @@ panels), to the output folder, in the layout described in
 - see `readregions!`), an overlay of every region in `fit.pdf`, and a `regions/` folder
 holding each region's own plot and the data behind it under the same basename."""
 function saveresults(state)
-    dir = joinpath(pwd(), state[:outputdir][])
-    regionsdir = joinpath(dir, "regions")
-    isdir(regionsdir) || mkpath(regionsdir)
+    # The whole folder is moved aside rather than individual files backed up, so that a
+    # region deleted since the last save doesn't leave its plot and data behind looking
+    # like part of the current result.
+    dir = backupfolder(joinpath(pwd(), state[:outputdir][]))
+    regionsdir = mkpath(joinpath(dir, "regions"))
     expt = state[:expt]
     ds = state[:dataset][]
     result = state[:result][]

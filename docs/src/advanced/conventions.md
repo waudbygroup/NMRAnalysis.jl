@@ -34,6 +34,11 @@ require filtering a file of several thousand rows.
 `global.csv` is written only when the analysis fits something globally: a titration `Kd`,
 an exchange `kex`. A plain relaxation fit has nothing global and the file is absent.
 
+Saving starts from an empty folder: an existing one is moved aside to `<name>_previous`,
+replacing any earlier backup. That is what keeps a peak or region deleted since the last
+save from leaving its plot and its data behind, looking like part of the current result,
+and it means a mistyped folder name never destroys what was there.
+
 Cluster plots have no CSV of their own: a cluster is a group of overlapping peaks rather
 than an entity with its own parameters, so it stays at the top level under its existing
 `cluster_LABEL.pdf` name.

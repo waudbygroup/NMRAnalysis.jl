@@ -292,18 +292,8 @@ end
 function savefig!(state)
     outputdir = joinpath(pwd(), state[:outputdir][])
     @info "Saving results to $outputdir"
-    if !isdir(outputdir)
-        mkdir(outputdir)
-    else
-        # move existing files to a backup folder
-        backupdir = outputdir * "_previous"
-        @info "Backing up previous results to $backupdir"
-        if isdir(backupdir)
-            rm(backupdir; recursive=true)
-        end
-        mv(outputdir, backupdir)
-        mkdir(outputdir)
-    end
+    isdir(outputdir) && @info "Backing up previous results to $(outputdir)_previous"
+    backupfolder(outputdir)
 
     c1 = Makie.wong_colors()[1]
     c2 = Makie.wong_colors()[2]
