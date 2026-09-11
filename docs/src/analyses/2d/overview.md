@@ -78,14 +78,26 @@ Clicking **Save to folder** writes the following files:
 
 | File | Contents |
 |------|---------|
-| `results.csv` | One row per peak: positions (δ₁, δ₂), linewidths (R2x, R2y), per-plane amplitudes, and any derived experiment parameters (relaxation rates, NOE values, …), each with uncertainties |
+| `summary.txt` | The record to read: where the data came from, the fitting radii, and the headline parameter for every peak |
+| `results.csv` | One row per peak: identity, position and linewidths, and any derived parameters (relaxation rates, NOE values, …), each with uncertainties |
+| `series.csv` | The measurements, one row per peak per plane: the plane's own coordinate and the amplitude fitted there |
+| `global.csv` | Anything fitted once across every peak, such as a titration `Kd`. Absent when there is nothing global |
 | `summary.pdf` | Summary plot of the primary fitted parameter against residue number (or atom for methyl/non-backbone experiments) |
-| `peak_LABEL.pdf` | Per-peak publication-quality fit plot for each labelled peak |
+| `peaks/LABEL.pdf` and `.csv` | Each peak's fit plot, and the data behind it under the same name |
 | `cluster_LABEL.pdf` | Zoomed 2D contour plot (first plane) with fitted lineshapes for each group of overlapping peaks |
 
-`results.csv` has experiment metadata in `#`-comment lines above an ordinary
-header row, so it opens directly in spreadsheets and `pandas`. Existing files are
-backed up with an `.old` extension before being overwritten. See
+Anything that varies plane by plane is in `series.csv`: the amplitude always, and
+for a moving-peak experiment (titrations, peak tracking, RDCs) the positions and
+linewidths too. Each row names the plane's own coordinate, so a relaxation series
+records the delay and a titration the concentration, rather than an `amp[7]`
+column whose meaning has to be remembered.
+
+Every CSV has experiment metadata in `#`-comment lines above an ordinary header
+row, so it opens directly in spreadsheets and `pandas`. Column headers carry
+units in ASCII (`R (s-1)`, `x (ppm)`), and an uncertainty column repeats the unit
+of the value it belongs to. An existing output folder is moved aside to
+`<name>_previous` before saving, so each save starts clean and a peak you deleted
+since the last one does not leave its plot behind. See
 [Peak Lists and Output Files](peaklistformats.md) for the full column description.
 
 ## Loading and Resuming Analysis

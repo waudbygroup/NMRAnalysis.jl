@@ -430,14 +430,17 @@ Still open after this iteration:
 - **The `Reproduce:` block in `summary.txt`.** The conventions page specifies it and
   nothing writes it yet: it needs each entry point to record the arguments it resolved and
   where each came from, which is a change to every entry point rather than to the writer.
-- **GUI2D and R1rho** have not been brought onto the conventions; see the status table at
-  the foot of the conventions page. Exchange1D now conforms (`src/exchange1d/files.jl`),
-  with the generic column/value rules lifted into `src/output.jl` so the two modules share
-  one implementation of them. Decided with CW for the GUI2D round: per-plane peak positions
-  and linewidths move to `series.csv` entirely (so `Load` will read positions from there
-  rather than from `results.csv`), and the 2D save button changes from a native folder
-  dialog to the text box 1D and R1rho already use. R1rho is to write the new files
-  alongside its existing ones for now, since it is being published.
+- **R1rho** has not been brought onto the conventions; see the status table at the foot of
+  the conventions page. It is to write the new files alongside its existing ones for now,
+  since it is being published. Analysis1D, Exchange1D and GUI2D all conform, sharing the
+  generic column/value rules in `src/output.jl` and each building its own tables.
+- **The 2D save button still opens a native folder dialog**, where 1D and R1rho use a text
+  box naming a folder relative to the working directory. CW chose the text box; it needs a
+  widget adding to the 2D GUI rather than a change to the writer, so it is not done yet.
+- **`series.csv` has no fitted-value column in 2D.** 1D writes `I_fit` beside `I`; the 2D
+  equivalent would be the model curve through the per-plane amplitudes, which
+  `get_model_data` returns in a shape that varies by experiment. Left out rather than
+  guessed at.
 - **`prepare_outputfolder` deletes the whole output folder** before Exchange1D writes to it
   (`src/exchange1d/misc.jl`), which makes the `.bak` convention meaningless there and
   destroys anything else the user had put in that folder. Predates this work and left

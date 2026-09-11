@@ -148,7 +148,9 @@ function _readtable(file)
         (isempty(s) || startswith(s, '#')) && continue
         fields = String.(splitfields(s))
         if isempty(header)
-            header = fields
+            # Column headers carry their unit (`R (s-1)`); parameters are located by name,
+            # so the unit is stripped here once rather than at every lookup.
+            header = String.(stripunit.(fields))
         else
             push!(rows, fields)
         end
@@ -186,7 +188,9 @@ function _defaultparam(path::AbstractString)
         (endswith(h, "_err") || h in fixed || startswith(h, "amp[")) && continue
         return Symbol(h)
     end
-    return Symbol("amp[1]")
+    # Nothing but identity and position columns: a fit that derived nothing. Amplitudes are
+    # in series.csv rather than results.csv, so there is no fallback column to offer.
+    return error("$(_resultsfile(path)) has no derived parameter to plot")
 end
 
 _onedataset(s::FixedPeakExperiment, param; kw...) = summary_dataset(s, param; kw...)

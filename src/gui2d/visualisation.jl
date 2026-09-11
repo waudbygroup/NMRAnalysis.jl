@@ -18,16 +18,18 @@ function get_model_data(peak, expt::Experiment)
     error("get_model_data not implemented for $(typeof(expt))")
 end
 
+# One plot per peak, in `peaks/` and sharing its basename with that peak's CSV so the data
+# behind a plot sits beside it (see docs/src/advanced/conventions.md). The label is
+# sanitised because a peak can be renamed to anything at all, including a path separator.
 function save_peak_plots!(expt::E, folder::AbstractString) where E <: Experiment
     CairoMakie.activate!()
-    
+    peakfolder = mkpath(joinpath(folder, "peaks"))
     for peak in expt.peaks[]
         fig = Figure()
         plot_peak!(fig, peak, expt)  # Uses the trait-based plot_peak! we defined
-        save(joinpath(folder, "peak_$(peak.label[]).pdf"), fig)
+        save(joinpath(peakfolder, "$(safename(peak.label[])).pdf"), fig)
     end
-    
-    GLMakie.activate!()
+    return GLMakie.activate!()
 end
 
 

@@ -176,7 +176,7 @@ what the experiment was.
 | Module | `summary.txt` | `results.csv` | `series.csv` | `global.csv` | per-entity files |
 |---|---|---|---|---|---|
 | Analysis1D | yes | yes | yes | yes | yes |
-| GUI2D | no | old format | no | no | plots only |
+| GUI2D | yes | yes | yes | yes | yes |
 | R1rho | old format | no | no | no | no |
 | Exchange1D | yes | yes | yes | yes | yes |
 

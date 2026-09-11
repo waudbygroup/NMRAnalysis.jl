@@ -30,16 +30,12 @@ function saveresults!(expt)
     @async begin # do saving in a separate task
         sleep(0.2) # allow time for mode change to be processed
         try
-            # save all peak positions, linewidths, amplitudes and derived
-            # parameters to a single results file
+            # An existing folder is moved aside to <name>_previous rather than written
+            # into, so a peak deleted since the last save leaves nothing behind - which is
+            # what the stale-PDF sweep here used to be for.
+            backupfolder(folder)
             writeresults!(expt, folder)
-
-            # remove stale per-peak, per-cluster and summary PDFs
-            for file in readdir(folder)
-                if occursin(r"^(peak_|cluster_).*\.pdf$", file) || file == "summary.pdf"
-                    rm(joinpath(folder, file))
-                end
-            end
+            writesummary(joinpath(folder, "summary.txt"), expt)
             save_peak_plots!(expt, folder)
             save_cluster_plots!(expt, folder)
             save_summary_plot!(expt, folder)
@@ -64,6 +60,32 @@ whitespace on each field is stripped.
 function splitfields(line)
     fields = occursin(',', line) ? split(line, ',') : split(line)
     return strip.(fields)
+end
+
+"""
+    stripunit(name) -> String
+
+A column name with its parenthesised unit removed: `"x (ppm)"` → `"x"`. Column headers
+carry units (see `docs/src/advanced/conventions.md`), so anything locating a column by name
+strips them first.
+"""
+stripunit(name) = strip(replace(String(name), r"\s*\(.*\)\s*$" => ""))
+
+"""
+    headercolumns(filepath) -> Dict{String,Int} or nothing
+
+The column positions of `filepath`'s header row, lowercased and with units stripped, or
+`nothing` where the first non-comment line is data rather than a header (a hand-made
+`label x y` list).
+"""
+function headercolumns(filepath::AbstractString)
+    for line in eachline(filepath)
+        sline = strip(line)
+        (isempty(sline) || startswith(sline, '#')) && continue
+        names = lowercase.(stripunit.(splitfields(sline)))
+        return "label" in names ? Dict(n => i for (i, n) in enumerate(names)) : nothing
+    end
+    return nothing
 end
 
 """
@@ -114,6 +136,18 @@ comments. A malformed line is skipped with a warning rather than aborting the
 load — any labelling convention is tolerated.
 """
 function readpeaklist!(expt, filepath::AbstractString)
+    # A moving-peak experiment's positions vary plane by plane and so live in `series.csv`,
+    # not `results.csv` (see docs/src/advanced/conventions.md). Where the chosen file has no
+    # position columns at all, read them from the series file beside it instead.
+    columns = headercolumns(filepath)
+    if !isnothing(columns) && !haskey(columns, "x") && !haskey(columns, "x[1]")
+        series = joinpath(dirname(filepath), "series.csv")
+        isfile(series) ||
+            throw(ArgumentError("$filepath has no peak positions, and there is no " *
+                                "series.csv beside it to read them from"))
+        return readseriespeaks!(expt, series)
+    end
+
     peak_count = 0
     colmap = nothing  # name => index, or nothing until established
 
@@ -130,7 +164,7 @@ function readpeaklist!(expt, filepath::AbstractString)
 
             # Establish the column layout from the first non-comment line
             if isnothing(colmap)
-                lower = lowercase.(fields)
+                lower = lowercase.(stripunit.(fields))
                 if "label" in lower
                     colmap = Dict(name => i for (i, name) in enumerate(lower))
                     continue  # header line, not data
@@ -176,35 +210,56 @@ function readpeaklist!(expt, filepath::AbstractString)
 end
 
 """
-    writeresults!(expt, folder) -> String
+    readseriespeaks!(expt, filepath) -> Int
 
-Write all peak results to a single `results.csv` in `folder`. Each row is one
-peak with identity (`label`, `resnum`, `resname`, `atom`), positions (`x`, `y`),
-linewidths (`R2x`, `R2y`), per-plane amplitudes (`amp[1]`, `amp[2]`, …) and any
-derived parameters, each value immediately followed by its `_err` uncertainty
-column. Experiment metadata is written as `#`-comment lines above an ordinary
-(uncommented) header row, so the file opens directly in spreadsheets and via
-`pandas.read_csv(comment="#")`.
+Restore peaks from a `series.csv`, which holds one row per peak per plane. Used where the
+positions vary plane by plane and so are not in `results.csv`; the peak is added at its
+first plane's position and the whole trajectory is then set on it.
 """
-function writeresults!(expt, folder)
-    filepath = joinpath(folder, "results.csv")
-    backup_file(filepath)
+function readseriespeaks!(expt, filepath::AbstractString)
+    columns = headercolumns(filepath)
+    (isnothing(columns) || !haskey(columns, "x") || !haskey(columns, "y")) &&
+        throw(ArgumentError("$filepath has no label/x/y columns"))
 
-    header, rows = resultstable(expt)
-    open(filepath, "w") do f
-        for line in split(experimentinfo(expt), '\n')
-            isempty(strip(line)) && continue
-            println(f, "# ", line)
+    labels = String[]
+    positions = Dict{String,Vector{NTuple{4,Union{Nothing,Float64}}}}()
+    for line in eachline(filepath)
+        sline = strip(line)
+        isempty(sline) && continue
+        if startswith(sline, '#')
+            parse_radius_comment!(expt, sline)
+            continue
         end
-        # Record the fitting radii so they are restored on load (parsed by readpeaklist!).
-        println(f, "# X radius / ppm: ", round(expt.xradius[]; digits=4))
-        println(f, "# Y radius / ppm: ", round(expt.yradius[]; digits=4))
-        println(f, join(header, ","))
-        for row in rows
-            println(f, join(row, ","))
-        end
+        fields = splitfields(sline)
+        lowercase(stripunit(fields[columns["label"]])) == "label" && continue  # header
+        label = String(fields[columns["label"]])
+        cell(name) = haskey(columns, name) && columns[name] ≤ length(fields) ?
+                     tryparse(Float64, fields[columns[name]]) : nothing
+        label in labels || push!(labels, label)
+        push!(get!(positions, label, NTuple{4,Union{Nothing,Float64}}[]),
+              (cell("x"), cell("y"), cell("r2x"), cell("r2y")))
     end
-    return filepath
+
+    count = 0
+    for label in labels
+        points = positions[label]
+        xs = [p[1] for p in points]
+        ys = [p[2] for p in points]
+        (isempty(xs) || any(isnothing, xs) || any(isnothing, ys)) && continue
+        addpeak!(expt, Point2f(xs[1], ys[1]), label)
+        peak = expt.peaks[][end]
+        setperplane!(peak, :x, Float64.(xs))
+        setperplane!(peak, :y, Float64.(ys))
+        r2x = [p[3] for p in points]
+        r2y = [p[4] for p in points]
+        if !any(isnothing, r2x) && !any(isnothing, r2y)
+            setperplane!(peak, :R2x, Float64.(r2x))
+            setperplane!(peak, :R2y, Float64.(r2y))
+        end
+        count += 1
+    end
+    @debug "Added $count peaks from $filepath"
+    return count
 end
 
 "Sort peaks by residue number (positive ascending first, then unassigned)."
@@ -213,74 +268,6 @@ function sortedpeaks(expt)
                     r = extract_residue_number(peak.label[])
                     (r ≤ 0, abs(r))
                 end)
-end
-
-"""
-    resultstable(expt) -> (header, rows)
-
-Build the column-name `header` and the `rows` (each a vector of strings) for the
-results file. Derived (post-fit) parameters are appended with the experiment's
-primary parameter first (see `primaryparam`).
-"""
-function resultstable(expt)
-    n = nslices(expt)
-    peaks = sortedpeaks(expt)
-
-    # derived parameter keys, primary result first
-    derivedkeys = Symbol[]
-    if !isempty(peaks)
-        allkeys = collect(keys(first(peaks).postparameters))
-        prim = primaryparam(expt)
-        derivedkeys = prim in allkeys ? [prim; filter(!=(prim), allkeys)] : allkeys
-    end
-
-    # For moving-peak experiments, positions and linewidths vary per plane, so they are
-    # written per-plane (x[1], x[2], ...) like amplitudes; fixed-peak experiments keep a
-    # single column each.
-    moving = !hasfixedpositions(expt)
-    posparams = (:x, :y, :R2x, :R2y)
-
-    header = ["label", "resnum", "resname", "atom"]
-    for p in posparams
-        if moving
-            for i in 1:n
-                append!(header, ["$(p)[$i]", "$(p)[$i]_err"])
-            end
-        else
-            append!(header, [string(p), "$(p)_err"])
-        end
-    end
-    for i in 1:n
-        append!(header, ["amp[$i]", "amp[$i]_err"])
-    end
-    for k in derivedkeys
-        append!(header, [string(k), "$(k)_err"])
-    end
-
-    rows = Vector{String}[]
-    for peak in peaks
-        lbl = parse_label(peak.label[])
-        row = [peak.label[], string(lbl.resnum),
-               lbl.onelettercode == '?' ? "" : string(lbl.onelettercode),
-               lbl.atom]
-        for p in posparams
-            slices = moving ? (1:n) : (1:1)
-            for i in slices
-                push!(row, format_param(peak, p, i, :value))
-                push!(row, format_param(peak, p, i, :uncertainty))
-            end
-        end
-        for i in 1:n
-            push!(row, format_param(peak, :amp, i, :value))
-            push!(row, format_param(peak, :amp, i, :uncertainty))
-        end
-        for k in derivedkeys
-            push!(row, format_post(peak, k, :value))
-            push!(row, format_post(peak, k, :uncertainty))
-        end
-        push!(rows, row)
-    end
-    return header, rows
 end
 
 "Format a post-fit parameter value/uncertainty, returning \"NA\" if absent."
