@@ -12,6 +12,7 @@ using Statistics
 include("fileselection.jl")
 include("analyse.jl")
 include("viscosity.jl")
+include("output.jl")   # shared CSV column/value rules - see docs/src/advanced/conventions.md
 
 include("maybevector/MaybeVector.jl")
 using .MaybeVectorModule

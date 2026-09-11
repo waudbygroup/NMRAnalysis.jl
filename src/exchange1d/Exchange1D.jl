@@ -25,6 +25,8 @@ using Statistics
 import ..NMRAnalysis  # module itself, for pkgversion(NMRAnalysis)
 using ..NMRAnalysis: analyse, register_analysis!, MultiFileRule
 using ..NMRAnalysis: select_expts
+# shared output rules - see src/output.jl and docs/src/advanced/conventions.md
+using ..NMRAnalysis: csvcolumn, csvvalue, safename, backupfile, writetable
 # Interactive region selection for `integrate!` (replaces the former readline prompts).
 using ..Analysis1D: pickregion
 
@@ -40,6 +42,7 @@ include("problem.jl")
 include("overlay.jl")
 include("interface.jl")
 include("results.jl")
+include("files.jl")
 
 export exchange1d
 

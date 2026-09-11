@@ -430,9 +430,18 @@ Still open after this iteration:
 - **The `Reproduce:` block in `summary.txt`.** The conventions page specifies it and
   nothing writes it yet: it needs each entry point to record the arguments it resolved and
   where each came from, which is a change to every entry point rather than to the writer.
-- **GUI2D, R1rho and Exchange1D** have not been brought onto the conventions; see the
-  status table at the foot of the conventions page. R1rho is to write the new files
+- **GUI2D and R1rho** have not been brought onto the conventions; see the status table at
+  the foot of the conventions page. Exchange1D now conforms (`src/exchange1d/files.jl`),
+  with the generic column/value rules lifted into `src/output.jl` so the two modules share
+  one implementation of them. Decided with CW for the GUI2D round: per-plane peak positions
+  and linewidths move to `series.csv` entirely (so `Load` will read positions from there
+  rather than from `results.csv`), and the 2D save button changes from a native folder
+  dialog to the text box 1D and R1rho already use. R1rho is to write the new files
   alongside its existing ones for now, since it is being published.
+- **`prepare_outputfolder` deletes the whole output folder** before Exchange1D writes to it
+  (`src/exchange1d/misc.jl`), which makes the `.bak` convention meaningless there and
+  destroys anything else the user had put in that folder. Predates this work and left
+  alone, but it should go.
 - **Data-driven tests.** Everything above the analysis core - annotation lookup, `vdlist` /
   `p30` / `d20` / `gpnam6` reading, `tracesfromspec`'s N-D plane flattening,
   `nplanesfromspec` - is untested, because it needs real Bruker directories. The seam is

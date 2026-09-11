@@ -12,31 +12,9 @@
 # `results.csv` is also the file a saved region list is restored from, so a multi-region
 # session is reproducible rather than only screenshot-able.
 
-# ---- column and value formatting ----------------------------------------------
-
-"""
-    csvcolumn(name, unit) -> String
-
-A column header: the ASCII parameter name, with its unit in parentheses where it has one
-(`"R (s-1)"`, `"A"`). The matching uncertainty column repeats the unit, so a reader that
-strips the parenthesised part treats the pair symmetrically - see the column rules in
-`docs/src/advanced/conventions.md`.
-"""
-csvcolumn(name, unit) = isempty(unit) ? string(name) : "$(name) ($(unit))"
-
-"""Value and uncertainty column headers for one parameter."""
-csvcolumns(name, unit) = (csvcolumn(name, unit), csvcolumn("$(name)_err", unit))
-
-"""
-    csvvalue(x) -> String
-
-One cell, at full precision. `"NA"` for anything absent or not applicable, which is
-distinct from a blank key (a blank key means the row applies to every value of it).
-"""
-csvvalue(::Nothing) = "NA"
-csvvalue(::Missing) = "NA"
-csvvalue(x::Real) = isfinite(x) ? string(x) : "NA"
-csvvalue(x) = string(x)
+# ---- value formatting ---------------------------------------------------------
+# `csvcolumn`, `csvcolumns`, `csvvalue`, `safename`, `backupfile` and the underlying
+# `writetable` are shared with the other modules - see `src/output.jl`.
 
 """Value and uncertainty cells for a parameter that may carry neither."""
 function valueerr(params, key::Symbol)
@@ -44,17 +22,6 @@ function valueerr(params, key::Symbol)
     v = params[key]
     v isa Measurement || return (csvvalue(v), "NA")
     return (csvvalue(Measurements.value(v)), csvvalue(Measurements.uncertainty(v)))
-end
-
-"""
-    safename(label) -> String
-
-A region label made safe to use as a filename, so that a region the user renamed to
-anything at all still writes to `regions/<name>.csv` without escaping its folder.
-"""
-function safename(label::AbstractString)
-    name = replace(String(label), r"[^A-Za-z0-9._-]" => "_")
-    return isempty(name) ? "region" : name
 end
 
 # ---- provenance ---------------------------------------------------------------
@@ -257,28 +224,6 @@ end
 # ---- writing ------------------------------------------------------------------
 
 """
-    writetable(filepath, expt, dataset, header, rows) -> String
-
-Write one CSV: the experiment description as `#` comment lines, then `header`, then `rows`.
-Any existing file is backed up first. Returns the path.
-"""
-function writetable(filepath::AbstractString, expt::Experiment1D, ds::Dataset1D, header,
-                    rows)
-    backupfile(filepath)
-    open(filepath, "w") do f
-        for line in split(experimentinfo(expt, ds), '\n')
-            isempty(strip(line)) && continue
-            println(f, "# ", line)
-        end
-        println(f, join(header, ","))
-        for row in rows
-            println(f, join(row, ","))
-        end
-    end
-    return filepath
-end
-
-"""
     writeresults!(expt, dataset, results, regions, folder) -> String
 
 Write the whole result set into `folder`: `results.csv`, `series.csv`, `global.csv` (only
@@ -287,24 +232,22 @@ holding that region's own rows of `series.csv`. Returns the path of `results.csv
 """
 function writeresults!(expt::Experiment1D, ds::Dataset1D, results, regs,
                        folder::AbstractString)
-    isdir(folder) || mkpath(folder)
-    filepath = writetable(joinpath(folder, "results.csv"), expt, ds,
+    comments = split(experimentinfo(expt, ds), '\n')
+    filepath = writetable(joinpath(folder, "results.csv"), comments,
                           resultstable(expt, results, regs)...)
 
     header, rows = seriestable(expt, ds, results)
-    writetable(joinpath(folder, "series.csv"), expt, ds, header, rows)
+    writetable(joinpath(folder, "series.csv"), comments, header, rows)
 
     # per-region files, beside the per-region plots `saveresults` writes
     labelcol = findfirst(==("label"), header)
-    regionfolder = joinpath(folder, "regions")
-    isdir(regionfolder) || mkpath(regionfolder)
     for reg in regs
-        writetable(joinpath(regionfolder, "$(safename(reg.label)).csv"), expt, ds, header,
-                   filter(row -> row[labelcol] == reg.label, rows))
+        writetable(joinpath(folder, "regions", "$(safename(reg.label)).csv"), comments,
+                   header, filter(row -> row[labelcol] == reg.label, rows))
     end
 
     gheader, grows = globaltable(expt, results)
-    isempty(grows) || writetable(joinpath(folder, "global.csv"), expt, ds, gheader, grows)
+    isempty(grows) || writetable(joinpath(folder, "global.csv"), comments, gheader, grows)
     return filepath
 end
 
@@ -485,8 +428,3 @@ function readregions!(state, filepath::AbstractString)
     return length(regs)
 end
 
-"""Rename an existing file to `<name>.bak` so a save never silently destroys the last one."""
-function backupfile(filepath::AbstractString)
-    isfile(filepath) || return nothing
-    return mv(filepath, filepath * ".bak"; force=true)
-end

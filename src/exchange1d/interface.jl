@@ -713,40 +713,38 @@ function _save_results(result::FitResult)
 
     outputfolder = input
     prepare_outputfolder(outputfolder)
+    mkpath(joinpath(outputfolder, "experiments"))
     saved = String[]
 
-    # save per-experiment plots, combined into one grid figure
+    # every experiment on one grid
     plots = plot(result)
-    plt = combineplots(plots)
-    savefig(plt, joinpath(outputfolder, "exchange1d_fit.pdf"))
-    push!(saved, "exchange1d_fit.pdf")
+    savefig(combineplots(plots), joinpath(outputfolder, "fit.pdf"))
+    push!(saved, "fit.pdf")
 
-    for (i, p) in enumerate(plots)
-        savefig(p, joinpath(outputfolder, "exchange1d_expt_$i.pdf"))
-        push!(saved, "exchange1d_expt_$i.pdf")
+    # one plot per experiment, sharing its basename with that experiment's CSV so the data
+    # behind a plot sits beside it
+    for (expt, p) in zip(result.prob.experiments, plots)
+        name = safename(short_expt_path(expt))
+        savefig(p, joinpath(outputfolder, "experiments", "$name.pdf"))
+        push!(saved, joinpath("experiments", "$name.pdf"))
     end
 
-    # save overlays of similar experiments as individual files only — not
-    # combined into a grid of their own (see combineplots)
+    # Overlays of comparable experiments span several of them, so - like a cluster plot in
+    # the 2D interface - they have no single experiment's data to sit beside and stay at
+    # the top level under a prefixed name.
     overlays = overlayplots(result)
     for (i, p) in enumerate(overlays)
-        savefig(p, joinpath(outputfolder, "exchange1d_overlay_$i.pdf"))
-        push!(saved, "exchange1d_overlay_$i.pdf")
+        savefig(p, joinpath(outputfolder, "overlay_$i.pdf"))
+        push!(saved, "overlay_$i.pdf")
     end
 
-    # save parameters as text
-    paramfile = joinpath(outputfolder, "exchange1d_params.txt")
-    open(paramfile, "w") do io
-        return show(io, MIME("text/plain"), result)
+    writesummary(joinpath(outputfolder, "summary.txt"), result)
+    push!(saved, "summary.txt")
+    writeresults!(result, outputfolder)
+    append!(saved, ["results.csv", "series.csv", "global.csv"])
+    for expt in result.prob.experiments
+        push!(saved, joinpath("experiments", "$(safename(short_expt_path(expt))).csv"))
     end
-    push!(saved, "exchange1d_params.txt")
-
-    # save data filenames, experiment parameters, and sample information
-    infofile = joinpath(outputfolder, "exchange1d_experiments.txt")
-    open(infofile, "w") do io
-        return writeexperimentsummary(io, result.prob)
-    end
-    push!(saved, "exchange1d_experiments.txt")
 
     println()
     sectionheader("Saved to $outputfolder:")

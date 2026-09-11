@@ -173,7 +173,7 @@ what the experiment was.
 | Analysis1D | yes | yes | yes | yes | yes |
 | GUI2D | no | old format | no | no | plots only |
 | R1rho | old format | no | no | no | no |
-| Exchange1D | old format | no | no | no | no |
+| Exchange1D | yes | yes | yes | yes | yes |
 
 The `Reproduce:` line records the resolved arguments, which each entry point hands to the
 writer. It does not yet say *where* each one came from (an annotation, the `vdlist`, a

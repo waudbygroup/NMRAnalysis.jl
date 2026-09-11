@@ -25,6 +25,8 @@ using REPL.TerminalMenus
 using Statistics
 
 using ..NMRAnalysis: register_analysis!, viscosity
+# shared output rules - see src/output.jl and docs/src/advanced/conventions.md
+using ..NMRAnalysis: csvcolumn, csvcolumns, csvvalue, safename, backupfile, writetable
 
 # pure analysis core (no Makie dependency in these files)
 include("types.jl")
