@@ -108,7 +108,7 @@ function DampedSinusoidModel(; phase::Symbol=:sine)
         return [A, ν, 1.0 / maximum(x)]
     end
     return CurveFitModel((x, p) -> @.(p[1] * trig(2π * p[2] * x) * exp(-p[3] * x)),
-                         ["A", "ν", "R"],
+                         ["A", "nu", "R"],
                          est;
                          xlabel="Pulse duration / s")
 end
@@ -116,7 +116,7 @@ end
 # Stored in the units `PARAM_UNITS` names for them: a 90° pulse reads naturally in µs,
 # never in seconds.
 function postfit!(r::RegionResult, ::NutationExperiment)
-    ν = param(r, :ν)
+    ν = param(r, :nu)
     setpost!(r, :pulse90, 1e6 / (4ν))
     setpost!(r, :inhomogeneity, 100 * param(r, :R) / (2π * ν))
     return nothing
@@ -138,16 +138,19 @@ function spectruminfo(::NutationExperiment, vars::NamedTuple)
 end
 
 # Own display names and units, not the shared PARAM_LABELS/PARAM_UNITS tables -
-# everything about this experiment's presentation lives here. :ν, :pulse90 and
+# everything about this experiment's presentation lives here. :nu, :pulse90 and
 # :inhomogeneity only ever appear in this file (DampedSinusoidModel and postfit!, above).
+# The key is ASCII (:nu, not :ν) because a parameter key becomes a CSV column header, which
+# is ASCII by convention - see docs/src/advanced/conventions.md. The typeset name lives in
+# the label below.
 # :R is deliberately *not* overridden here: it's this model's decay rate, not a
 # relaxation rate (see the shared table's own note on why it stays bare by default).
-const NUTATION_PARAM_LABELS = Dict(:ν => "Nutation frequency",
+const NUTATION_PARAM_LABELS = Dict(:nu => "Nutation frequency",
                                    :pulse90 => "90°",
                                    :inhomogeneity => "B₁ inhom.")
-const NUTATION_PARAM_UNITS = Dict(:ν => " Hz",
-                                  :pulse90 => " µs",
-                                  :inhomogeneity => " %")
+const NUTATION_PARAM_UNITS = Dict(:nu => "Hz",
+                                  :pulse90 => "us",
+                                  :inhomogeneity => "%")
 
 function paramlabel(::NutationExperiment, name::Symbol)
     return get(NUTATION_PARAM_LABELS, name, get(PARAM_LABELS, name, string(name)))

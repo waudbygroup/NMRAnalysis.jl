@@ -394,14 +394,52 @@ Phase 3.11 — **the reduced series is an output; results print, not dump; tests
       the docs page it was copied into was wrong; the round-trip test now pins the two
       together
 
+Phase 4 — **the shared output conventions, Analysis1D first**  ← THIS ITERATION
+- [x] `docs/src/advanced/conventions.md`: the agreed output layout and column rules every
+      module is to be brought onto - one folder per analysis holding `summary.txt`,
+      `results.csv`, `series.csv`, `global.csv`, an overview plot, and a per-entity
+      subfolder where a plot and its data share a basename. Agreed with CW before any code
+      was written; that page, not this one, is the specification
+- [x] Analysis1D writes that layout. `intensities.csv` becomes `series.csv` in long form
+      (one row per series per coordinate point, carrying `source`, the grouping
+      coordinates, the fit axis, and `I`/`I_err`/`I_fit`), which is what multi-coordinate
+      and multi-dataset experiments need and a wide table cannot express
+- [x] parameter **scope**: `setpost!(r, name, value; scope=:series|:region|:global)`.
+      TRACT's η and τc describe the TROSY/anti-TROSY *pair*, and `postfitglobal!` has to
+      record them on one member for want of anywhere else to put them - the scope is what
+      keeps that arbitrary choice out of the output, which now writes them as a row with
+      the group key left blank. Diffusion's solvent viscosity is `:global` (a property of
+      the sample, identical for every region) and moves to `global.csv`
+- [x] units are held in ASCII in the label tables (`"s-1"`, `"us"`, `"1e-10 m2/s"`) and
+      appear in the CSV column headers, with `prettyunit` turning one into the typeset form
+      for the GUI panel and `summary.txt`. One table rather than two that can drift
+- [x] parameter *keys* are ASCII for the same reason, a key being what becomes a column
+      header: `:τc`/`:ηxy`/`:ν` are now `:tauc`/`:etaxy`/`:nu`, with the typeset names left
+      in `paramlabel` where they always were. **Breaking**: `param(r, :τc)` is now
+      `param(r, :tauc)`
+- [x] `Dataset1D` carries per-plane `sources`, so `series.csv` can say which spectrum each
+      row came from. TRACT is the experiment that needed it and kinetics across samples
+      will too. Deliberately not a plane variable: it is provenance, not a coordinate, and
+      two files may be replicates with identical coordinates
+- [x] `RegionResult` carries the plane indices its points came from, which is what lets the
+      writer resolve those sources without re-deriving the grouping
+- [x] `writeresults!` takes the dataset, results and regions rather than the GUI state bag,
+      so it is callable and testable without a GUI
+
 Still open after this iteration:
+- **The `Reproduce:` block in `summary.txt`.** The conventions page specifies it and
+  nothing writes it yet: it needs each entry point to record the arguments it resolved and
+  where each came from, which is a change to every entry point rather than to the writer.
+- **GUI2D, R1rho and Exchange1D** have not been brought onto the conventions; see the
+  status table at the foot of the conventions page. R1rho is to write the new files
+  alongside its existing ones for now, since it is being published.
 - **Data-driven tests.** Everything above the analysis core - annotation lookup, `vdlist` /
   `p30` / `d20` / `gpnam6` reading, `tracesfromspec`'s N-D plane flattening,
   `nplanesfromspec` - is untested, because it needs real Bruker directories. The seam is
   ready (`prompt=false` plus an `integration` triple runs an entry point end to end with
   no interaction); it needs a small relaxation, diffusion and TRACT dataset under
   `examples/`.
-- **Canonical output format across 1D and 2D** (text vs CSV, units, precision). 1D now has
-  a `results.csv` following 2D's conventions and a small shared units/labels table (plus
-  one per experiment for what isn't shared), but the 1D and 2D tables have not been
-  merged and the question itself is not settled.
+- **The 1D and 2D label/unit tables have still not been merged.** The format question
+  itself is now settled (see the conventions page); what remains is one registry rather
+  than `Analysis1D`'s tables and `gui2d/summary.jl`'s, which is part of bringing GUI2D
+  onto the conventions.

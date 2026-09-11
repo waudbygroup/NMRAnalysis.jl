@@ -45,19 +45,20 @@ kinetics1d("21", times; model=ExponentialModel())
 
 ## Reading the traces
 
-**Save** writes `intensities.csv`, which for a kinetics run is the whole result: times
-down the side, regions across the top.
+**Save** writes `series.csv`, which for a kinetics run is the whole result: one row per
+region per time point.
 
 ```
-time,reactant,reactant_err,product,product_err
-0.0,9421.3,12.4,0.0,12.4
-60.0,7724.5,12.4,1702.1,12.4
-120.0,6013.8,12.4,3399.7,12.4
+source,label,time (s),I,I_err,I_fit
+21/pdata/1,reactant,0.0,9421.3,12.4,NA
+21/pdata/1,reactant,60.0,7724.5,12.4,NA
+21/pdata/1,product,0.0,0.0,12.4,NA
+21/pdata/1,product,60.0,1702.1,12.4,NA
 ```
 
-Where a series has several runs, each gets its own pair of columns (`reactant_1`,
-`reactant_2`, …). Runs need not share the same times: the rows are the union of all of
-them, and a run with no measurement at a given time reads `NA` there.
+Each region also gets its own copy in `regions/<name>.csv`, beside its plot. Where a series
+has several runs, `run` appears as a further column, so runs need not share the same times.
+`I_fit` is `NA` because nothing was fitted.
 
 The returned results carry the same traces:
 

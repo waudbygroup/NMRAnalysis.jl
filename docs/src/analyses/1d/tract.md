@@ -69,8 +69,8 @@ tensors (17°), and the static field.
 |---|---|
 | `A` | Amplitude of each decay |
 | `R` | Relaxation rate of each component, s⁻¹ |
-| `ηxy` | Cross-correlated relaxation rate, s⁻¹ |
-| `τc` | Rotational correlation time, ns |
+| `etaxy` | Cross-correlated relaxation rate, s⁻¹ |
+| `tauc` | Rotational correlation time, ns |
 
 η and τc describe the pair rather than either component, so they are recorded once, on the
 TROSY series:
@@ -78,7 +78,7 @@ TROSY series:
 ```julia
 results = tract("12", "13")
 trosy = first(r for r in results if r.group.which == :trosy)
-param(trosy, :τc)     # ns, with uncertainty
+param(trosy, :tauc)   # ns, with uncertainty
 ```
 
 ## Assumptions

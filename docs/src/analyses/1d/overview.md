@@ -150,32 +150,50 @@ It defaults to `out`.
 **Save** writes these files into the output folder, backing up any it would overwrite as
 `.bak` first:
 
+```
+out/
+  summary.txt
+  results.csv
+  series.csv
+  global.csv        (only when the analysis fits something globally)
+  fit.pdf
+  regions/
+    signal.csv
+    signal.pdf
+```
+
 | File | Contents |
 |---|---|
+| `summary.txt` | The record to read: where the data came from, the regions, and the results rounded and with units |
 | `results.csv` | One row per region (and per series, where an experiment has more than one), with every fitted and derived parameter and its uncertainty |
-| `intensities.csv` | The integrals themselves: one row per spectrum, one column per region, with uncertainties |
-| `summary.txt` | The same numbers laid out to be read, with the region and noise positions |
+| `series.csv` | The measurements themselves, one row per region per spectrum |
+| `global.csv` | Anything fitted once for the whole analysis. A plain relaxation fit has nothing global and the file is absent |
 | `fit.pdf` | The fit for every region on one set of axes |
-| `fit_<region>.pdf` | The fit for each region on its own |
+| `regions/<name>.pdf` and `.csv` | Each region's own fit, and the data behind it under the same name |
 
-Both CSVs carry the experiment details as `#` comment lines above an ordinary header row,
+Every CSV carries the experiment details as `#` comment lines above an ordinary header row,
 so they open directly in a spreadsheet or `pandas`. `results.csv` is also what **Load**
 reads: it restores the regions and the noise position, so a session with several named
 regions can be picked up again later rather than picked out by hand.
 
-`intensities.csv` is the data behind the fit, laid out as the evolution parameter down the
-side and the regions across the top:
+`series.csv` is the data behind the fit, one row per measurement:
 
 ```
-time,reactant,reactant_err,product,product_err
-0.0,9421.3,12.4,0.0,12.4
-60.0,7724.5,12.4,1702.1,12.4
-120.0,6013.8,12.4,3399.7,12.4
+source,label,time (s),I,I_err,I_fit
+11/pdata/1,signal,0.010,9188.2,12.4,9188.9
+11/pdata/1,signal,0.030,8737.1,12.4,8740.3
+11/pdata/1,signal,0.060,8107.6,12.4,8104.0
 ```
 
-For a kinetics experiment, where nothing is fitted, this *is* the result. For everything
+`I_fit` is the fitted curve at the measured points, so a residual is a subtraction. For a
+kinetics experiment, where nothing is fitted, this file *is* the result. For everything
 else it is the decay or buildup the fitted parameters came from, which is what you want if
 you would rather plot or fit it yourself.
+
+Units appear in the column headers in ASCII (`R (s-1)`, `tau_c (ns)`), and an uncertainty
+column repeats the unit of the value it belongs to. Numbers are written at full precision;
+`summary.txt` is where they are rounded. See
+[Output and Interface Conventions](../../advanced/conventions.md) for the full rules.
 
 ## Repeating an analysis
 
@@ -192,7 +210,7 @@ julia> param(results[1], :R)     # the fitted rate, with its uncertainty
 ```
 
 `param` reads both the fitted parameters and anything derived from them, so
-`param(r, :τc)` and `param(r, :rH)` work the same way.
+`param(r, :tauc)` and `param(r, :rH)` work the same way.
 
 To repeat an analysis without the window at all, pass the region you settled on as an
 `integration` triple. This is the same triple the exchange routines use, so a region

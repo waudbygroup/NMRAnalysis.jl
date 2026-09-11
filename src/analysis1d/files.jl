@@ -1,80 +1,178 @@
-# Results file and region round-trip, mirroring `gui2d/files.jl`: `results.csv` is both the
-# machine-readable output and the format a saved region list is restored from, so a
-# multi-region kinetics session is reproducible rather than only screenshot-able.
+# Output files, written to the layout and column rules in
+# `docs/src/advanced/conventions.md`:
 #
-# Layout (as in 2D): `#` comment lines carrying the experiment metadata, then a header row,
-# then one row per (region × group). Regions travel as ordinary `region`/`lo`/`hi` columns,
-# the way 2D peaks travel as `label`/`x`/`y`, and it is those columns `readregions!` reads
-# back.
+#   out/
+#     summary.txt        (written by `saveresults` in gui.jl)
+#     results.csv        fitted and derived parameters, one row per entity
+#     series.csv         the measurements, one row per entity per coordinate point
+#     global.csv         parameters fitted once for the whole analysis, when there are any
+#     fit.pdf
+#     regions/<label>.csv, regions/<label>.pdf
+#
+# `results.csv` is also the file a saved region list is restored from, so a multi-region
+# session is reproducible rather than only screenshot-able.
+
+# ---- column and value formatting ----------------------------------------------
 
 """
-    experimentinfo(expt) -> String
+    csvcolumn(name, unit) -> String
 
-Multi-line description of the experiment, written as the comment header of `results.csv`.
+A column header: the ASCII parameter name, with its unit in parentheses where it has one
+(`"R (s-1)"`, `"A"`). The matching uncertainty column repeats the unit, so a reader that
+strips the parenthesised part treats the pair symmetrically - see the column rules in
+`docs/src/advanced/conventions.md`.
+"""
+csvcolumn(name, unit) = isempty(unit) ? string(name) : "$(name) ($(unit))"
+
+"""Value and uncertainty column headers for one parameter."""
+csvcolumns(name, unit) = (csvcolumn(name, unit), csvcolumn("$(name)_err", unit))
+
+"""
+    csvvalue(x) -> String
+
+One cell, at full precision. `"NA"` for anything absent or not applicable, which is
+distinct from a blank key (a blank key means the row applies to every value of it).
+"""
+csvvalue(::Nothing) = "NA"
+csvvalue(::Missing) = "NA"
+csvvalue(x::Real) = isfinite(x) ? string(x) : "NA"
+csvvalue(x) = string(x)
+
+"""Value and uncertainty cells for a parameter that may carry neither."""
+function valueerr(params, key::Symbol)
+    haskey(params, key) || return ("NA", "NA")
+    v = params[key]
+    v isa Measurement || return (csvvalue(v), "NA")
+    return (csvvalue(Measurements.value(v)), csvvalue(Measurements.uncertainty(v)))
+end
+
+"""
+    safename(label) -> String
+
+A region label made safe to use as a filename, so that a region the user renamed to
+anything at all still writes to `regions/<name>.csv` without escaping its folder.
+"""
+function safename(label::AbstractString)
+    name = replace(String(label), r"[^A-Za-z0-9._-]" => "_")
+    return isempty(name) ? "region" : name
+end
+
+# ---- provenance ---------------------------------------------------------------
+
+"""
+    experimentinfo(expt, [dataset]) -> String
+
+Multi-line description of the experiment, written as the comment header of every CSV.
 Generic across every experiment - the analysis name, where the data came from, how many
 spectra and which variables are arrayed are all already known to the framework - so
 experiments need not override it (GUI2D's equivalent is written out per experiment).
+
+The dataset is passed explicitly because the one the experiment was *constructed* with
+still carries the noise position it started at, where the GUI's live dataset carries
+wherever the user dragged the marker to. Provenance has to describe the data as analysed.
 """
-function experimentinfo(expt::Experiment1D)
-    ds = dataset(expt)
+function experimentinfo(expt::Experiment1D, ds::Dataset1D=dataset(expt))
     io = IOBuffer()
-    println(io, "Analysis type: $(windowtitle(expt))")
-    isempty(ds.label) || println(io, "Source: $(ds.label)")
+    println(io, "NMRAnalysis.jl $(pkgversion(@__MODULE__))")
+    println(io, "Analysis: $(windowtitle(expt))")
+    for src in unique(sources(ds))
+        isempty(src) || println(io, "Source: $src")
+    end
     println(io, "Number of spectra: $(nplanes(ds))")
     if !isempty(ds.planes.vars)
         println(io, "Arrayed variables: $(join(keys(first(ds.planes.vars)), ", "))")
     end
+    println(io, "Noise position / ppm: $(round(ds.noisecenter; digits=4))")
     return String(take!(io))
 end
 
-"""
-    valueerr(params, key) -> (value, uncertainty)
+# ---- results.csv --------------------------------------------------------------
 
-The two CSV cells for one parameter, as strings. `"NA"` where the parameter is absent, and
-for the uncertainty of a quantity that carries none (a solvent viscosity looked up from
-temperature is a plain number, where a fitted rate is a `Measurement`) - matching GUI2D's
-`format_param`/`format_post`.
 """
-function valueerr(params, key::Symbol)
-    haskey(params, key) || return ("NA", "NA")
-    v = params[key]
-    v isa Measurement || return (string(v), "NA")
-    return (string(Measurements.value(v)), string(Measurements.uncertainty(v)))
+    resultkeys(expt) -> Vector{Symbol}
+
+The grouping coordinates that, with the region label, identify a row of `results.csv`:
+`(:which,)` for TRACT, `(:run,)` for a multi-run kinetics series, none for a single-series
+experiment.
+"""
+resultkeys(expt::Experiment1D) = collect(Symbol, groupcols(expt))
+
+"""
+    scopedkeys(results, scope) -> Vector{Symbol}
+
+Derived-parameter names recorded at `scope`, in order of first appearance across
+`results`.
+"""
+function scopedkeys(results, scope::Symbol)
+    names = Symbol[]
+    for r in results, name in keys(r.postparameters)
+        postscope(r, name) == scope && !(name in names) && push!(names, name)
+    end
+    return names
 end
 
 """
     resultstable(expt, results, regions) -> (header, rows)
 
-Column names and rows for `results.csv`: one row per (region × group), carrying the
-region's bounds, the fit's own parameters and the quantities derived from them, with the
-experiment's [`primaryparam`](@ref) first among the derived columns.
+Column names and rows for `results.csv`: one row per series, carrying the region's bounds,
+the fit's own parameters and the quantities derived from them, with the experiment's
+[`primaryparam`](@ref) first among the derived columns.
 
-Columns are the union of the keys present across all results, so a table stays rectangular
-when one region fitted and another did not; missing cells read `NA`.
+Quantities recorded with `scope=:region` (TRACT's η and τc, which describe the
+TROSY/anti-TROSY pair rather than either component) get a row of their own per region, with
+the grouping keys left blank to say so. Columns are the union of everything present, so the
+table stays rectangular and missing cells read `NA`.
 """
 function resultstable(expt::Experiment1D, results, regs)
     bounds = Dict(r.label => r for r in regs)
+    keycols = resultkeys(expt)
     fitkeys = unique(Iterators.flatten(keys(r.parameters) for r in results))
-    derived = unique(Iterators.flatten(keys(r.postparameters) for r in results))
-    primary = primaryparam(expt)
-    primary in derived && (derived = [primary; filter(!=(primary), derived)])
+    serieskeys = scopedkeys(results, :series)
+    regionkeys = scopedkeys(results, :region)
 
-    header = ["region", "lo", "hi", "group"]
-    for k in Iterators.flatten((fitkeys, derived))
-        append!(header, [string(k), "$(k)_err"])
+    primary = primaryparam(expt)
+    for keys_ in (serieskeys, regionkeys)
+        i = findfirst(==(primary), keys_)
+        isnothing(i) || (pushfirst!(keys_, popat!(keys_, i)))
+    end
+
+    header = ["label", csvcolumn("lo", "ppm"), csvcolumn("hi", "ppm")]
+    append!(header, [csvcolumn(k, coordinateunit(expt, k)) for k in keycols])
+    for k in Iterators.flatten((fitkeys, serieskeys, regionkeys))
+        append!(header, collect(csvcolumns(k, paramunit(expt, k))))
+    end
+
+    boundcells(label) = begin
+        reg = get(bounds, label, nothing)
+        isnothing(reg) ? ["NA", "NA"] : [csvvalue(reg.lo), csvvalue(reg.hi)]
     end
 
     rows = Vector{String}[]
     for r in results
-        reg = get(bounds, r.region, nothing)
-        row = [r.region,
-               isnothing(reg) ? "NA" : string(reg.lo),
-               isnothing(reg) ? "NA" : string(reg.hi),
-               groupname(r.group)]
+        row = [r.region; boundcells(r.region)]
+        append!(row, [csvvalue(get(r.group, k, nothing)) for k in keycols])
         for k in fitkeys
             append!(row, collect(valueerr(r.parameters, k)))
         end
-        for k in derived
+        for k in serieskeys
+            append!(row, collect(valueerr(r.postparameters, k)))
+        end
+        append!(row, repeat(["NA"], 2 * length(regionkeys)))
+        push!(rows, row)
+    end
+
+    # one region-scoped row per region, keys blank
+    isempty(regionkeys) && return header, rows
+    for label in unique(r.region for r in results)
+        holder = findfirst(r -> r.region == label &&
+                                any(haskey(r.postparameters, k) for k in regionkeys),
+                           results)
+        isnothing(holder) && continue
+        r = results[holder]
+        row = [label; boundcells(label)]
+        append!(row, repeat([""], length(keycols)))          # blank key: spans every group
+        append!(row, repeat(["NA"], 2 * (length(fitkeys) + length(serieskeys))))
+        for k in regionkeys
             append!(row, collect(valueerr(r.postparameters, k)))
         end
         push!(rows, row)
@@ -82,76 +180,94 @@ function resultstable(expt::Experiment1D, results, regs)
     return header, rows
 end
 
-"""
-    seriescolumn(result) -> String
+# ---- series.csv ---------------------------------------------------------------
 
-Column name for one series in `intensities.csv`: the region label, suffixed with the group
-where an experiment has more than one series per region (`amide_trosy`).
 """
-function seriescolumn(r::RegionResult)
-    return isempty(r.group) ? r.region : "$(r.region)_$(groupname(r.group))"
+    fitvalues(result) -> Vector{Float64}
+
+The model evaluated at the measured coordinates, for the `I_fit` column - not on a fine
+grid, so that a residual is a subtraction. `NaN` (written `NA`) where nothing was fitted.
+"""
+fitvalues(r::RegionResult) = fitvalues(r.model, r)
+fitvalues(::SeriesModel, r::RegionResult) = fill(NaN, length(r.x))
+function fitvalues(m::CurveFitModel, r::RegionResult)
+    isempty(r.parameters) && return fill(NaN, length(r.x))
+    p = [Measurements.value(v) for v in values(r.parameters)]
+    return m.func(r.x, p)
 end
 
 """
-    intensitiestable(expt, results) -> (header, rows)
+    seriestable(expt, dataset, results) -> (header, rows)
 
-Column names and rows for `intensities.csv`: the reduced quantity of every series against
-the evolution parameter. One row per value of the fit axis, one pair of columns (value and
-uncertainty) per series, i.e. times down the side and regions across the top - which is
-the shape a kinetics experiment wants, and readable straight into a spreadsheet or
-`DataFrame` for plotting.
+Column names and rows for `series.csv`: the measurements themselves, long, one row per
+series per coordinate point.
 
-Written for every experiment, not just the unfitted ones: the integrals behind a fit are
-worth having whether or not one was performed. For a `NoFitting` experiment it is the
-*only* place the deliverable appears, `results.csv` carrying fitted parameters of which
-such an experiment has none.
-
-Series need not share a fit axis (separate kinetics runs generally do not), so the rows
-are the sorted union of every series' own values and a series missing one reads `NA`
-there.
+`source` names the dataset each row came from and is always written, even when constant -
+it is provenance, not meaning, so whatever physical variable distinguishes several datasets
+(TRACT's `which`, a concentration) also appears as its own coordinate column.
 """
-function intensitiestable(expt::Experiment1D, results)
-    header = [string(fitaxis(expt))]
-    isempty(results) && return (header, Vector{String}[])
+function seriestable(expt::Experiment1D, ds::Dataset1D, results)
+    keycols = resultkeys(expt)
+    axis = fitaxis(expt)
+    header = ["source", "label"]
+    append!(header, [csvcolumn(k, coordinateunit(expt, k)) for k in keycols])
+    push!(header, csvcolumn(axis, coordinateunit(expt, axis)))
+    append!(header, ["I", "I_err", "I_fit"])
 
-    xs = sort(unique(Float64[x for r in results for x in r.x]))
-    for r in results
-        name = seriescolumn(r)
-        append!(header, [name, "$(name)_err"])
-    end
-
+    src = sources(ds)
     rows = Vector{String}[]
-    for x in xs
-        row = [string(x)]
-        for r in results
-            i = findfirst(==(x), r.x)
-            if isnothing(i)
-                append!(row, ["NA", "NA"])
-            else
-                append!(row, [string(Measurements.value(r.y[i])),
-                              string(Measurements.uncertainty(r.y[i]))])
-            end
+    for r in results
+        yfit = fitvalues(r)
+        for i in eachindex(r.x)
+            plane = i ≤ length(r.planes) ? r.planes[i] : 0
+            row = [1 ≤ plane ≤ length(src) ? src[plane] : ds.label, r.region]
+            append!(row, [csvvalue(get(r.group, k, nothing)) for k in keycols])
+            push!(row, csvvalue(r.x[i]))
+            append!(row, [csvvalue(Measurements.value(r.y[i])),
+                          csvvalue(Measurements.uncertainty(r.y[i])),
+                          csvvalue(yfit[i])])
+            push!(rows, row)
         end
-        push!(rows, row)
     end
     return header, rows
 end
 
-"""
-    writetable(filepath, expt, header, rows; extra=String[]) -> String
+# ---- global.csv ---------------------------------------------------------------
 
-Write one CSV: the experiment description as `#` comment lines (plus any `extra` comment
-lines), then `header`, then `rows`. Any existing file is backed up first. Returns the path.
 """
-function writetable(filepath::AbstractString, expt::Experiment1D, header, rows;
-                    extra=String[])
+    globaltable(expt, results) -> (header, rows)
+
+Column names and rows for `global.csv`: parameters recorded with `scope=:global`, which
+describe the whole analysis rather than any one region (a solvent viscosity is a property
+of the sample, identical for every region). Long, because these sets are small and
+structurally unlike each other, and de-duplicated, since a global quantity is recorded on
+every result that computes it.
+"""
+function globaltable(expt::Experiment1D, results)
+    header = ["parameter", "value", "error", "unit"]
+    rows = Vector{String}[]
+    for name in scopedkeys(results, :global)
+        r = results[findfirst(r -> haskey(r.postparameters, name), results)]
+        value, err = valueerr(r.postparameters, name)
+        push!(rows, [string(name), value, err, paramunit(expt, name)])
+    end
+    return header, rows
+end
+
+# ---- writing ------------------------------------------------------------------
+
+"""
+    writetable(filepath, expt, dataset, header, rows) -> String
+
+Write one CSV: the experiment description as `#` comment lines, then `header`, then `rows`.
+Any existing file is backed up first. Returns the path.
+"""
+function writetable(filepath::AbstractString, expt::Experiment1D, ds::Dataset1D, header,
+                    rows)
     backupfile(filepath)
     open(filepath, "w") do f
-        for line in split(experimentinfo(expt), '\n')
+        for line in split(experimentinfo(expt, ds), '\n')
             isempty(strip(line)) && continue
-            println(f, "# ", line)
-        end
-        for line in extra
             println(f, "# ", line)
         end
         println(f, join(header, ","))
@@ -163,21 +279,32 @@ function writetable(filepath::AbstractString, expt::Experiment1D, header, rows;
 end
 
 """
-    writeresults!(expt, state, folder) -> String
+    writeresults!(expt, dataset, results, regions, folder) -> String
 
-Write `results.csv` (fitted and derived parameters) and `intensities.csv` (the reduced
-series they were fitted to) into `folder`, backing up any existing ones first. Returns the
-path of `results.csv`.
+Write the whole result set into `folder`: `results.csv`, `series.csv`, `global.csv` (only
+where the analysis fits something globally), and one `regions/<label>.csv` per region
+holding that region's own rows of `series.csv`. Returns the path of `results.csv`.
 """
-function writeresults!(expt::Experiment1D, state, folder::AbstractString)
-    results, regs = state[:result][], state[:regions][]
-    # The noise position is a user choice the region bounds do not capture, so it is
-    # recorded for `readregions!` to restore.
-    noise = ["Noise position / ppm: $(round(state[:noisec][]; digits=4))"]
-    filepath = writetable(joinpath(folder, "results.csv"), expt,
-                          resultstable(expt, results, regs)...; extra=noise)
-    writetable(joinpath(folder, "intensities.csv"), expt,
-               intensitiestable(expt, results)...; extra=noise)
+function writeresults!(expt::Experiment1D, ds::Dataset1D, results, regs,
+                       folder::AbstractString)
+    isdir(folder) || mkpath(folder)
+    filepath = writetable(joinpath(folder, "results.csv"), expt, ds,
+                          resultstable(expt, results, regs)...)
+
+    header, rows = seriestable(expt, ds, results)
+    writetable(joinpath(folder, "series.csv"), expt, ds, header, rows)
+
+    # per-region files, beside the per-region plots `saveresults` writes
+    labelcol = findfirst(==("label"), header)
+    regionfolder = joinpath(folder, "regions")
+    isdir(regionfolder) || mkpath(regionfolder)
+    for reg in regs
+        writetable(joinpath(regionfolder, "$(safename(reg.label)).csv"), expt, ds, header,
+                   filter(row -> row[labelcol] == reg.label, rows))
+    end
+
+    gheader, grows = globaltable(expt, results)
+    isempty(grows) || writetable(joinpath(folder, "global.csv"), expt, ds, gheader, grows)
     return filepath
 end
 
@@ -186,8 +313,9 @@ end
 
 Restore a saved region list (and the noise position) from a `results.csv`, replacing
 whatever is currently set, and return the number of regions read. Regions are taken from
-the `region`/`lo`/`hi` columns, de-duplicated by label and kept in file order - a grouped
-experiment writes one row per (region, group), so the same region appears several times.
+the `label` (or, in files written before the column was renamed, `region`) and `lo`/`hi`
+columns, de-duplicated by label and kept in file order - a grouped experiment writes one
+row per (region, group), so the same region appears several times.
 
 Nothing else is read back: the parameter columns are outputs, recomputed from the restored
 regions the moment they are set.
@@ -197,6 +325,7 @@ function readregions!(state, filepath::AbstractString)
     regs = Region[]
     seen = Set{String}()
     colmap = nothing
+    labelcol = nothing
     for line in eachline(filepath)
         sline = strip(line)
         isempty(sline) && continue
@@ -207,13 +336,17 @@ function readregions!(state, filepath::AbstractString)
         end
         fields = strip.(split(sline, ','))
         if isnothing(colmap)
-            colmap = Dict(lowercase(name) => i for (i, name) in enumerate(fields))
-            all(haskey(colmap, c) for c in ("region", "lo", "hi")) ||
-                throw(ArgumentError("$filepath has no region/lo/hi columns"))
+            # Units are part of the header (`lo (ppm)`), so columns are located by their
+            # name with any parenthesised unit stripped.
+            colmap = Dict(lowercase(strip(replace(name, r"\s*\(.*\)$" => ""))) => i
+                          for (i, name) in enumerate(fields))
+            labelcol = get(colmap, "label", get(colmap, "region", nothing))
+            (isnothing(labelcol) || !haskey(colmap, "lo") || !haskey(colmap, "hi")) &&
+                throw(ArgumentError("$filepath has no label/lo/hi columns"))
             continue
         end
-        label = String(fields[colmap["region"]])
-        label in seen && continue
+        label = String(fields[labelcol])
+        (isempty(label) || label in seen) && continue
         lo, hi = fields[colmap["lo"]], fields[colmap["hi"]]
         (lo == "NA" || hi == "NA") && continue
         push!(seen, label)

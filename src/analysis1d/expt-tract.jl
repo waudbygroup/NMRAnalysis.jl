@@ -43,8 +43,12 @@ function tract(trosy, antitrosy; tau=nothing, regions=nothing, integration=nothi
     ωN = 2π * acqus(trosy, :bf3)
     f = tractf(; B0)
 
+    # Per-plane sources: this is the experiment that actually combines two files, so
+    # `series.csv` should say which spectrum each row came from rather than naming the
+    # TROSY one for both.
+    src = vcat(fill(speclabel(trosy), length(ttau)), fill(speclabel(antitrosy), length(atau)))
     ds = Dataset1D(Planes(traces, vars), defaultnoisecentre(trosy),
-                   speclabel(trosy))
+                   speclabel(trosy), src)
     expt = isnothing(regions) ? TractExperiment(ds; ωN, f) :
            TractExperiment(ds; ωN, f, regions)
     return run1d(expt; integration)
@@ -92,7 +96,7 @@ defaultamideregion(; label="amide") = Region(label, 7.5, 9.5)
 seriesmodel(::TractExperiment) = ExponentialModel()
 fitaxis(::TractExperiment) = :time
 groupcols(::TractExperiment) = (:which,)
-primaryparam(::TractExperiment) = :τc
+primaryparam(::TractExperiment) = :tauc
 
 # ---- 4. science ---------------------------------------------------------------
 
@@ -112,11 +116,13 @@ function postfitglobal!(results::AbstractVector{RegionResult}, e::TractExperimen
         ηxy = (param(rs[anti], :R) - param(rs[trosy], :R)) / 2
         τc = tracttauc(e.f, e.ωN, ηxy)
         # η and τc belong to the region, not to either series of the pair, so they are
-        # recorded once - on the TROSY member by convention. Recording them on both would
+        # recorded once - on the TROSY member by convention - and marked `scope=:region`,
+        # which is what keeps that arbitrary choice out of the output: the results file
+        # writes them as a row with the `which` key blank. Recording them on both would
         # print them twice in the results panel, which shows every series of the active
         # region, and duplicate them down the results file.
-        setpost!(rs[trosy], :ηxy, ηxy)
-        setpost!(rs[trosy], :τc, τc)
+        setpost!(rs[trosy], :etaxy, ηxy; scope=:region)
+        setpost!(rs[trosy], :tauc, τc; scope=:region)
     end
     return nothing
 end
@@ -185,12 +191,15 @@ end
 # everything about this experiment's presentation lives here. :R genuinely means
 # "relaxation rate" for both TROSY and anti-TROSY decays (unlike the shared table, which
 # leaves :R alone because nutation's decay rate shares the same bare symbol without the
-# same meaning); :ηxy and :τc only ever appear here, computed in `postfitglobal!` above.
+# same meaning); :etaxy and :tauc only ever appear here, computed in `postfitglobal!`
+# above. Their keys are ASCII even though the quantities are conventionally written η and
+# τc: a key becomes a CSV column header, and those are ASCII by convention (see
+# `docs/src/advanced/conventions.md`). The typeset form lives in the label below.
 const TRACT_PARAM_LABELS = Dict(:R => "Relaxation rate",
-                                :ηxy => "CCR rate (η)",
-                                :τc => "Correlation time (τc)")
-const TRACT_PARAM_UNITS = Dict(:ηxy => " s⁻¹",
-                               :τc => " ns")
+                                :etaxy => "CCR rate (η)",
+                                :tauc => "Correlation time (τc)")
+const TRACT_PARAM_UNITS = Dict(:etaxy => "s-1",
+                               :tauc => "ns")
 
 function paramlabel(::TractExperiment, name::Symbol)
     return get(TRACT_PARAM_LABELS, name, get(PARAM_LABELS, name, string(name)))

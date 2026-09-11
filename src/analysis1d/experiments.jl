@@ -54,9 +54,12 @@ their science.
 - `group`     : `NamedTuple` of grouping values (empty if ungrouped)
 - `x`         : evolution-parameter values (sorted)
 - `y`         : reduced quantities (`Vector{Measurement}`)
+- `planes`    : which plane of the dataset each point came from, in the same order, so the
+  series file can name its source spectrum
 - `parameters`     : the curve fit's own parameters (`A`, `R`, `ν`, …)
 - `postparameters` : quantities derived from them by [`postfit!`](@ref) /
-  [`postfitglobal!`](@ref) (`τc`, `pulse90`, `rH`, …)
+  [`postfitglobal!`](@ref) (`tauc`, `pulse90`, `rH`, …)
+- `postscopes`     : what each derived quantity describes - see [`setpost!`](@ref)
 - `model`     : the series model used
 - `converged` : whether the fit converged
 - `postfitted`: whether a derived result has been recorded
@@ -76,11 +79,21 @@ mutable struct RegionResult
     group::NamedTuple
     x::Vector{Float64}
     y::Vector{Measurement{Float64}}
+    planes::Vector{Int}
     parameters::OrderedDict{Symbol,Any}
     postparameters::OrderedDict{Symbol,Any}
+    postscopes::OrderedDict{Symbol,Symbol}
     model::Any
     converged::Bool
     postfitted::Bool
+end
+
+# Convenience constructor for the common case of a freshly fitted series, which has no
+# derived quantities yet.
+function RegionResult(region, group, x, y, planes, parameters, model, converged)
+    return RegionResult(region, group, x, y, planes, parameters,
+                        OrderedDict{Symbol,Any}(), OrderedDict{Symbol,Symbol}(), model,
+                        converged, false)
 end
 
 """
@@ -88,7 +101,7 @@ end
 
 Value of parameter `name` (a `Symbol` or a `String`) from a `RegionResult`: the fit's own
 parameters first, then the quantities derived from them by [`postfit!`](@ref) /
-[`postfitglobal!`](@ref). One accessor for both, so `param(r, :R)` and `param(r, :τc)`
+[`postfitglobal!`](@ref). One accessor for both, so `param(r, :R)` and `param(r, :tauc)`
 read alike and a caller need not know which stage produced a quantity.
 """
 function param(r::RegionResult, name::Symbol)
@@ -99,17 +112,40 @@ end
 param(r::RegionResult, name::AbstractString) = param(r, Symbol(name))
 
 """
-    setpost!(result, name, value)
+    setpost!(result, name, value; scope=:series)
 
 Record a derived quantity on `result` and mark it post-fitted. The `postfit!` /
 `postfitglobal!` counterpart of writing into `peak.postparameters` and setting
 `peak.postfitted[]` in GUI2D.
+
+`scope` says what the quantity actually describes, which decides where it is written (see
+`docs/src/advanced/conventions.md`):
+
+- `:series` (the default) - this series alone, e.g. nutation's 90° pulse length. Written on
+  this result's own row of `results.csv`.
+- `:region` - the whole region, across every group. TRACT's τc combines the TROSY and
+  anti-TROSY rates, so it describes the region rather than either component;
+  `postfitglobal!` still has to record it on one of the two, and the scope is what stops
+  that choice leaking into the output. Written as a row with the group keys left blank.
+- `:global` - the whole analysis, e.g. a solvent viscosity, which is a property of the
+  sample and the same for every region. Written to `global.csv`.
 """
-function setpost!(r::RegionResult, name::Symbol, value)
+function setpost!(r::RegionResult, name::Symbol, value; scope::Symbol=:series)
+    scope in (:series, :region, :global) ||
+        throw(ArgumentError("unknown parameter scope :$scope (expected :series, :region or :global)"))
     r.postparameters[name] = value
+    r.postscopes[name] = scope
     r.postfitted = true
     return value
 end
+
+"""
+    postscope(result, name) -> Symbol
+
+The scope recorded for a derived quantity by [`setpost!`](@ref), defaulting to `:series`
+for anything written into `postparameters` directly.
+"""
+postscope(r::RegionResult, name::Symbol) = get(r.postscopes, name, :series)
 
 """
     postfit!(result, expt)
@@ -165,13 +201,13 @@ function seriesresults(e::Experiment1D, ds::Dataset1D, regs; isfitting::Bool=tru
             x = Float64[ds.planes.vars[i][axis] for i in idx]
             y = I[idx]
             perm = sortperm(x)
-            x, y = x[perm], y[perm]
+            x, y, planes = x[perm], y[perm], idx[perm]
             fit = fitseries(model, x, y)
             parameters = OrderedDict{Symbol,Any}(Symbol(n) => p
                                                  for (n, p) in zip(fit.names, fit.params))
             push!(results,
-                  RegionResult(region.label, gkey, x, y, parameters,
-                               OrderedDict{Symbol,Any}(), fit.model, fit.converged, false))
+                  RegionResult(region.label, gkey, x, y, planes, parameters, fit.model,
+                               fit.converged))
         end
     end
     return results
@@ -229,7 +265,7 @@ call it directly where the rest of that state is wanted.
 function run1d(expt::Experiment1D; integration=nothing)
     isnothing(integration) && return gui!(expt)[:result][]
     d = dataset(expt)
-    ds = Dataset1D(d.planes, Float64(integration.noiseppm), d.label)
+    ds = Dataset1D(d.planes, Float64(integration.noiseppm), d.label, d.sources)
     return analyse(expt, ds, regionsfrom(integration))
 end
 

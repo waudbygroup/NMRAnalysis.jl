@@ -172,7 +172,9 @@ function postfit!(r::RegionResult, e::DiffusionExperiment)
     D = param(r, :D) * 1e-10                       # m² s⁻¹
     η = viscosity(e.solvent, e.temp)               # mPa s
     kB = 1.38e-23
-    setpost!(r, :viscosity, η)
+    # The viscosity is a property of the sample at this temperature, identical for every
+    # region, so it is global rather than a per-region result. rH is genuinely per region.
+    setpost!(r, :viscosity, η; scope=:global)
     setpost!(r, :rH, kB * e.temp / (6π * η * 0.001 * D) * 1e10)   # Å
     return nothing
 end
@@ -195,9 +197,9 @@ end
 # its unit, which was previously sitting in the shared table for no reason but this.
 const DIFFUSION_PARAM_LABELS = Dict(:D => "Diffusion coefficient",
                                     :viscosity => "η")
-const DIFFUSION_PARAM_UNITS = Dict(:D => " ×10⁻¹⁰ m² s⁻¹",
-                                   :rH => " Å",
-                                   :viscosity => " mPa s")
+const DIFFUSION_PARAM_UNITS = Dict(:D => "1e-10 m2/s",
+                                   :rH => "A",
+                                   :viscosity => "mPa s")
 
 function paramlabel(::DiffusionExperiment, name::Symbol)
     return get(DIFFUSION_PARAM_LABELS, name, get(PARAM_LABELS, name, string(name)))

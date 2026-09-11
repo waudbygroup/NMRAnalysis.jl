@@ -203,7 +203,7 @@ fmt(::Nothing, digits=4) = "n/a"
 
 # Units and display names for the handful of parameters genuinely shared by more than one
 # experiment - not a catch-all table. Everything specific to one experiment (TRACT's
-# :ηxy/:τc, nutation's :pulse90/:inhomogeneity, diffusion's :D/:rH/:viscosity, relaxation's
+# :etaxy/:tauc, nutation's :pulse90/:inhomogeneity, diffusion's :D/:rH/:viscosity, relaxation's
 # :C, ...) is defined in that experiment's own expt-*.jl, in its own local table, alongside
 # the `postfit!`/model that produces it - see `paramlabel`/`paramunit` below. Putting any
 # of that here instead is exactly the mistake this split exists to prevent: it scatters
@@ -220,7 +220,7 @@ fmt(::Nothing, digits=4) = "n/a"
 # rate" would mislabel the latter. So :R gets a unit here but its label is left to each
 # experiment that needs one (relaxation and TRACT override it; nutation deliberately
 # doesn't, falling back to the bare "R" this table would otherwise give it).
-const PARAM_UNITS = Dict(:R => " s⁻¹")
+const PARAM_UNITS = Dict(:R => "s-1")
 const PARAM_LABELS = Dict(:A => "Amplitude")
 
 """
@@ -232,9 +232,50 @@ default here falls back to the small shared tables above (only the symbols genui
 universal across experiments), then to the bare symbol/no unit. Every experiment that
 introduces its own parameters overrides these with its own local table - see e.g.
 `NUTATION_PARAM_LABELS` in `expt-nutation.jl`.
+
+Units are held in **ASCII** (`"s-1"`, `"us"`, `"1e-10 m2/s"`), because that is the form the
+CSV column headers carry and a file header must survive being opened on any machine - see
+`docs/src/advanced/conventions.md`. [`prettyunit`](@ref) turns one into the typeset form
+for the GUI panel and `summary.txt`, so there is one table rather than two that can drift.
 """
 paramlabel(::Experiment1D, name::Symbol) = get(PARAM_LABELS, name, string(name))
 paramunit(::Experiment1D, name::Symbol) = get(PARAM_UNITS, name, "")
+
+"""
+    prettyunit(unit) -> String
+
+The typeset form of an ASCII unit, for display only: `"s-1"` → `" s⁻¹"`, `"us"` → `" µs"`.
+Includes the leading space, so it appends directly to a formatted value, and returns `""`
+for a dimensionless quantity. Anything not in the table is shown as written, which is the
+right answer for units that are already fine in ASCII (`"Hz"`, `"ns"`, `"%"`).
+"""
+function prettyunit(unit::AbstractString)
+    isempty(unit) && return ""
+    return " " * get(PRETTY_UNITS, unit, unit)
+end
+
+const PRETTY_UNITS = Dict("s-1" => "s⁻¹",
+                          "us" => "µs",
+                          "A" => "Å",
+                          "m2/s" => "m² s⁻¹",
+                          "1e-10 m2/s" => "×10⁻¹⁰ m² s⁻¹")
+
+"Display unit for a parameter: [`paramunit`](@ref) in its typeset form."
+prettyparamunit(e::Experiment1D, name::Symbol) = prettyunit(paramunit(e, name))
+
+"""
+    coordinateunit(expt, name) -> String
+
+ASCII unit for a *coordinate* - the fit axis, or a grouping variable - as it appears in the
+column headers of `results.csv` and `series.csv`. Distinct from [`paramunit`](@ref) because
+a coordinate is an input to the analysis rather than an output of it, and the two name spaces
+are independent: nothing stops an experiment arraying a variable that shares a name with a
+fitted parameter. Categorical coordinates (TRACT's `:which`, kinetics' `:run`) and relative
+ones (diffusion's `:gradient`, a fraction of maximum) have no unit.
+"""
+coordinateunit(::Experiment1D, name::Symbol) = get(COORDINATE_UNITS, name, "")
+
+const COORDINATE_UNITS = Dict(:time => "s", :duration => "s")
 
 """
     groupheader(expt, group) -> String
@@ -275,7 +316,8 @@ function paramblock(io::IO, expt::Experiment1D, params, width=nothing)
     w = something(width,
                   maximum(length(paramlabel(expt, name)) for name in keys(params)) + 2)
     for (name, value) in params
-        println(io, "$(rpad(paramlabel(expt, name), w))$(fmt(value))$(paramunit(expt, name))")
+        println(io,
+                "$(rpad(paramlabel(expt, name), w))$(fmt(value))$(prettyparamunit(expt, name))")
     end
     return nothing
 end

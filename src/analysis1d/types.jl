@@ -108,11 +108,18 @@ Whether the planes carry an arrayed variable called `name`.
 hasvar(p::Planes, name::Symbol) = !isempty(p.vars) && haskey(first(p.vars), name)
 
 """
-    Dataset1D(planes, noisecenter, [label])
+    Dataset1D(planes, noisecenter, [label, [sources]])
 
-The planes plus the universal noise position (ppm), and a `label` describing where the
-data came from (a filename, say) - a plain `String`, so results files can say what they
-were computed from without NMRData re-entering the analysis core. The noise *region* used to estimate
+The planes plus the universal noise position (ppm), a `label` describing where the data
+came from (a filename, say) and `sources`, the same thing per plane. Both are plain
+`String`s, so results files can say what they were computed from without NMRData
+re-entering the analysis core.
+
+`sources` is per plane rather than per dataset because an experiment may combine several
+files: TRACT loads a TROSY and an anti-TROSY spectrum, and kinetics may cover several
+samples. It defaults to `label` repeated, which is right for the single-file case. It is
+deliberately *not* one of the plane variables: it is provenance, not a coordinate, and two
+files may be replicates with identical coordinates. The noise *region* used to estimate
 uncertainty always has the same width as whichever signal region is being reduced (see
 [`reduceregion`](@ref)) — matching widths is what makes the noise-region integral a
 direct estimate of the signal-region integral's noise — so only the noise centre is
@@ -123,11 +130,28 @@ struct Dataset1D
     planes::Planes
     noisecenter::Float64
     label::String
+    sources::Vector{String}
+    function Dataset1D(planes, noisecenter, label, sources)
+        length(sources) == nplanes(planes) ||
+            throw(ArgumentError("got $(length(sources)) sources for " *
+                                "$(nplanes(planes)) planes"))
+        return new(planes, Float64(noisecenter), String(label), collect(String, sources))
+    end
 end
 
-Dataset1D(planes, noisecenter) = Dataset1D(planes, Float64(noisecenter), "")
+function Dataset1D(planes, noisecenter, label="")
+    return Dataset1D(planes, noisecenter, label, fill(String(label), nplanes(planes)))
+end
 
 nplanes(d::Dataset1D) = nplanes(d.planes)
+
+"""
+    sources(dataset) -> Vector{String}
+
+Where each plane came from, one entry per plane. This is what the `source` column of
+`series.csv` carries.
+"""
+sources(d::Dataset1D) = d.sources
 
 """
     groupseries(planes, cols) -> Vector{Pair{NamedTuple,Vector{Int}}}

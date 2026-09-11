@@ -71,7 +71,7 @@ t_{90} = \frac{1}{4\nu}, \qquad
 | Parameter | Meaning |
 |---|---|
 | `A` | Amplitude |
-| `ν` | Nutation frequency, Hz |
+| `nu` | Nutation frequency, Hz |
 | `R` | Decay rate, s⁻¹ |
 | `pulse90` | 90° pulse length, µs |
 | `inhomogeneity` | B₁ inhomogeneity, % |

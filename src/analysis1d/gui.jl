@@ -694,15 +694,20 @@ function pickregion(specs::AbstractVector; kwargs...)
 end
 
 """Save the results, covering every region (not just the active one shown live in the GUI
-panels), to the output folder: `results.csv` (machine-readable, and the file a region list
-is restored from - see `readregions!`), `summary.txt`, an overlay of every region in
-`fit.pdf`, and one `fit_<region>.pdf` per region on its own."""
+panels), to the output folder, in the layout described in
+`docs/src/advanced/conventions.md`: `summary.txt` to read, `results.csv` / `series.csv` /
+`global.csv` to compute with (`results.csv` is also the file a region list is restored from
+- see `readregions!`), an overlay of every region in `fit.pdf`, and a `regions/` folder
+holding each region's own plot and the data behind it under the same basename."""
 function saveresults(state)
     dir = joinpath(pwd(), state[:outputdir][])
-    isdir(dir) || mkpath(dir)
+    regionsdir = joinpath(dir, "regions")
+    isdir(regionsdir) || mkpath(regionsdir)
     expt = state[:expt]
+    ds = state[:dataset][]
     result = state[:result][]
-    labels = [r.label for r in state[:regions][]]
+    regs = state[:regions][]
+    labels = [r.label for r in regs]
     xl, yl = resultlabels(expt)
 
     # no gridlines (matching the live GUI panels), but keep a visible zero line
@@ -720,29 +725,46 @@ function saveresults(state)
     i > 1 && axislegend(ax; position=:rt)
     save(joinpath(dir, "fit.pdf"), fig; backend=CairoMakie)
 
-    # one plot per region
+    # one plot per region, sharing its basename with that region's CSV so the data behind
+    # a plot is beside it
     for label in labels
         fig1 = Figure()
         ax1 = newfitaxis(fig1)
         hlines!(ax1, [0]; color=:grey)
         n1 = plotresult!(ax1, expt, result, label, 0)
         n1 > 1 && axislegend(ax1; position=:rt)
-        save(joinpath(dir, "fit_$label.pdf"), fig1; backend=CairoMakie)
+        save(joinpath(regionsdir, "$(safename(label)).pdf"), fig1; backend=CairoMakie)
     end
 
-    open(joinpath(dir, "summary.txt"), "w") do f
-        println(f, "Integration regions (ppm):")
-        for r in state[:regions][]
+    writesummary(joinpath(dir, "summary.txt"), expt, ds, result, regs)
+    writeresults!(expt, ds, result, regs, dir)
+    @info "Saved results to $dir"
+    return dir
+end
+
+"""
+    writesummary(filepath, expt, dataset, results, regions)
+
+Write `summary.txt`: the human-readable record of the analysis, and the one output where
+numbers are rounded for reading rather than written at full precision.
+"""
+function writesummary(filepath, expt::Experiment1D, ds::Dataset1D, results, regs)
+    backupfile(filepath)
+    open(filepath, "w") do f
+        for line in split(experimentinfo(expt, ds), '\n')
+            isempty(strip(line)) && continue
+            println(f, line)
+        end
+        println(f)
+        println(f, "Integration regions / ppm:")
+        for r in regs
             println(f,
                     "  $(r.label): $(round(r.lo; digits=4)) to $(round(r.hi; digits=4))")
         end
-        println(f, "Noise position (ppm): $(round(state[:noisec][]; digits=4))")
         println(f)
-        for label in labels
-            print(f, summarytext(expt, result, label))
+        for r in regs
+            print(f, summarytext(expt, results, r.label))
         end
     end
-    writeresults!(expt, state, dir)
-    @info "Saved results to $dir"
-    return dir
+    return filepath
 end
