@@ -26,9 +26,18 @@ relaxation delay) and is repeated down the rows.
 
 Named per quantity rather than reduced to one `x` column, so that a saved file says what
 its planes actually were. This is the same hook Exchange1D defines for the same reason.
+
+The two generic experiment types differ only by the model fitted, so they delegate to a
+second method dispatching on that: `rdc2d` needs two keys where a titration needs one.
 """
-seriescoordinates(e::IntensityExperiment) = [coordinatename(e.model) => e.x]
-seriescoordinates(e::MovingExperiment) = [coordinatename(e.model) => e.x]
+seriescoordinates(e::IntensityExperiment) = seriescoordinates(e, e.model)
+seriescoordinates(e::MovingExperiment) = seriescoordinates(e, e.model)
+seriescoordinates(e, model::FittingModel) = [coordinatename(model) => e.x]
+
+# Nothing was arrayed, so the plane index is the coordinate - and `series.csv` already
+# carries it as a column of its own.
+seriescoordinates(e, ::NoFitting) = Pair{Symbol,Any}[]
+
 function seriescoordinates(e::CESTExperiment)
     return [:offset => e.frequencies, :B1 => e.B1, :Tsat => e.Tsat]
 end
@@ -44,7 +53,6 @@ fallback is the uninformative `:x`, which is the honest answer for a model fitte
 whatever the caller supplied (`modelfit2d`).
 """
 coordinatename(::FittingModel) = :x
-coordinatename(::NoFitting) = :plane
 coordinatename(::ExponentialModel) = :time
 coordinatename(::RecoveryModel) = :time
 coordinatename(::MethylCCRModel) = :time
@@ -57,10 +65,10 @@ coordinateunit(name::Symbol) = get(COORDINATE_UNITS, name, "")
 
 # ---- units --------------------------------------------------------------------
 
-# ASCII units for the fitted and derived parameters, as they appear in column headers. Only
-# what can be stated with confidence: a parameter missing here gets no unit rather than a
-# guessed one. `Kd` is the notable blank - a titration's concentrations come from the
-# sample metadata, so its units are whatever that metadata used.
+# ASCII units for the parameters shared by more than one experiment, as they appear in
+# column headers. A parameter missing here gets no unit rather than a guessed one; `Kd` is
+# the notable blank, a titration's concentrations coming from the sample metadata, so its
+# units are whatever that metadata used.
 const PARAM_UNITS = Dict(:x => "ppm", :y => "ppm", :R2x => "s-1", :R2y => "s-1",
                          :R => "s-1", :R1 => "s-1", :R2 => "s-1", :R20 => "s-1",
                          :PRE => "s-1", :eta => "s-1", :S2tc => "ns",
@@ -68,18 +76,42 @@ const PARAM_UNITS = Dict(:x => "ppm", :y => "ppm", :R2x => "s-1", :R2y => "s-1",
                          :Xfree => "ppm", :Xbound => "ppm",
                          :Yfree => "ppm", :Ybound => "ppm")
 
+"""
+    paramunit(expt, name) -> String
+
+ASCII unit for a fitted or derived parameter, as it appears in a column header.
+Experiment-dispatched, so an experiment introducing its own parameters declares their
+units in its own `expt-*.jl` rather than here; the default falls back to the shared table
+above and then to no unit.
+"""
+paramunit(::Experiment, name::Symbol) = get(PARAM_UNITS, name, "")
 paramunit(name::Symbol) = get(PARAM_UNITS, name, "")
 
 """
     globalparams(expt) -> Vector{Symbol}
 
-Derived parameters that are fitted once across every peak rather than per peak, and so
-belong in `global.csv`. A titration's `Kd` is the case: it is fitted globally and then
-copied onto every peak, so writing it in `results.csv` would repeat one number down a
-column.
+Derived parameters fitted once across every peak rather than per peak, and so belonging in
+`global.csv`. A titration's `Kd` is fitted globally and then copied onto every peak, so
+writing it in `results.csv` would repeat one number down a column.
+
+Declared beside the `postfitglobal!` that computes it - see `globalparams(::TitrationModel)`
+in `expt-moving.jl`.
 """
 globalparams(::Experiment) = Symbol[]
-globalparams(e::MovingExperiment) = e.model isa TitrationModel ? [:Kd] : Symbol[]
+globalparams(::FittingModel) = Symbol[]
+globalparams(e::IntensityExperiment) = globalparams(e.model)
+globalparams(e::MovingExperiment) = globalparams(e.model)
+
+"""
+    fittedamplitudes(peak, expt) -> Vector{Float64}
+
+The model evaluated at each plane's own coordinate, for the `amp_fit` column of
+`series.csv`, so that a residual is a subtraction. `NaN` (written `NA`) for every plane
+where nothing was fitted through the amplitudes themselves: a heteronuclear NOE, a CCR
+rate and a CEST profile are fitted from ratios or from transformed intensities, so no
+curve passes through the amplitudes to report.
+"""
+fittedamplitudes(peak, expt) = fill(NaN, nslices(expt))
 
 # ---- provenance ---------------------------------------------------------------
 
@@ -126,39 +158,26 @@ end
 """
     resultstable(expt) -> (header, rows)
 
-Column names and rows for `results.csv`: one row per peak, carrying its identity, its
-position and linewidths where those are properties of the peak rather than of each plane,
-and the parameters derived from the fit.
+Column names and rows for `results.csv`: one row per peak, its identity and the parameters
+derived from the fit. This is the table to plot against residue number.
 
-A moving-peak experiment's positions vary plane by plane and so are in `series.csv`
-instead; only a fixed-peak experiment has a single position to report here.
+Positions and linewidths are not here. They are per-plane quantities that happen to take
+one value per plane when the peaks are fixed, so they live in `series.csv` whether or not
+they move, and the layout is the same either way.
 """
 function resultstable(expt)
-    peaks = sortedpeaks(expt)
     derived = derivedkeys(expt)
-    fixed = hasfixedpositions(expt)
 
     header = ["label", "resnum", "resname", "atom"]
-    if fixed
-        for p in POSITION_PARAMS
-            append!(header, collect(csvcolumns(p, paramunit(p))))
-        end
-    end
     for k in derived
-        append!(header, collect(csvcolumns(k, paramunit(k))))
+        append!(header, collect(csvcolumns(k, paramunit(expt, k))))
     end
 
     rows = Vector{String}[]
-    for peak in peaks
+    for peak in sortedpeaks(expt)
         lbl = parse_label(peak.label[])
         row = [peak.label[], string(lbl.resnum),
                lbl.onelettercode == '?' ? "" : string(lbl.onelettercode), lbl.atom]
-        if fixed
-            for p in POSITION_PARAMS
-                push!(row, format_param(peak, p, 1, :value))
-                push!(row, format_param(peak, p, 1, :uncertainty))
-            end
-        end
         for k in derived
             push!(row, format_post(peak, k, :value))
             push!(row, format_post(peak, k, :uncertainty))
@@ -216,34 +235,42 @@ end
     seriestable(expt) -> (header, rows)
 
 Column names and rows for `series.csv`: one row per peak per plane, with the plane's
-coordinates and the quantities measured there.
+coordinates and everything measured there - the amplitude, the position and the linewidths.
+A fixed-peak experiment simply repeats its one position down the rows.
 
-Every experiment contributes the amplitude. A moving-peak experiment contributes its
-positions and linewidths too, those varying plane by plane; for a fixed-peak experiment
-they are single values and stay in `results.csv`.
+`plane` is always written and is load-bearing where the planes share one file: every row of
+a pseudo-3D experiment has the same `source`, and the plane index is then the only thing
+telling two rows apart.
 """
 function seriestable(expt)
     n = nslices(expt)
     coords = seriescoordinates(expt)
-    values = hasfixedpositions(expt) ? (:amp,) : (:amp, POSITION_PARAMS...)
 
-    header = ["source", "label"]
+    header = ["source", "label", "plane"]
     append!(header, [csvcolumn(name, coordinateunit(name)) for (name, _) in coords])
-    for k in values
-        append!(header, collect(csvcolumns(k, paramunit(k))))
+    append!(header, collect(csvcolumns(:amp, paramunit(expt, :amp))))
+    push!(header, csvcolumn("amp_fit", paramunit(expt, :amp)))
+    for k in POSITION_PARAMS
+        append!(header, collect(csvcolumns(k, paramunit(expt, k))))
     end
 
     rows = Vector{String}[]
-    for peak in sortedpeaks(expt), i in 1:n
-        row = [planesource(expt, i), peak.label[]]
-        for (_, value) in coords
-            push!(row, csvvalue(value isa AbstractVector ? value[i] : value))
+    for peak in sortedpeaks(expt)
+        ampfit = fittedamplitudes(peak, expt)
+        for i in 1:n
+            row = [planesource(expt, i), peak.label[], string(i)]
+            for (_, value) in coords
+                push!(row, csvvalue(value isa AbstractVector ? value[i] : value))
+            end
+            push!(row, format_param(peak, :amp, i, :value))
+            push!(row, format_param(peak, :amp, i, :uncertainty))
+            push!(row, csvvalue(ampfit[i]))
+            for k in POSITION_PARAMS
+                push!(row, format_param(peak, k, i, :value))
+                push!(row, format_param(peak, k, i, :uncertainty))
+            end
+            push!(rows, row)
         end
-        for k in values
-            push!(row, format_param(peak, k, i, :value))
-            push!(row, format_param(peak, k, i, :uncertainty))
-        end
-        push!(rows, row)
     end
     return header, rows
 end
@@ -264,7 +291,7 @@ function globaltable(expt)
         i = findfirst(p -> haskey(p.postparameters, k), peaks)
         isnothing(i) && continue
         push!(rows, [string(k), format_post(peaks[i], k, :value),
-                     format_post(peaks[i], k, :uncertainty), paramunit(k)])
+                     format_post(peaks[i], k, :uncertainty), paramunit(expt, k)])
     end
     return header, rows
 end
@@ -274,10 +301,13 @@ end
 """
     writeresults!(expt, folder) -> String
 
-Write `peaklist.csv` (what was picked), `results.csv`, `series.csv`, `global.csv` (where
-the experiment fits anything globally) and one `peaks/<label>.csv` per peak into `folder`,
-and return the path of `results.csv`. The per-peak files hold that peak's own rows of `series.csv`, so the data
-behind each plot sits beside it under the same basename.
+Write `peaklist.csv` (what was picked), `series.csv`, `results.csv` and `global.csv` (each
+where there is anything to put in it) and one `peaks/<label>.csv` per peak into `folder`,
+and return the path of the series file. The per-peak files hold that peak's own rows of
+`series.csv`, so the data behind each plot sits beside it under the same basename.
+
+`results.csv` is skipped by an experiment that derives nothing per peak (`fit2d`,
+`peaktrack2d`): it would carry peak labels and no values.
 """
 function writeresults!(expt, folder)
     comments = resultcomments(expt)
@@ -285,10 +315,11 @@ function writeresults!(expt, folder)
     # What the user picked, kept apart from what the fit produced - see `peaklisttable`.
     writetable(joinpath(folder, "peaklist.csv"), comments, peaklisttable(expt)...)
 
-    filepath = writetable(joinpath(folder, "results.csv"), comments, resultstable(expt)...)
+    isempty(derivedkeys(expt)) ||
+        writetable(joinpath(folder, "results.csv"), comments, resultstable(expt)...)
 
     header, rows = seriestable(expt)
-    writetable(joinpath(folder, "series.csv"), comments, header, rows)
+    filepath = writetable(joinpath(folder, "series.csv"), comments, header, rows)
 
     labelcol = findfirst(==("label"), header)
     for peak in expt.peaks[]
@@ -326,7 +357,15 @@ function writesummary(filepath, expt)
             end
             println(f)
         end
-        unit = paramunit(primary)
+        # An experiment that derives nothing per peak (fit2d, peaktrack2d) has :amp as its
+        # primary parameter, which is per plane and so lives in `parameters`. Say where the
+        # numbers are rather than print a heading with nothing under it.
+        if !any(haskey(p.postparameters, primary) for p in peaks)
+            println(f, "Nothing is derived per peak. The fitted amplitudes, positions and")
+            println(f, "linewidths of each peak in each plane are in series.csv.")
+            return nothing
+        end
+        unit = paramunit(expt, primary)
         println(f, "$(primary)$(isempty(unit) ? "" : " / $unit") by peak:")
         for peak in peaks
             haskey(peak.postparameters, primary) || continue

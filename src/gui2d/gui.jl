@@ -109,7 +109,16 @@ function gui!(expt::Experiment)
 
     # peak info
     g[:cmdload] = Button(g[:panelinfo][1, 1]; label="Load peak list")
-    g[:cmdsave] = Button(g[:panelinfo][1, 2]; label="Save to folder")
+    # Output folder typed rather than chosen from a native dialog: the dialog cannot create
+    # a folder on every platform, and a typed name is what makes a save repeatable.
+    outputrow = g[:panelinfo][1, 2] = GridLayout()
+    g[:toutput] = Textbox(g[:fig]; width=90, placeholder="out")
+    outputrow[1, 1] = g[:toutput]
+    on(g[:toutput].stored_string) do s
+        return expt.state[][:outputdir][] = s
+    end
+    g[:cmdsave] = Button(g[:fig]; label="Save")
+    outputrow[1, 2] = g[:cmdsave]
     g[:cmdrename] = Button(g[:panelinfo][2, 1]; label="(R)ename peak")
     g[:cmddelete] = Button(g[:panelinfo][2, 2]; label="(D)elete peak")
     Label(g[:panelinfo][3, 1:2], addpeakhint(expt); word_wrap=true)

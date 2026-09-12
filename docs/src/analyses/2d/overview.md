@@ -80,18 +80,23 @@ Clicking **Save to folder** writes the following files:
 |------|---------|
 | `summary.txt` | The record to read: where the data came from, the fitting radii, and the headline parameter for every peak |
 | `peaklist.csv` | The peaks you picked and where you placed them, with the fitting radii. This is what **Load** reads |
-| `results.csv` | One row per peak: identity, position and linewidths, and any derived parameters (relaxation rates, NOE values, …), each with uncertainties |
-| `series.csv` | The measurements, one row per peak per plane: the plane's own coordinate and the amplitude fitted there |
+| `results.csv` | One row per peak: its identity and the derived parameters (relaxation rates, NOE values, …), each with an uncertainty. This is the table to plot against residue number |
+| `series.csv` | The measurements, one row per peak per plane: the plane index and its own coordinate, then the amplitude, the fitted amplitude, the position and the linewidths |
 | `global.csv` | Anything fitted once across every peak, such as a titration `Kd`. Absent when there is nothing global |
 | `summary.pdf` | Summary plot of the primary fitted parameter against residue number (or atom for methyl/non-backbone experiments) |
 | `peaks/LABEL.pdf` and `.csv` | Each peak's fit plot, and the data behind it under the same name |
 | `cluster_LABEL.pdf` | Zoomed 2D contour plot (first plane) with fitted lineshapes for each group of overlapping peaks |
 
-Anything that varies plane by plane is in `series.csv`: the amplitude always, and
-for a moving-peak experiment (titrations, peak tracking, RDCs) the positions and
-linewidths too. Each row names the plane's own coordinate, so a relaxation series
-records the delay and a titration the concentration, rather than an `amp[7]`
-column whose meaning has to be remembered.
+Anything that varies plane by plane is in `series.csv`: the amplitude, the position and
+the linewidths. A peak that does not move simply repeats its position down the rows, so the
+layout is the same whether or not the peaks track. Each row names the plane's own
+coordinate, so a relaxation series records the delay and a titration the concentration,
+rather than an `amp[7]` column whose meaning has to be remembered.
+
+`amp_fit` is the model evaluated at that plane's coordinate, so a residual is a
+subtraction. It is `NA` where nothing is fitted through the amplitudes themselves: a
+heteronuclear NOE, a CCR rate and a CEST profile are fitted from ratios or from
+transformed intensities.
 
 Every CSV has experiment metadata in `#`-comment lines above an ordinary header
 row, so it opens directly in spreadsheets and `pandas`. Column headers carry

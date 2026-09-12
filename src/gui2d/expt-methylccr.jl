@@ -252,6 +252,17 @@ function postfit!(peak::Peak, expt::IntensityExperiment, model::MethylCCRModel)
     return
 end
 
+# Both halves of the series share one list of delays, so `time (s)` alone cannot tell a
+# buildup plane from a decay plane; only the filename could, and that is provenance.
+function seriescoordinates(e::IntensityExperiment, m::MethylCCRModel)
+    n = length(m.times)
+    return Pair{Symbol,Any}[:buildup => [i ≤ n for i in 1:nslices(e)], :time => e.x]
+end
+
+# The model is fitted through the buildup/decay ratio, not through the amplitudes, so no
+# curve passes through the amplitudes to report in `amp_fit`.
+fittedamplitudes(peak, expt::IntensityExperiment, ::MethylCCRModel) = fill(NaN, nslices(expt))
+
 function get_model_data(peak, expt::IntensityExperiment, model::MethylCCRModel)
     isnothing(peak) &&
         return (Point2f[], _empty_errorbars(), Point2f[], Point2f[], _empty_errorbars())

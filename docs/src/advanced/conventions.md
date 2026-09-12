@@ -230,12 +230,10 @@ what the experiment was.
 
 Still outstanding:
 
-- GUI2D writes a fixed-peak experiment's positions and linewidths into `results.csv`. They
-  are per-plane quantities that happen to have one value per plane, so they belong in
-  `series.csv` for every experiment, moving or not.
+- GUI2D has no `Reproduce:` block, and no equivalent of `AnalysisCall` to record what each
+  routine was given.
 - Analysis1D has no `global.csv` because no 1D analysis currently fits anything across
   regions. `postfitglobal!` exists and will need somewhere to put its results when one does.
 - The `Reproduce:` line records the resolved arguments but not *where* each came from (an
   annotation, the `vdlist`, a question), which needs the resolution chain to report its own
   winner rather than only its result.
-- The 2D save button opens a native folder dialog rather than the text box chosen in review.

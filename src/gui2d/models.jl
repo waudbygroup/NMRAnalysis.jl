@@ -138,6 +138,16 @@ function get_model_data(peak, expt::Experiment, ::NoFitting)
     return (obs_points, obs_errors, Point2f[], skip_points, skip_errors)
 end
 
+# The fitted curve at the measured coordinates, for `series.csv`'s amp_fit column. Only a
+# model fitted through the amplitudes themselves has one; the default in output.jl answers
+# NaN for the rest.
+function fittedamplitudes(peak, expt::Experiment, model::ParametricModel)
+    peak.postfitted[] || return fill(NaN, nslices(expt))
+    p = [peak.postparameters[Symbol(name)].value[][1] for name in model.param_names]
+    return collect(Float64, model.func(expt.x, p))
+end
+fittedamplitudes(peak, expt::Experiment, ::FittingModel) = fill(NaN, nslices(expt))
+
 # Generic parametric model visualization
 function get_model_data(peak, expt::Experiment, model::ParametricModel)
     isnothing(peak) &&

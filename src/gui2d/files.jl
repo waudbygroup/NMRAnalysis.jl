@@ -19,8 +19,7 @@ function loadpeaks!(expt)
 end
 
 function saveresults!(expt)
-    folder = pick_folder()
-    folder == "" && return
+    folder = joinpath(pwd(), expt.state[][:outputdir][])
 
     @info "Saving results to $folder"
     @async begin
@@ -143,9 +142,8 @@ function readpeaklist!(expt, filepath::AbstractString)
         # A peak list written by this program carries a `plane` column, which is what
         # distinguishes one position per peak from a whole hand-tracked trajectory.
         haskey(columns, "plane") && return readtrackedpeaks!(expt, filepath, columns)
-        # A results.csv for a moving-peak experiment has no positions at all - they are
-        # input, not output (see docs/src/advanced/conventions.md) - so look for the peak
-        # list beside it, falling back to the series data.
+        # results.csv carries no positions: they are input, not output, and the fitted
+        # ones are per plane. So look for the peak list beside it, then the series data.
         if !haskey(columns, "x") && !haskey(columns, "x[1]")
             for name in ("peaklist.csv", "series.csv")
                 beside = joinpath(dirname(filepath), name)

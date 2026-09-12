@@ -12,6 +12,9 @@ function preparestate(expt::Experiment)
 
     state[:total_peaks] = Observable(length(expt.peaks[]))
 
+    # Output folder, relative to the working directory, typed into the box beside Save.
+    state[:outputdir] = Observable("out")
+
     state[:current_slice] = Observable(1)
 
     state[:current_slice_label] = lift(idx -> slicelabel(expt, idx), state[:current_slice])

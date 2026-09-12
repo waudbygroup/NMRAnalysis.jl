@@ -454,6 +454,8 @@ function get_model_data(peak, expt::IntensityExperiment)
     return get_model_data(peak, expt, expt.model)
 end
 
+fittedamplitudes(peak, expt::IntensityExperiment) = fittedamplitudes(peak, expt, expt.model)
+
 function peakinfotext(expt::IntensityExperiment, idx)
     if idx == 0
         return "No peak selected"

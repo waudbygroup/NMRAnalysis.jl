@@ -571,10 +571,11 @@ struct RDCModel <: FittingModel
     couplingdim::Type
     scale::Float64
     gammasign::Float64
+    components::Tuple{String,String}
 end
 
 """
-    rdc2d(; isotropic, aligned, coupling=nothing, scale=1)
+    rdc2d(; isotropic, aligned, components=("a","b"), coupling=nothing, scale=1)
 
 Interactive measurement of one-bond couplings and residual dipolar couplings from paired
 2D spectra. Supply the two doublet-component spectra (already combined, e.g. IPAP α/β, or
@@ -592,12 +593,13 @@ across the planes (T) or add and adjust by hand (A); the per-residue postfit the
 
 where `sep` is the position difference between the two components in the coupling dimension
 (converted to Hz). `scale` is 1 for IPAP and 0.5 for HSQC/TROSY (the separation is then half
-the coupling). `coupling` selects the dimension (`:F1`/`:F2`); it defaults to the
+the coupling). `components` names the two, for the `component` column of `series.csv`, e.g.
+`("TROSY", "anti-TROSY")`. `coupling` selects the dimension (`:F1`/`:F2`); it defaults to the
 heteronuclear dimension, and the sign is flipped automatically for ¹⁵N (so J ≈ −93 Hz). List
 the two components in the same order for both conditions; if J comes out with the wrong sign,
 swap the pair. Each component can also be given as a Bruker experiment number.
 """
-function rdc2d(; isotropic, aligned, coupling=nothing, scale=1.0)
+function rdc2d(; isotropic, aligned, components=("a", "b"), coupling=nothing, scale=1.0)
     length(isotropic) == 2 || error("`isotropic` must be two component spectra, e.g. [A, B]")
     length(aligned) == 2 || error("`aligned` must be two component spectra, e.g. [A, B]")
 
@@ -606,9 +608,11 @@ function rdc2d(; isotropic, aligned, coupling=nothing, scale=1.0)
     length(specdata.z) == 4 ||
         error("expected 4 single-plane spectra (got $(length(specdata.z))); each input must be a 2D spectrum")
 
+    length(components) == 2 || error("`components` must name the two doublet components")
     couplingdim = _resolve_coupling_dim(specdata, coupling)
     model = RDCModel((1, 2), (3, 4), couplingdim, Float64(scale),
-                     _gamma_sign(specdata, couplingdim))
+                     _gamma_sign(specdata, couplingdim),
+                     (String(components[1]), String(components[2])))
 
     peaks = Observable(Vector{Peak}())
     expt = MovingExperiment(specdata, peaks, model, nothing, CrossSectionVisualisation())
@@ -627,6 +631,22 @@ end
 # Sign factor for the coupling: negative for ¹⁵N (negative gyromagnetic ratio), else positive.
 function _gamma_sign(specdata, dim)
     return occursin("N", uppercase(string(label(specdata.nmrdata[1], dim)))) ? -1.0 : 1.0
+end
+
+# Four planes, two conditions × two doublet components, so `series.csv` needs both keys:
+# the plane index alone would not say which spectrum a row came from.
+function seriescoordinates(e::MovingExperiment, m::RDCModel)
+    n = nslices(e)
+    isaligned = fill(false, n)
+    component = fill("", n)
+    for (j, i) in enumerate(m.isotropic)
+        component[i] = m.components[j]
+    end
+    for (j, i) in enumerate(m.aligned)
+        isaligned[i] = true
+        component[i] = m.components[j]
+    end
+    return Pair{Symbol,Any}[:aligned => isaligned, :component => component]
 end
 
 function setup_post_parameters!(peak::Peak, ::RDCModel)
@@ -914,6 +934,9 @@ end
 # residual built from all residues and dimensions, then read off the linear parameters.
 postfitglobal!(expt::MovingExperiment) = postfitglobal!(expt, expt.model)
 postfitglobal!(::MovingExperiment, ::FittingModel) = nothing
+
+# Kd is fitted once across every peak, then copied onto each of them - see below.
+globalparams(::TitrationModel) = [:Kd]
 
 function postfitglobal!(expt::MovingExperiment, model::TitrationModel)
     peaks = [p for p in expt.peaks[] if p.postfitted[]]
