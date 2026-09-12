@@ -268,7 +268,9 @@ function addhanders!(g, state, expt::Experiment)
     # peak hover
     onpick(g[:axcontour], g[:pltinitialpeaks]) do _, idx
         # if state[:current_peak_idx][] != idx && state[:mode][] == :normal
-        if state[:mode][] == :normal
+        # GPU picking can lag a frame behind a peak deletion, so idx may momentarily point
+        # past the end of the (now shorter) peak list - ignore a stale pick rather than crash.
+        if state[:mode][] == :normal && idx in eachindex(expt.peaks[])
             @debug "Setting current peak to $idx"
             state[:current_peak_idx][] = idx
             if haskey(g, :axpeakplot)
