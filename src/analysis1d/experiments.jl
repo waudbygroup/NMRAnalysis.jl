@@ -21,6 +21,14 @@ seriesmodel(e::Experiment1D) = e.model
 groupcols(::Experiment1D) = ()
 
 """
+    fitaxis(expt) -> Symbol
+
+The arrayed variable forming the x-axis of every series: a relaxation delay, a gradient
+strength, a pulse duration. Required of every experiment, there being no sensible default.
+"""
+function fitaxis end
+
+"""
     integrate(region, expt[, dataset]) -> Vector{Measurement{Float64}}
 
 Stage 1: reduce `region` to one measured quantity per plane. The default integrates;

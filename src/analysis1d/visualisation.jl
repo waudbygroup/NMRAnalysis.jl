@@ -202,20 +202,24 @@ const PARAM_LABELS = Dict(:A => "Amplitude")
 
 """
     paramlabel(expt, name) -> String
+
+Display name for parameter `name` (fitted or derived). Experiment-dispatched: the default
+falls back to the small shared table above, then to the bare symbol. An experiment that
+introduces its own parameters overrides this with its own local table - see e.g.
+`NUTATION_PARAM_LABELS` in `expt-nutation.jl`.
+"""
+paramlabel(::Experiment1D, name::Symbol) = get(PARAM_LABELS, name, string(name))
+
+"""
     paramunit(expt, name) -> String
 
-Display name and unit for parameter `name` (fitted or derived). Experiment-dispatched: the
-default here falls back to the small shared tables above (only the symbols genuinely
-universal across experiments), then to the bare symbol/no unit. Every experiment that
-introduces its own parameters overrides these with its own local table - see e.g.
-`NUTATION_PARAM_LABELS` in `expt-nutation.jl`.
+Unit for parameter `name`, dispatched and overridden as [`paramlabel`](@ref) is.
 
 Units are held in **ASCII** (`"s-1"`, `"us"`, `"1e-10 m2/s"`), because that is the form the
 CSV column headers carry and a file header must survive being opened on any machine - see
 `docs/src/advanced/conventions.md`. [`prettyunit`](@ref) turns one into the typeset form
 for the GUI panel and `summary.txt`, so there is one table rather than two that can drift.
 """
-paramlabel(::Experiment1D, name::Symbol) = get(PARAM_LABELS, name, string(name))
 paramunit(::Experiment1D, name::Symbol) = get(PARAM_UNITS, name, "")
 
 """
