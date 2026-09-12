@@ -24,6 +24,8 @@ function gui!(state)
                       ypanlock=true,
                       xrectzoom=true,
                       yrectzoom=false,
+                      xgridvisible=false,
+                      ygridvisible=false,
                       xlabel="Chemical shift (ppm)",
                       ylabel="Intensity",
                       title=gui[:specplottitle])
@@ -146,9 +148,12 @@ function gui!(state)
         return "Peak integrals (νSL = $(round(0.001*νSL(state[:dataset])[i],digits=2)) kHz)"
     end
     ax_fit = Axis(bottom_panel[1, 1];
+                  xgridvisible=false,
+                  ygridvisible=false,
                   xlabel="TSL (ms)",
                   ylabel="Peak integral",
                   title=gui[:fitplottitle])
+    hlines!(ax_fit, [0]; color=:grey)
     plt_obserr = errorbars!(ax_fit, state[:currenterror])
     plt_obsscat = scatter!(ax_fit, state[:currentscatter]; label="Observed")
     plt_glob = lines!(ax_fit, state[:currentfit]; label="Global fit", color=c1)
@@ -167,10 +172,12 @@ function gui!(state)
            nbanks=2, orientation=:horizontal)
 
     ax_fit_R1rho = Axis(bottom_panel[1, 2];
+                        xgridvisible=false,
+                        ygridvisible=false,
                         xlabel="νSL (kHz)",
                         ylabel="R1rho (s⁻¹)",
                         title="Dispersion curve")
-    hlines!(ax_fit_R1rho, [0]; linewidth=0)
+    hlines!(ax_fit_R1rho, [0]; color=:grey)
     errorbars!(ax_fit_R1rho, state[:expfiterror]; color=c2)
     scatter!(ax_fit_R1rho, state[:expfitpoints]; label="Exponential fits", color=c2)
     lines!(ax_fit_R1rho, state[:fitR1rho]; label="Global fit", color=c1)
@@ -302,9 +309,11 @@ function savefig!(state)
     # dispersion fit
     fig = Figure()
     ax_fit_R1rho = Axis(fig[1, 1];
+                        xgridvisible=false,
+                        ygridvisible=false,
                         xlabel="νSL (kHz)",
                         ylabel="R1rho (s⁻¹)")
-    hlines!(ax_fit_R1rho, [0]; linewidth=0)
+    hlines!(ax_fit_R1rho, [0]; color=:grey)
     errorbars!(ax_fit_R1rho, state[:expfiterror]; color=c2)
     scatter!(ax_fit_R1rho, state[:expfitpoints]; label="Exponential fits", color=c2)
     lines!(ax_fit_R1rho, state[:fitR1rho]; label="Global fit")
@@ -317,9 +326,12 @@ function savefig!(state)
         filename = "intensities_$(round(0.001*νSL(state[:dataset])[i],digits=2))_kHz.pdf"
         fig = Figure()
         ax_fit = Axis(fig[1, 1];
+                      xgridvisible=false,
+                      ygridvisible=false,
                       xlabel="TSL (ms)",
                       ylabel="Peak integral",
                       title=title)
+        hlines!(ax_fit, [0]; color=:grey)
         errorbars!(ax_fit, state[:errorpoints][][i])
         scatter!(ax_fit, state[:scatterpoints][][i]; label="Observed")
         lines!(ax_fit, state[:fitseries][][i]; label="Global fit")
