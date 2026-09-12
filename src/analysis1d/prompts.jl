@@ -1,20 +1,9 @@
-# Interactive parameter entry.
-#
-# Every 1D routine resolves a parameter the same way, in one fixed order of precedence:
-#
-#   1. an explicit argument, if the caller supplied one;
-#   2. whatever the spectrum records - a pulse-sequence annotation first, then an
-#      acquisition parameter;
-#   3. failing both, a question asked here, before the analysis window opens.
-#
-# The entry points express that as `@something(explicit, annotation(...), acqusvalue(...),
-# ask...(; prompt))`, which short-circuits, so a question is only ever printed for a value
-# that genuinely could not be found. `prompt=false` (the default outside an interactive
-# session) turns each question into either its stated default or an informative error, so a
-# script or a test never blocks on stdin.
-#
-# Nothing here knows anything about NMR: the physics of *which* parameters an experiment
-# needs, and what they mean, stays in that experiment's own `expt-*.jl`.
+# Interactive parameter entry: the last step of the resolution chain each entry point
+# follows, expressed as `@something(explicit, annotation(...), acqusvalue(...), ask(...))`.
+# Because `@something` short-circuits, a question is only printed for a value that could
+# not be found. `prompt=false` (the default outside an interactive session) turns each
+# question into its stated default or an informative error, so a script never blocks on
+# stdin. Which parameters an experiment needs stays in its own `expt-*.jl`.
 
 """
     ask(label, default; unit="", note="", type=Float64, prompt=true) -> value

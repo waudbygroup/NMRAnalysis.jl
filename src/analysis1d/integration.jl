@@ -25,16 +25,12 @@ integrate(r::Region, t::Trace) = sum(@view t.y[roiindices(r, t)])
 
 Integrate `region` over every plane of `dataset`, with an uncertainty attached to each.
 
-This is a different noise question from the point-wise spectrum normalisation done in
-`tracesfromspec` (dividing by `spec[:noise]`, the whole-spectrum RMS level): the
-uncertainty on an *integrated* region depends on its width and on the actual, possibly
-non-white noise there, not on a single global scalar. So, following the legacy 1D
-routines and `Exchange1D`, it's measured directly: integrate a noise region of the same
-width as `region` (centred at `dataset.noisecenter`, which the GUI lets the user
-reposition) over every plane, and take the standard deviation of those integrals across
-planes. Since the trace intensities are already noise-normalised, this comes out close
-to `sqrt(n points)` when the noise is uniform, but tracks the real, locally-measured
-noise otherwise.
+The uncertainty is measured rather than taken from `spec[:noise]`: the noise on an
+*integrated* region depends on its width and on the noise where it actually sits, not on
+the whole-spectrum RMS level. So a noise region of the same width, centred at
+`dataset.noisecenter`, is integrated over every plane and the standard deviation of those
+integrals taken. With uniform noise this approaches `sqrt(n points)`, the trace
+intensities already being noise-normalised, but it tracks a locally noisier baseline.
 """
 function integrate(region::Region, ds::Dataset1D)
     w = width(region)

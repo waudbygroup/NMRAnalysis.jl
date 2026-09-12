@@ -45,9 +45,8 @@ function tract(trosy, antitrosy; tau=nothing, regions=nothing, integration=nothi
     ωN = 2π * acqus(trosy, :bf3)
     f = tractf(; B0)
 
-    # Per-plane sources: this is the experiment that actually combines two files, so
-    # `series.csv` should say which spectrum each row came from rather than naming the
-    # TROSY one for both.
+    # Per-plane sources, so `series.csv` names the spectrum each row came from rather
+    # than naming the TROSY one for both.
     src = vcat(fill(speclabel(trosy), length(ttau)),
                fill(speclabel(antitrosy), length(atau)))
     ds = Dataset1D(Planes(traces, vars), defaultnoisecentre(trosy),
@@ -180,14 +179,9 @@ function spectruminfo(::TractExperiment, vars::NamedTuple)
     return "$(round(vars.time; digits=3)) s delay ($which)"
 end
 
-# Own display names and units, not the shared PARAM_LABELS/PARAM_UNITS tables -
-# everything about this experiment's presentation lives here. :R genuinely means
-# "relaxation rate" for both TROSY and anti-TROSY decays (unlike the shared table, which
-# leaves :R alone because nutation's decay rate shares the same bare symbol without the
-# same meaning); :etaxy and :tauc only ever appear here, computed in `postfit!`
-# above. Their keys are ASCII even though the quantities are conventionally written η and
-# τc: a key becomes a CSV column header, and those are ASCII by convention (see
-# `docs/src/advanced/conventions.md`). The typeset form lives in the label below.
+# :R means a relaxation rate for both TROSY and anti-TROSY decays; :etaxy and :tauc appear
+# only here. The keys are ASCII even though the quantities are written η and τc, a key
+# becoming a CSV column header; the typeset form is in the label.
 const TRACT_PARAM_LABELS = Dict(:R => "Relaxation rate",
                                 :etaxy => "CCR rate (η)",
                                 :tauc => "Correlation time (τc)")

@@ -51,9 +51,9 @@ function diffusion1d(spec, gradients=nothing; coherence=SQ(H1), δ=nothing, Δ=n
     γ = gyromagneticratio(coherence)
     n = nplanesfromspec(spec)
 
-    # Each parameter in turn: taken as given if supplied, otherwise read from the
-    # acquisition parameters and offered for confirmation (the gradient list excepted -
-    # Bruker does not record it, so there is nothing to confirm).
+    # Each parameter is taken as given if supplied, otherwise read from the acquisition
+    # parameters and offered for confirmation. Bruker does not record the gradient list,
+    # so there is nothing to confirm for that one.
     prompt && println("Parsing experiment parameters...")
     p30 = acqusvalue(spec, :p, 30)
     δ = @something(δ,
@@ -165,10 +165,9 @@ function StejskalTannerModel(; γ, δ, Δ, σ, Gmax)
                          xlabel="Relative gradient strength")
 end
 
-# D itself needs no post-fit: the fitted parameter is already the diffusion coefficient in
-# the ×10⁻¹⁰ m² s⁻¹ that such coefficients are conventionally quoted in (and that the fit
-# is conditioned on), so it is reported straight from `parameters`. Only the
-# Stokes–Einstein radius is derived, and only when the solvent and temperature are known.
+# D needs no post-fit: the fitted parameter is already in the ×10⁻¹⁰ m² s⁻¹ such
+# coefficients are quoted in, and that the fit is conditioned on. Only the Stokes–Einstein
+# radius is derived, and only when the solvent and temperature are known.
 function postfit!(r::RegionResult, e::DiffusionExperiment)
     (isnothing(e.solvent) || isnothing(e.temp)) && return nothing
     D = param(r, :D) * 1e-10                       # m² s⁻¹
@@ -190,11 +189,8 @@ function spectruminfo(::DiffusionExperiment, vars::NamedTuple)
     return "gradient = $(round(100 * vars.gradient; digits=1))%"
 end
 
-# Own display names and units, not the shared PARAM_LABELS/PARAM_UNITS tables -
-# everything about this experiment's presentation lives here. :D, :rH and :viscosity
-# only ever appear in this file (StejskalTannerModel and postfit!, above); :rH has no
-# entry in the labels table below (it stays the bare "rH" it already was) but does need
-# its unit, which was previously sitting in the shared table for no reason but this.
+# :D, :rH and :viscosity appear only in this file, so their labels and units do too.
+# :rH keeps its bare name as a label but still needs a unit.
 const DIFFUSION_PARAM_LABELS = Dict(:D => "Diffusion coefficient",
                                     :viscosity => "η")
 const DIFFUSION_PARAM_UNITS = Dict(:D => "1e-10 m2/s",

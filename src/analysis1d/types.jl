@@ -3,9 +3,8 @@
 
 A single 1D spectrum: a chemical-shift axis `δ` (ppm) and intensities `y`.
 
-Deliberately holds plain vectors and has no dependency on NMRData, Makie, or any GUI
-state — the analysis layer operates on `Trace`s so the science stays independent of the
-GUI. The adapters in `nmrdata.jl` convert NMRData into `Trace`s.
+Plain vectors, with no dependency on NMRData, Makie or GUI state: the analysis layer
+operates on `Trace`s, and the adapters in `nmrdata.jl` convert NMRData into them.
 """
 struct Trace
     δ::Vector{Float64}
@@ -40,9 +39,8 @@ Region(label, δ::Real) = Region(label, δ, δ)
 """
     defaultregionwidth(δ) -> Float64
 
-A sensible default region width: 2% of the full chemical-shift range spanned by `δ`,
-matching the noise marker's drag-handle width. Used for the initial default integration
-region, `A`-key tap-to-add, and `pickregion`'s default `ppmwidth`.
+A default region width: 2% of the chemical-shift range spanned by `δ`, matching the noise
+marker's drag-handle width.
 """
 defaultregionwidth(δ::AbstractVector) = 0.02 * (maximum(δ) - minimum(δ))
 
@@ -52,8 +50,7 @@ width(r::Region) = r.hi - r.lo
     centre(region) -> Float64
 
 Midpoint of a region (ppm). Regions are stored by their bounds, but centre-and-width is
-the natural handle for interaction - dragging moves the centre, the width box resizes
-about it - so both views are available and there is only ever one representation.
+the natural handle for interaction, so both views are available.
 """
 centre(r::Region) = (r.lo + r.hi) / 2
 
@@ -110,21 +107,18 @@ hasvar(p::Planes, name::Symbol) = !isempty(p.vars) && haskey(first(p.vars), name
 """
     Dataset1D(planes, noisecenter, [label, [sources]])
 
-The planes plus the universal noise position (ppm), a `label` describing where the data
-came from (a filename, say) and `sources`, the same thing per plane. Both are plain
-`String`s, so results files can say what they were computed from without NMRData
-re-entering the analysis core.
+The planes plus the universal noise position (ppm), a `label` saying where the data came
+from, and `sources`, the same per plane. Both are plain `String`s, so results files can
+name what they were computed from without NMRData re-entering the analysis core.
 
-`sources` is per plane rather than per dataset because an experiment may combine several
-files: TRACT loads a TROSY and an anti-TROSY spectrum, and kinetics may cover several
-samples. It defaults to `label` repeated, which is right for the single-file case. It is
-deliberately *not* one of the plane variables: it is provenance, not a coordinate, and two
-files may be replicates with identical coordinates. The noise *region* used to estimate
-uncertainty always has the same width as whichever signal region is being reduced (see
-[`integrate`](@ref)) — matching widths is what makes the noise-region integral a
-direct estimate of the signal-region integral's noise — so only the noise centre is
-stored here; noise handling is otherwise shared across all experiments rather than
-re-implemented per analysis.
+`sources` is per plane because an experiment may combine files: TRACT loads a TROSY and an
+anti-TROSY spectrum. It defaults to `label` repeated. It is not a plane variable, being
+provenance rather than a coordinate: two files may be replicates with identical
+coordinates.
+
+Only the noise *centre* is stored. The noise region takes the width of whichever signal
+region is being measured, which is what makes its integral a direct estimate of that
+region's noise (see [`integrate`](@ref)).
 """
 struct Dataset1D
     planes::Planes
@@ -156,11 +150,10 @@ sources(d::Dataset1D) = d.sources
 """
     groupseries(planes, cols) -> Vector{Pair{NamedTuple,Vector{Int}}}
 
-Group plane indices by the values of the variables named in `cols` (a tuple of
-`Symbol`s), preserving order of first appearance. With `cols = ()` every plane falls in
-a single group keyed by the empty `NamedTuple`. This is the generic form of R1ρ's
-`onresseries`: a "series" is the set of planes sharing all grouping variables, i.e.
-differing only in the fit-axis.
+Group plane indices by the values of the variables named in `cols`, preserving order of
+first appearance. With `cols = ()` every plane falls in one group keyed by the empty
+`NamedTuple`. A series is the set of planes sharing all grouping variables, differing only
+in the fit axis.
 """
 function groupseries(planes::Planes, cols::Tuple)
     keyfor(i) = NamedTuple{cols}(Tuple(planes.vars[i][c] for c in cols))

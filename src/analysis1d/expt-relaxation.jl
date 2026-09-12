@@ -142,11 +142,8 @@ end
 
 spectruminfo(::RelaxationExperiment, vars::NamedTuple) = "$(round(vars.time; digits=3)) s delay"
 
-# Own display names, not the shared PARAM_LABELS table - everything about this
-# experiment's presentation lives here, not scattered into a module-wide table. :R
-# genuinely means "relaxation rate" for both T1/T2 and recovery fits (TRACT overrides
-# it too, for the same reason - see its own note); :C only ever appears here, since
-# RecoveryModel, above, is this experiment's alone.
+# :R means a relaxation rate for both T1/T2 and recovery fits, and :C appears only here,
+# RecoveryModel being this experiment's alone.
 const RELAXATION_PARAM_LABELS = Dict(:R => "Relaxation rate",
                                      :C => "Recovery factor")
 

@@ -3,13 +3,11 @@
 #
 #   out/
 #     summary.txt        (written by `saveresults` in gui.jl)
+#     regionlist.csv     what the user picked; what Load reads back
 #     results.csv        one row per region: everything reported for it
 #     series.csv         the measurements, one row per region per plane
 #     fit.pdf
 #     regions/<label>.csv, regions/<label>.pdf
-#
-# `results.csv` is also the file a saved region list is restored from, so a multi-region
-# session is reproducible rather than only screenshot-able.
 
 # ---- value formatting ---------------------------------------------------------
 # `csvcolumn`, `csvcolumns`, `csvvalue`, `safename`, `backupfile` and the underlying
@@ -66,8 +64,8 @@ resultkeys(expt::Experiment1D) = collect(Symbol, groupcols(expt))
 """
     parameternames(results) -> Vector{Symbol}
 
-Every parameter name present across `results`, in order of first appearance. The union,
-so the table stays rectangular when one region derived something another did not.
+Every parameter name present across `results`, in order of first appearance. The union, so
+the table stays rectangular when one region derived something another did not.
 """
 function parameternames(results)
     names = Symbol[]
@@ -80,18 +78,13 @@ end
 """
     resultstable(expt, results) -> (header, rows)
 
-Column names and rows for `results.csv`: **one row per region**, carrying every parameter
-reported for it, with the experiment's [`primaryparam`](@ref) first.
+Column names and rows for `results.csv`: one row per region, carrying every parameter
+reported for it, with the experiment's [`primaryparam`](@ref) first. A region measured
+under several conditions keeps them all on that row under the names [`seriesname`](@ref)
+gave them, so TRACT writes `R_trosy` and `R_anti` beside the `tauc` computed from the two.
 
-A region measured under several conditions keeps them all on that one row, under the names
-[`seriesname`](@ref) gave them: TRACT writes `R_trosy` and `R_anti` beside the `tauc`
-computed from the two, rather than splitting one region across rows and leaving τc blank on
-both.
-
-The region *bounds* are not here: where a region sits is something the user chose, not
-something the fit produced, and it lives in `regionlist.csv` (see
-[`regionlisttable`](@ref)). Keeping the two apart is what lets a region list be reused on
-another dataset.
+The region bounds are not here: they are what the user picked, and live in
+`regionlist.csv` (see [`regionlisttable`](@ref)).
 """
 function resultstable(expt::Experiment1D, results)
     names = parameternames(results)
@@ -137,12 +130,10 @@ end
 Column names and rows for `series.csv`: the measurements themselves, long, one row per
 region per plane.
 
-`source` names the dataset each row came from and is always written, even when constant -
-it is provenance, not meaning, so whatever physical variable distinguishes several datasets
-(TRACT's `which`, a concentration) also appears as its own coordinate column. `plane` is
-written for the same reason and is load-bearing where the planes share one file: a
-pseudo-2D experiment has one `source` for every row, and the plane index is then the only
-thing telling two rows apart.
+`source` and `plane` are always written, even when constant. They are provenance, so
+whatever physical variable distinguishes several datasets (TRACT's `which`, a
+concentration) gets its own coordinate column as well. `plane` is load-bearing where the
+planes share one file: every row of a pseudo-2D experiment has the same `source`.
 """
 function seriestable(expt::Experiment1D, ds::Dataset1D, results)
     keycols = resultkeys(expt)

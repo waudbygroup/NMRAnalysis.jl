@@ -142,11 +142,9 @@ end
 # Own display names and units, not the shared PARAM_LABELS/PARAM_UNITS tables -
 # everything about this experiment's presentation lives here. :nu, :pulse90 and
 # :inhomogeneity only ever appear in this file (DampedSinusoidModel and postfit!, above).
-# The key is ASCII (:nu, not :ν) because a parameter key becomes a CSV column header, which
-# is ASCII by convention - see docs/src/advanced/conventions.md. The typeset name lives in
-# the label below.
-# :R is deliberately *not* overridden here: it's this model's decay rate, not a
-# relaxation rate (see the shared table's own note on why it stays bare by default).
+# The key is ASCII (:nu, not :ν) because it becomes a CSV column header; the typeset name
+# is in the label. :R is not overridden: this model's is a decay rate, not a relaxation
+# rate.
 const NUTATION_PARAM_LABELS = Dict(:nu => "Nutation frequency",
                                    :pulse90 => "90°",
                                    :inhomogeneity => "B₁ inhom.")

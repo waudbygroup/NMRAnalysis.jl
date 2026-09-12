@@ -123,3 +123,32 @@ function_name(filenames::Vector{String}; options...)
 - Follow the Julia style guide: function names should be lowercase without underscores (e.g. `plot(results)`, not `plot_result(results)`)
 - Do NOT prefix private/internal functions with `_`. Just use unexported names.
 - Avoid underscores in function names entirely — use concatenated lowercase words (e.g. `combineplots`, `defaultparams`, `formatvalue`)
+
+### Comments and Docstrings
+
+Existing code runs at roughly 5-30% comment and docstring lines. Match the file you are
+working in rather than exceeding it.
+
+- **Exported entry points** get a full docstring in the form the Julia manual describes:
+  the signature, a one-line summary, then arguments and an example. Documenter publishes
+  these and a spectroscopist reads them, so they are worth the space.
+- **Internal functions** get one line, or none where the name and signature already say it.
+  A docstring that restates the signature in prose is noise.
+- **Comments record a constraint the code cannot state for itself**: a Makie quirk, a
+  Bruker convention, a sign or a unit that is easy to get wrong, a numerical trap.
+- **Document the science.** Where a function implements a physical relation, give the
+  relation and a literature reference next to it. This is the thing a reader most needs and
+  cannot reconstruct from the code.
+- **A comment never argues for a decision.** Justifying a choice to a reviewer belongs in
+  the commit message, where it stays attached to the change. In the source it goes stale as
+  soon as the decision changes, and then actively misleads.
+
+### Documentation
+
+User-facing pages under `docs/src/` follow the Google developer documentation style guide:
+second person, present tense, sentence case headings, task-oriented rather than
+feature-oriented. Assume a reader who knows NMR and not this package.
+
+Pages under `docs/src/advanced/` are for people changing the code. `pipeline.md` describes
+the three stages every analysis shares; `conventions.md` specifies the output files and
+column rules. Keep both current with the code in the same commit that changes it.

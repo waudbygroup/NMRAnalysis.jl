@@ -85,26 +85,15 @@ function preparestate(expt::Experiment1D)
     # here: what the panel needs depends on how it draws (see `ResultVisualisation`).
     completeresultstate!(state, expt)
 
-    # The whole right-hand info panel - which region is active and its bounds, the fit's
-    # own parameters, and the quantities derived from them - as one RichText, built fresh
-    # whenever the region list, the active region, the fit, or the Fitting toggle changes.
+    # The whole right-hand info panel as one RichText, rebuilt whenever the region list,
+    # the active region, the fit or the Fitting toggle changes.
     #
-    # One Label rather than several stacked ones (as this used to be, and as GUI2D's own
-    # info panel still is): each Label in a GridLayout column auto-sizes its row from its
-    # own reported height, and that reporting does not track a RichText's actual rendered
-    # height reliably as its content changes, so a later row could start before an earlier
-    # one had actually finished, overlapping it - which is exactly what happened here. One
-    # Label sidesteps the whole question: everything below the heading is just more
-    # content appended to the same growing block, with no second, independently-positioned
-    # row for an earlier misjudged height to collide with.
+    # One Label rather than several stacked ones: each Label in a GridLayout column
+    # auto-sizes its row from its own reported height, which does not track a RichText's
+    # rendered height reliably as the content changes, so stacked Labels overlap.
     #
-    # `panelwidth` aligns the block's values to one column, computed across the whole
-    # panel, so "Amplitude (trosy)" and "Correlation time (τc)" line up together.
-    #
-    # Always RichText, for the same Observable-element-type reason `RegionResult` exists:
-    # every branch below returns one, including "no region selected" and the
-    # Fitting-toggle-off case, so the Observable's inferred type never has to change to
-    # accommodate a later branch.
+    # Every branch returns a RichText, including the empty ones, so the Observable's
+    # inferred element type never has to change.
     state[:resultspanel] = lift(state[:result], state[:regions], state[:active],
                                 state[:isfitting]) do res, rs, i, fitting
         (1 ≤ i ≤ length(rs)) || return plaintext("No region selected")

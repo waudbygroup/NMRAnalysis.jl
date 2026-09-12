@@ -39,20 +39,17 @@ end
 """
     resultxfactor(expt) -> Float64
 
-Multiplier applied to the result panel's x-values (and its axis label, via
-`resultlabels`) for display - `1.0` (unscaled) for every experiment except those with a
-time-valued x-axis (relaxation delays, TRACT delays, nutation pulse durations), which
-switch to whichever of s/ms/µs suits their actual scale (see `timescale`). Curve-fitting
-itself always uses the raw, unscaled values; this only affects what's plotted/exported.
+Multiplier applied to the result panel's x-values for display, `1.0` except where a
+time-valued axis reads better in ms or µs (see [`timescale`](@ref)). Fitting always uses
+the raw values.
 """
 resultxfactor(::Experiment1D) = 1.0
 
 """
     resultplotdata(expt, result, activelabel) -> Vector{ResultSeries}
 
-Plot primitives for the active region, one `ResultSeries` per group (e.g. TRACT's
-TROSY/anti-TROSY pair, or kinetics' runs) so each can be drawn in a distinct, matching
-colour. Covers every curve-fit / `NoFitting` experiment generically.
+Plot primitives for the active region, one `ResultSeries` per series, so each is drawn in
+its own colour.
 """
 function resultplotdata(e::Experiment1D, result, activelabel::AbstractString)
     i = findfirst(r -> r.region == activelabel, result)
@@ -81,15 +78,11 @@ end
 """
     show(io, result::RegionResult)
 
-One line per region: its label followed by every parameter reported for it.
+One line per region: its label followed by every parameter reported for it, so that
+closing an analysis window prints a short table rather than pages of measured points.
 
-A `RegionResult` holds every measured point and its whole parameter set, so the
-struct display Julia generates by default is pages of numbers - which is what a routine
-returning results would dump into the REPL the moment its window closed. This is the whole
-answer to that: the results are still returned, and still indexable for a script or a test,
-but a vector of them prints as a short table. Units are deliberately absent, being the one
-thing a `RegionResult` cannot know (`paramunit` is dispatched on the experiment); the
-results panel, `summary.txt` and the CSVs all carry them.
+Units are absent, being the one thing a `RegionResult` cannot know: `paramunit` is
+dispatched on the experiment. The results panel, `summary.txt` and the CSVs carry them.
 """
 function Base.show(io::IO, r::RegionResult)
     print(io, r.region)
@@ -135,20 +128,19 @@ end
 """
     ResultVisualisation
 
-How an experiment's results are drawn in the fit panel. A hierarchy deliberately
-*orthogonal* to `Experiment1D`, joined by [`visualisationtype`](@ref), exactly as GUI2D's
-`VisualisationStrategy` is orthogonal to its `Experiment` - so that a presentation can be
-shared by unrelated experiments, or swapped without touching the science.
+How an experiment's results are drawn in the fit panel. A hierarchy orthogonal to
+`Experiment1D`, joined by [`visualisationtype`](@ref), as GUI2D's `VisualisationStrategy`
+is to its `Experiment`, so a presentation can be shared or swapped without touching the
+science.
 
-A strategy implements three methods, the same trio GUI2D uses:
+A strategy implements three methods:
 
 - `completeresultstate!(state, expt, ::V)` — build the Observables the panel reads
 - `resultpanel!(gui, state, expt, ::V)`    — the live GUI panel
 - `plotresult!(ax, expt, result, label, i0, ::V)` — the static CairoMakie export
 
 The live and export paths share one data getter (here `resultplotdata`) so that what is
-saved is what was on screen. A strategy's getter may return whatever shape suits it: it is
-only ever consumed by the three methods paired with it.
+saved is what was on screen.
 
 [`SeriesVisualisation`](@ref) covers every curve-fit experiment and is the default.
 """
@@ -199,25 +191,12 @@ fmt(x::Measurement, digits=4) = string(round(Measurements.value(x); sigdigits=di
 fmt(x::Real, digits=4) = string(round(x; sigdigits=digits))
 fmt(::Nothing, digits=4) = "n/a"
 
-# Units and display names for the handful of parameters genuinely shared by more than one
-# experiment - not a catch-all table. Everything specific to one experiment (TRACT's
-# :etaxy/:tauc, nutation's :pulse90/:inhomogeneity, diffusion's :D/:rH/:viscosity, relaxation's
-# :C, ...) is defined in that experiment's own expt-*.jl, in its own local table, alongside
-# the `postfit!`/model that produces it - see `paramlabel`/`paramunit` below. Putting any
-# of that here instead is exactly the mistake this split exists to prevent: it scatters
-# one experiment's presentation into a file every other experiment also reads. The 2D
-# side keeps an equivalent table in `gui2d/summary.jl` (`PARAM_LABELS`); merging the two
-# is the first step of the open question in PLAN.md about a canonical output format
-# across 1D and 2D.
+# Only the parameters genuinely shared by more than one experiment. Anything specific to
+# one lives in its own expt-*.jl, beside the `postfit!` that produces it.
 #
-# `:A` is here because "Amplitude" is accurate for every fit that produces it (relaxation,
-# TRACT, nutation, diffusion all fit an overall scale factor and mean the same thing by
-# it). `:R`'s *unit* (a rate, in s⁻¹) is equally universal - relaxation, TRACT and
-# nutation's models all produce one - but its *label* is not: relaxation and TRACT mean a
-# relaxation rate, nutation's damped-sinusoid model means a decay rate, and "Relaxation
-# rate" would mislabel the latter. So :R gets a unit here but its label is left to each
-# experiment that needs one (relaxation and TRACT override it; nutation deliberately
-# doesn't, falling back to the bare "R" this table would otherwise give it).
+# `:R` has a unit here but no label: every model producing a rate means s⁻¹ by it, but
+# relaxation and TRACT mean a relaxation rate where nutation's damped sinusoid means a
+# decay rate, so "Relaxation rate" would mislabel the latter.
 const PARAM_UNITS = Dict(:R => "s-1")
 const PARAM_LABELS = Dict(:A => "Amplitude")
 
@@ -242,10 +221,9 @@ paramunit(::Experiment1D, name::Symbol) = get(PARAM_UNITS, name, "")
 """
     displaylabel(expt, name) -> String
 
-[`paramlabel`](@ref) for a parameter as it is stored on a region, which for a fitted one
-carries the series it came from: `:R_trosy` shows as "Relaxation rate (trosy)". What the
-quantity *is* comes from [`baseparam`](@ref), so an experiment's label table needs only the
-bare names.
+[`paramlabel`](@ref) for a parameter as stored on a region, which for a fitted one carries
+the series it came from: `:R_trosy` shows as "Relaxation rate (trosy)". The quantity comes
+from [`baseparam`](@ref), so an experiment's label table needs only bare names.
 """
 function displaylabel(e::Experiment1D, name::Symbol)
     base = baseparam(name)
@@ -257,9 +235,8 @@ end
     prettyunit(unit) -> String
 
 The typeset form of an ASCII unit, for display only: `"s-1"` → `" s⁻¹"`, `"us"` → `" µs"`.
-Includes the leading space, so it appends directly to a formatted value, and returns `""`
-for a dimensionless quantity. Anything not in the table is shown as written, which is the
-right answer for units that are already fine in ASCII (`"Hz"`, `"ns"`, `"%"`).
+Includes the leading space so it appends to a formatted value, and returns `""` for a
+dimensionless quantity. Anything not in the table is shown as written (`"Hz"`, `"ns"`).
 """
 function prettyunit(unit::AbstractString)
     isempty(unit) && return ""
@@ -278,12 +255,10 @@ prettyparamunit(e::Experiment1D, name::Symbol) = prettyunit(paramunit(e, basepar
 """
     coordinateunit(expt, name) -> String
 
-ASCII unit for a *coordinate* - the fit axis, or a grouping variable - as it appears in the
-column headers of `results.csv` and `series.csv`. Distinct from [`paramunit`](@ref) because
-a coordinate is an input to the analysis rather than an output of it, and the two name spaces
-are independent: nothing stops an experiment arraying a variable that shares a name with a
-fitted parameter. Categorical coordinates (TRACT's `:which`, kinetics' `:run`) and relative
-ones (diffusion's `:gradient`, a fraction of maximum) have no unit.
+ASCII unit for a coordinate, the fit axis or a grouping variable, as it appears in a column
+header. Kept apart from [`paramunit`](@ref) because the two name spaces are independent:
+nothing stops an experiment arraying a variable named like a fitted parameter. Categorical
+coordinates (`:which`, `:run`) and relative ones (`:gradient`) have no unit.
 """
 coordinateunit(::Experiment1D, name::Symbol) = get(COORDINATE_UNITS, name, "")
 
@@ -327,10 +302,9 @@ end
     panelwidth(expt, result, activelabel) -> Int
 
 The label-column width for the results panel: the longest display label among the
-parameters shown for `activelabel`, plus a gap, or `nothing` if there is nothing to show
-yet (leaving the block to size itself the
-one time that matters least - before there is anything to align). Computed across the
-whole panel so that "Amplitude (trosy)" and "Correlation time (τc)" share one column.
+parameters shown for `activelabel`, plus a gap, or `nothing` when there is nothing to show
+yet. Computed across the whole panel so "Amplitude (trosy)" and "Correlation time (τc)"
+share one column.
 """
 function panelwidth(expt::Experiment1D, result, activelabel::AbstractString)
     len = 0
@@ -346,23 +320,20 @@ end
 """
     plaintext(text) -> RichText
 
-Wrap `text` in an explicit `font=:regular` span. `RichText`'s font is not scoped to each
-sibling - a plain `String` child simply inherits whatever font the previous sibling left
-active - so without this, a parameter block following a bold heading would render bold
-too, the bold state leaking straight past the heading it belongs to.
+Wrap `text` in an explicit `font=:regular` span. A `RichText` font is not scoped to each
+sibling: a plain `String` child inherits whatever font the previous sibling left active, so
+without this a parameter block following a bold heading renders bold too.
 """
 plaintext(text::AbstractString) = rich(text; font=:regular)
 
 """
     BLANK_RICHTEXT
 
-Placeholder for "nothing to show". A genuinely empty `RichText` - `rich()`, zero children -
-renders zero glyphs, and Makie's `GlyphCollection` cannot build itself from a zero-length
-glyph vector (it can't infer the vector's `rotations` field as `Vector{Quaternionf}` from
-an empty comprehension, and errors instead of rendering blank). A single space has exactly
-one glyph, so it sidesteps that without being visible - not a cosmetic choice, without it
-`resultstext` crashes outright whenever its span list is empty, which is every region of a
-`NoFitting` experiment and any region not yet fitted.
+Placeholder for "nothing to show". An empty `RichText` renders zero glyphs, and Makie's
+`GlyphCollection` cannot build itself from a zero-length glyph vector: it cannot infer
+`rotations` as `Vector{Quaternionf}` from an empty comprehension, and errors rather than
+rendering blank. A single space has one glyph and is invisible. Without it, `resultstext`
+crashes for every region of a `NoFitting` experiment and any region not yet fitted.
 """
 const BLANK_RICHTEXT = rich(" ")
 
