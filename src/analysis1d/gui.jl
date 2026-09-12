@@ -603,7 +603,7 @@ function pickregion(traces::AbstractVector{Trace}; peakppm=nothing, noiseppm=not
     vlines!(ax, nz; color=:orchid, linewidth=2, label="Noise")
     # The noise band shows the window actually used to estimate the noise, which always
     # matches the integration width (that equality is what makes it a direct estimate of
-    # the signal region's noise - see `reduceregion`). Floored at the default region width
+    # the signal region's noise - see `integrate`). Floored at the default region width
     # so a narrow integration still leaves something grabbable, exactly as in `gui!`.
     basedefaultwidth = defaultregionwidth(t1.δ)
     noisehandlehw = lift(ww -> max(basedefaultwidth, ww) / 2, w)

@@ -83,7 +83,7 @@ All 2D functions are provided by the GUI2D module:
 ### Module Organization
 - `GUI2D/` contains ~25 files organizing different aspects of 2D analysis
 - `R1rho/` contains ~10 files for R1ρ-specific analysis
-- `analysis1d/` contains the shared 1D core (`types.jl`, `reductions.jl`, `seriesmodels.jl`),
+- `analysis1d/` contains the shared 1D core (`types.jl`, `integration.jl`, `seriesmodels.jl`),
   the NMRData adapters (`nmrdata.jl`), the parameter prompts (`prompts.jl`), one
   `expt-<name>.jl` per experiment, and the interactive window (`visualisation.jl`,
   `state.jl`, `gui.jl`)

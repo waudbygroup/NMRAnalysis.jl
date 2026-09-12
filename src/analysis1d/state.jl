@@ -39,7 +39,7 @@ function preparestate(expt::Experiment1D)
     state[:active] = Observable(isempty(state[:regions][]) ? 0 : 1)
 
     # noise marker: a single position, no independent width (matches whichever region is
-    # being reduced - see reduceregion).
+    # being reduced - see integrate).
     state[:noisec] = Observable(ds.noisecenter)
 
     state[:currentspectrumidx] = Observable(1)

@@ -64,11 +64,11 @@ these files.
 
 | stage | `Analysis1D` | `GUI2D` |
 |---|---|---|
-| 1, measure | `reduction(expt)` | `fit!(cluster, expt)` |
+| 1, measure | `integrate(region, expt)` | `fit!(cluster, expt)` |
 | 2, fit | `postfit!(results, expt)` | `postfit!(peak, expt)` |
 | 3, global fit | `postfitglobal!(results, expt)` | `postfitglobal!(expt)` |
 
 Stage 2 receives everything belonging to one region or peak, so `Analysis1D` passes all of
-a region's series rather than one at a time. The per-plane measurements are held as the
-series itself in 1D, and in `peak.parameters` in 2D; everything a later stage derives is
-held in `postparameters` in both.
+a region's series rather than one at a time. In both modules `parameters` holds what the
+fit at that level produced, per plane in 2D and per series in 1D, and `postparameters`
+holds what a later stage derived from it.

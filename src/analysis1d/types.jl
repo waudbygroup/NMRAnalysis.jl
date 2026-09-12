@@ -121,7 +121,7 @@ samples. It defaults to `label` repeated, which is right for the single-file cas
 deliberately *not* one of the plane variables: it is provenance, not a coordinate, and two
 files may be replicates with identical coordinates. The noise *region* used to estimate
 uncertainty always has the same width as whichever signal region is being reduced (see
-[`reduceregion`](@ref)) — matching widths is what makes the noise-region integral a
+[`integrate`](@ref)) — matching widths is what makes the noise-region integral a
 direct estimate of the signal-region integral's noise — so only the noise centre is
 stored here; noise handling is otherwise shared across all experiments rather than
 re-implemented per analysis.

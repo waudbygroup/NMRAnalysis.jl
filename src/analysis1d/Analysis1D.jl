@@ -31,7 +31,7 @@ using ..NMRAnalysis: csvcolumn, csvcolumns, csvvalue, safename, backupfile,
 
 # pure analysis core (no Makie dependency in these files)
 include("types.jl")
-include("reductions.jl")
+include("integration.jl")
 include("seriesmodels.jl")
 include("nmrdata.jl")
 include("prompts.jl")   # parameter resolution: argument, then annotation/acqus, then ask
@@ -56,8 +56,8 @@ analyse1d(e) = analyse(e)
 export Trace, Planes, Region, Dataset1D
 export column, hasvar, nplanes, groupseries
 
-# reductions & models
-export Reduction, Integrate, integrate, integrals
+# measurement & models
+export integrate
 export SeriesModel, CurveFitModel, NoFitting
 export ExponentialModel, RecoveryModel, DampedSinusoidModel, StejskalTannerModel
 

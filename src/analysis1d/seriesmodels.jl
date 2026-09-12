@@ -13,7 +13,7 @@ Abstract supertype for the rule mapping a quantity series to derived parameters.
 - [`CurveFitModel`](@ref): a continuous fit-axis, fitted by nonlinear least squares.
 - [`NoFitting`](@ref): carry the reduced quantities through unfitted, for an experiment
   whose deliverable is the series itself (kinetics), or one that needs to transform the
-  series before fitting it in `postfit!` rather than fitting the raw reduction directly.
+  series before fitting it in `postfit!` rather than fitting the measured quantities directly.
 """
 abstract type SeriesModel end
 

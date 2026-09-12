@@ -2,7 +2,7 @@
     Experiment1D
 
 Abstract supertype for 1D analyses. A concrete experiment is a thin composition that
-supplies a dataset, a list of regions, a reduction, a series model, and the
+supplies a dataset, a list of regions, a series model, and the
 fit-axis / grouping designation. The generic [`analyse`](@ref) pipeline does the rest;
 experiments derive further quantities in [`postfit!`](@ref) / [`postfitglobal!`](@ref),
 and may override `analyse` entirely for non-curve-fit shapes.
@@ -22,12 +22,12 @@ a fixed five-section order (see `expt-tract.jl` for the fullest example):
 Interface (with defaults):
 - `dataset(e)`        — the `Dataset1D` (default: `e.dataset`)
 - `regions(e)`        — `Vector{Region}`, length ≥ 1 (default: `e.regions`)
-- `reduction(e)`      — `Reduction` (default `Integrate()`)
+- `integrate(region, e)` — region × planes → one quantity per plane (default: integration)
 - `seriesmodel(e)`    — `SeriesModel` (default: `e.model`)
 - `fitaxis(e)`        — `Symbol` naming the evolution variable (required)
 - `groupcols(e)`      — `Tuple` of grouping variables (default `()`)
-- `postfit!(r, e)`    — derived quantities from one series (default: none)
-- `postfitglobal!(results, e)` — derived quantities spanning series (default: none)
+- `postfit!(rs, e)`   — derived quantities from one region's series (default: none)
+- `postfitglobal!(results, e)` — derived quantities spanning regions (default: none)
 - `primaryparam(e)`   — the headline quantity (default `:A`)
 """
 abstract type Experiment1D end
@@ -39,8 +39,20 @@ dataset(e::Experiment1D) = e.dataset
 regions(e::Experiment1D) = e.regions
 seriesmodel(e::Experiment1D) = e.model
 
-reduction(::Experiment1D) = Integrate()
 groupcols(::Experiment1D) = ()
+
+"""
+    integrate(region, expt[, dataset]) -> Vector{Measurement{Float64}}
+
+Stage 1 of an analysis (see `docs/src/advanced/pipeline.md`): reduce `region` to one
+measured quantity per plane. The 1D counterpart of GUI2D's lineshape `fit!(cluster, expt)`,
+and like it dispatched on the experiment, so one that measures its regions some other way
+overrides this method. The default integrates.
+
+`dataset` is separate from the experiment's own so the GUI can measure against
+interactively-positioned regions and noise.
+"""
+integrate(region::Region, e::Experiment1D, ds::Dataset1D=dataset(e)) = integrate(region, ds)
 
 """
     RegionResult
@@ -124,9 +136,9 @@ Record a derived quantity on `result` and mark it post-fitted. The `postfit!` /
 - `:series` (the default) - this series alone, e.g. nutation's 90° pulse length. Written on
   this result's own row of `results.csv`.
 - `:region` - the whole region, across every group. TRACT's τc combines the TROSY and
-  anti-TROSY rates, so it describes the region rather than either component;
-  `postfitglobal!` still has to record it on one of the two, and the scope is what stops
-  that choice leaking into the output. Written as a row with the group keys left blank.
+  anti-TROSY rates, so it describes the region rather than either component; `postfit!`
+  still has to record it on one of the two, and the scope is what stops that choice
+  leaking into the output. Written as a row with the group keys left blank.
 - `:global` - the whole analysis, e.g. a solvent viscosity, which is a property of the
   sample and the same for every region. Written to `global.csv`.
 """
@@ -148,21 +160,24 @@ for anything written into `postparameters` directly.
 postscope(r::RegionResult, name::Symbol) = get(r.postscopes, name, :series)
 
 """
-    postfit!(result, expt)
+    postfit!(results, expt)
 
-Derive further quantities from one series' own fitted parameters and record them with
-[`setpost!`](@ref) - nutation's 90° pulse length from ν, diffusion's rH from D. The
-default does nothing (relaxation and kinetics derive nothing). Mirrors GUI2D's
-`postfit!(peak, expt)`.
+Stage 2: derive the quantities reported for one region from its fitted series, recording
+them with [`setpost!`](@ref) - nutation's 90° pulse length from ν, diffusion's rH from D,
+TRACT's τc from the TROSY and anti-TROSY rates together. The default does nothing
+(relaxation and kinetics derive nothing).
+
+`results` holds every series of a single region, so anything combining conditions belongs
+here rather than in [`postfitglobal!`](@ref). Mirrors GUI2D's `postfit!(peak, expt)`, which
+likewise sees the whole peak.
 """
-postfit!(::RegionResult, ::Experiment1D) = nothing
+postfit!(::AbstractVector{RegionResult}, ::Experiment1D) = nothing
 
 """
     postfitglobal!(results, expt)
 
-Derive quantities that need more than one series - TRACT's τc, which combines the TROSY
-and anti-TROSY rates for a region - and record them on the relevant results. Runs after
-every `postfit!`. Mirrors GUI2D's `postfitglobal!(expt)`.
+Stage 3: fit or derive quantities spanning every region of the analysis, and record them on
+the relevant results. Runs after every `postfit!`. Mirrors GUI2D's `postfitglobal!(expt)`.
 """
 postfitglobal!(::AbstractVector{RegionResult}, ::Experiment1D) = nothing
 
@@ -178,8 +193,8 @@ primaryparam(::Experiment1D) = :A
 """
     seriesresults(e, [dataset, regions]; isfitting=true) -> Vector{RegionResult}
 
-Run the reduction and per-series curve fit for every region and grouping key, without the
-post-fit stage. This is the pipeline shared by every curve-fit experiment.
+Measure and fit every region's series, for every grouping key, without the post-fit
+stage. This is the pipeline shared by every curve-fit experiment.
 
 The `dataset`/`regions` arguments default to the experiment's own, but can be supplied
 explicitly so the GUI can refit live against interactively-positioned regions and noise.
@@ -191,12 +206,11 @@ not merely a display toggle, an actual "don't fit" switch.
 seriesresults(e::Experiment1D) = seriesresults(e, dataset(e), regions(e))
 
 function seriesresults(e::Experiment1D, ds::Dataset1D, regs; isfitting::Bool=true)
-    red = reduction(e)
     model = isfitting ? seriesmodel(e) : NoFitting()
     axis = fitaxis(e)
     results = RegionResult[]
     for region in regs
-        I = reduceregion(red, region, ds).I
+        I = integrate(region, e, ds)
         for (gkey, idx) in groupseries(ds.planes, groupcols(e))
             x = Float64[ds.planes.vars[i][axis] for i in idx]
             y = I[idx]
@@ -227,8 +241,8 @@ analyse(e::Experiment1D) = analyse(e, dataset(e), regions(e))
 function analyse(e::Experiment1D, ds::Dataset1D, regs; isfitting::Bool=true)
     results = seriesresults(e, ds, regs; isfitting)
     isfitting || return results
-    for r in results
-        postfit!(r, e)
+    for label in unique(r.region for r in results)
+        postfit!(filter(r -> r.region == label, results), e)
     end
     postfitglobal!(results, e)
     return results
@@ -243,7 +257,7 @@ end
 
 The integration triple shared with `Exchange1D` (`prob.integration`): a peak position, a
 noise position, and a common width, all in ppm (the noise region always has the same
-width as the signal region — see [`reduceregion`](@ref)). Passing one to a top-level
+width as the signal region — see [`integrate`](@ref)). Passing one to a top-level
 entry point skips the GUI and analyses directly, so a previously-chosen region can be
 replayed reproducibly from a script.
 """

@@ -17,12 +17,15 @@ or more arrayed variables, reduced to quantities over named regions, then fitted
 evolution parameter. An experiment is a thin composition over that shared machinery:
 
 ```
-Dataset1D ──reduce──▶ quantity per plane ──group──▶ series ──fit──▶ parameters
-                                                                       │
-                                                              postfit! │ postfitglobal!
-                                                                       ▼
-                                                                 postparameters
+Dataset1D ──integrate──▶ quantity per plane ──group──▶ series ──fit──▶ parameters
+                                                                          │
+                                                                 postfit! │ postfitglobal!
+                                                                          ▼
+                                                                    postparameters
 ```
+
+The three stages are the same as in GUI2D; see
+[How an Analysis Works](pipeline.md).
 
 ## Data model
 
@@ -123,12 +126,12 @@ Only what differs from the defaults:
 |---|---|---|
 | `dataset(e)` | `e.dataset` | the data |
 | `regions(e)` | `e.regions` | initial integration regions |
-| `reduction(e)` | `Integrate()` | region × planes → quantity series |
+| `integrate(region, e)` | integration | region × planes → one quantity per plane |
 | `seriesmodel(e)` | `e.model` | what is fitted |
 | `fitaxis(e)` | *required* | the arrayed variable forming the x-axis |
 | `groupcols(e)` | `()` | variables that split planes into separate series |
-| `postfit!(r, e)` | none | quantities derived from one series |
-| `postfitglobal!(results, e)` | none | quantities spanning several series |
+| `postfit!(rs, e)` | none | quantities derived from one region's series |
+| `postfitglobal!(results, e)` | none | quantities spanning every region |
 | `primaryparam(e)` | `:A` | the headline quantity |
 | `visualisationtype(e)` | `SeriesVisualisation()` | how results are drawn |
 
@@ -143,22 +146,26 @@ Any model used by only this experiment is defined here (`RecoveryModel` in
 or more lives in `seriesmodels.jl`, which currently means `ExponentialModel` alone, fitted
 by both relaxation and TRACT.
 
-Derived quantities are computed in `postfit!` (one series) or `postfitglobal!` (several)
-and recorded with `setpost!`:
+Derived quantities are computed in `postfit!` (one region) or `postfitglobal!` (the whole
+analysis) and recorded with `setpost!`:
 
 ```julia
-function postfit!(r::RegionResult, ::MyExperiment)
-    setpost!(r, :halflife, log(2) / param(r, :R))
+function postfit!(rs::AbstractVector{RegionResult}, ::MyExperiment)
+    for r in rs
+        setpost!(r, :halflife, log(2) / param(r, :R))
+    end
     return nothing
 end
 ```
 
+`rs` holds every series of one region, so a quantity combining conditions is an ordinary
+`postfit!`: TRACT's τc takes the TROSY and anti-TROSY rates from the two members of `rs`.
+Use `postfitglobal!` only for something spanning regions, such as a parameter fitted once
+across the whole analysis.
+
 `postfit!` is also where an experiment does its own fitting when the series must be
-transformed first, rather than fitting the raw reduction directly — `cest2d` does this in
-GUI2D, normalising against its reference plane before fitting. Use `postfitglobal!` when
-the transformation needs another series entirely, as TRACT's τc does (it combines the
-TROSY and anti-TROSY series, so it cannot be computed from either series' own `postfit!`
-alone).
+transformed first, rather than fitting the measured quantities directly — `cest2d` does
+this in GUI2D, normalising against its reference plane before fitting.
 
 Store each derived quantity **in the unit its label names** (a 90° pulse in µs, τc in ns),
 so one stored number serves both the summary and `results.csv`. Keys are unique across all

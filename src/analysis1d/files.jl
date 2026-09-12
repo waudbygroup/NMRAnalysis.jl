@@ -276,7 +276,7 @@ Column names and rows for `regionlist.csv`: what the user picked, as opposed to 
 fit produced. One row per region, plus one for the noise position.
 
 The noise marker has a position but no width of its own - the width used to estimate a
-region's uncertainty always matches that region's own (see [`reduceregion`](@ref)) - so it
+region's uncertainty always matches that region's own (see [`integrate`](@ref)) - so it
 is written as a region `defaultwidth` wide, or as wide as the widest signal region where
 that is wider. Reading its centre back is what matters; the width is there so the row means
 something on its own and so the file needs no separate convention for it.

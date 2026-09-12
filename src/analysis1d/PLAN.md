@@ -19,8 +19,8 @@ fitted against an evolution parameter (or contrasted between categorical slices)
 The differences between experiments are confined to three composition slots plus an
 optional global post-fit:
 
-1. **Reduction** — region × planes → named quantity series. v1: `Integrate` (a height
-   is just a zero-width region; nutation needs no special case). Future: NMF for kinetics.
+1. **Measurement** — region × planes → one quantity per plane, via `integrate(region,
+   expt)` (a height is just a zero-width region; nutation needs no special case).
 2. **Series model** — quantity vs evolution parameter → derived parameters: v1 is
    curve-fit only (exponential, recovery, damped sinusoid, …), continuous fit-axis. A
    *contrast* shape (categorical slices, e.g. a reference-vs-saturated fraction — the 1D
@@ -117,7 +117,7 @@ target shape for whatever `std1d` becomes; it is the *loading* step that needs r
 
 Phase 1 — **analysis core + 5 experiments**  ✓
 - [x] `Trace` / `Planes` / `Region` / `Dataset1D`
-- [x] `Integrate` reduction with noise propagation (Measurements), height = zero width
+- [x] `integrate` with noise propagation (Measurements), height = zero width
 - [x] series models: Exponential, Recovery, DampedSinusoid, NoFitting; Contrast (STD)
 - [x] grouping + curve-fit pipeline (noise-weighted) → `RegionResult`
 - [x] experiments: Relaxation, TRACT (τc), Nutation (90°), STD (multi-freq + buildup + epitope), Kinetics

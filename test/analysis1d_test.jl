@@ -9,7 +9,7 @@
 
 using NMRAnalysis
 using NMRAnalysis.Analysis1D: Trace, Planes, groupseries, hasvar, column, nplanes
-using NMRAnalysis.Analysis1D: integrate, integrals
+using NMRAnalysis.Analysis1D: integrate
 using NMRAnalysis.Analysis1D: width, centre, recentre, setwidth, defaultregionwidth,
                               defaultamideregion
 using NMRAnalysis.Analysis1D: fitaxis, groupcols, primaryparam
@@ -89,7 +89,7 @@ signalregion(δ0=8.0) = [Region("signal", δ0 - 0.3, δ0 + 0.3)]
 
     @testset "Integration and noise" begin
         ds = peakdataset([100.0, 50.0], :time, [0.0, 1.0]; noise=1.0, noisecentre=0.0)
-        I = integrals(only(signalregion()), ds)
+        I = integrate(only(signalregion()), ds)
         @test length(I) == 2
         @test Measurements.value(I[1]) > Measurements.value(I[2]) > 0
         @test Measurements.value(I[1]) ≈ 2 * Measurements.value(I[2]) rtol = 0.05
@@ -99,8 +99,8 @@ signalregion(δ0=8.0) = [Region("signal", δ0 - 0.3, δ0 + 0.3)]
 
         # a zero-width region is a height: the single nearest point
         t = peaktrace(100.0, 8.0)
-        @test integrate(t, Region("height", 8.0)) ≈ 100.0 rtol = 1e-3
-        @test integrate(t, Region("wide", 7.7, 8.3)) > integrate(t, Region("height", 8.0))
+        @test integrate(Region("height", 8.0), t) ≈ 100.0 rtol = 1e-3
+        @test integrate(Region("wide", 7.7, 8.3), t) > integrate(Region("height", 8.0), t)
     end
 
     @testset "Relaxation" begin
