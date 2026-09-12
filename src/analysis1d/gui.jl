@@ -213,11 +213,13 @@ function gui!(expt::Experiment1D; call=nothing)
     end
 
     r += 1
+    right[r, 1] = Label(fig, "Working directory:\n$(pwd())"; word_wrap=true, tellwidth=false,
+                        halign=:left)
+
+    r += 1
     outputrow = right[r, 1] = GridLayout()
-    # empty (not pre-filled with "out") so the placeholder text is visible - `state[:outputdir]`
-    # already defaults to "out" independently (see `preparestate`), so leaving this
-    # untouched still saves there
-    tout = outputrow[1, 1] = Textbox(fig; width=90, placeholder="out")
+    tout = gui[:outputtextbox] = outputrow[1, 1] = Textbox(fig; width=90,
+                                                           stored_string=state[:outputdir][])
     # An empty box means the default rather than the working directory itself.
     on(tout.stored_string) do s
         return state[:outputdir][] = isempty(strip(s)) ? "out" : strip(s)
@@ -467,6 +469,7 @@ Left/Right to step through spectra, Up/Down to scale the spectrum's y-axis, matc
 function setupkeyboard!(fig, ax, state)
     defaultwidth = defaultregionwidth(first(state[:planes].traces).δ)
     on(events(fig).keyboardbutton; priority=2) do ev
+        state[:gui][:outputtextbox].focused[] && return Consume(false)
         mode = state[:mode][]
         if mode == :normal && ev.action == Keyboard.press
             if ev.key == Keyboard.a
@@ -527,6 +530,7 @@ function setupkeyboard!(fig, ax, state)
         return Consume(false)
     end
     on(events(fig).unicode_input) do character
+        state[:gui][:outputtextbox].focused[] && return Consume(false)
         if state[:mode][] == :renamingstart
             # the keypress that opened rename mode (the 'r' shortcut) also emits its own
             # character here a moment later - swallow it rather than prepending it

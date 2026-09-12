@@ -108,11 +108,13 @@ function gui!(expt::Experiment)
     add_moving_overlays!(g, state, expt)
 
     # peak info
-    g[:cmdload] = Button(g[:panelinfo][1, 1]; label="Load peak list")
+    Label(g[:panelinfo][1, 1:2], "Working directory:\n$(pwd())"; word_wrap=true,
+          tellwidth=false, halign=:left)
+    g[:cmdload] = Button(g[:panelinfo][2, 1]; label="Load peak list")
     # Output folder typed rather than chosen from a native dialog: the dialog cannot create
     # a folder on every platform, and a typed name is what makes a save repeatable.
-    outputrow = g[:panelinfo][1, 2] = GridLayout()
-    g[:toutput] = Textbox(g[:fig]; width=90, placeholder="out")
+    outputrow = g[:panelinfo][2, 2] = GridLayout()
+    g[:toutput] = Textbox(g[:fig]; width=90, stored_string=expt.state[][:outputdir][])
     outputrow[1, 1] = g[:toutput]
     # An empty box means the default rather than the working directory itself.
     on(g[:toutput].stored_string) do s
@@ -120,10 +122,10 @@ function gui!(expt::Experiment)
     end
     g[:cmdsave] = Button(g[:fig]; label="Save")
     outputrow[1, 2] = g[:cmdsave]
-    g[:cmdrename] = Button(g[:panelinfo][2, 1]; label="(R)ename peak")
-    g[:cmddelete] = Button(g[:panelinfo][2, 2]; label="(D)elete peak")
-    Label(g[:panelinfo][3, 1:2], addpeakhint(expt); word_wrap=true)
-    g[:sgradii] = SliderGrid(g[:panelinfo][4, 1:2],
+    g[:cmdrename] = Button(g[:panelinfo][3, 1]; label="(R)ename peak")
+    g[:cmddelete] = Button(g[:panelinfo][3, 2]; label="(D)elete peak")
+    Label(g[:panelinfo][4, 1:2], addpeakhint(expt); word_wrap=true)
+    g[:sgradii] = SliderGrid(g[:panelinfo][5, 1:2],
                              (label="X radius", range=0.02:0.005:0.1, format="{:.3f} ppm",
                               startvalue=expt.xradius[]),
                              (label="Y radius", range=0.1:0.02:0.8, format="{:.2f} ppm",
@@ -131,7 +133,7 @@ function gui!(expt::Experiment)
     g[:sliderxradius] = g[:sgradii].sliders[1].value
     g[:slideryradius] = g[:sgradii].sliders[2].value
 
-    g[:infotext] = Label(g[:panelinfo][5, 1:2], state[:current_peak_info])
+    g[:infotext] = Label(g[:panelinfo][6, 1:2], state[:current_peak_info])
 
     # peak plot panel
     makepeakplot!(g, state, expt)

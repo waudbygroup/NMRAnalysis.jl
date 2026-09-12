@@ -1,6 +1,7 @@
 function process_keyboardbutton(expt, state, event)
     @debug "keyboard event: $event"
     g = state[:gui][]
+    g[:toutput].focused[] && return Consume(false)
     if state[:mode][] == :normal && event.action == Keyboard.press
         if ispressed(g[:fig], Keyboard.a)
             pos = mouseposition(g[:axcontour])
@@ -99,6 +100,7 @@ end
 
 function process_unicode_input(expt, state, character)
     @debug "Processing unicode input: $character"
+    state[:gui][][:toutput].focused[] && return Consume(false)
     if state[:mode][] == :renamingstart
         state[:mode][] = :renaming
         if character == 'r'
