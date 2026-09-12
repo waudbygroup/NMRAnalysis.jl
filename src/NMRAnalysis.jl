@@ -4,7 +4,6 @@ using LsqFit
 using Measurements
 using NativeFileDialog
 using NMRTools
-using Plots
 using REPL.TerminalMenus
 using Reexport
 using Statistics

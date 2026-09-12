@@ -10,13 +10,14 @@ Supports R1ρ relaxation dispersion and CEST experiments with:
 """
 module Exchange1D
 
+using CairoMakie
 using ComponentArrays
+using GLMakie
 using InteractiveUtils: subtypes
 using LinearAlgebra
 using LsqFit
 using Measurements
 using NMRTools
-using Plots
 using PrettyTables
 using REPL.TerminalMenus
 using Statistics
@@ -40,6 +41,7 @@ include("experiments.jl")
 include("liouvillian.jl")
 include("params.jl")
 include("problem.jl")
+include("plots.jl")
 include("overlay.jl")
 include("interface.jl")
 include("results.jl")

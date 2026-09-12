@@ -62,5 +62,3 @@ function Base.show(io::IO, ::MIME"text/plain", result::FitResult)
     return println(io)
 end
 
-"""Plot all experiments in a FitResult, returning a vector of per-experiment plots."""
-Plots.plot(result::FitResult) = plot_result(result.prob, result)

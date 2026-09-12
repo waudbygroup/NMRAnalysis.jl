@@ -72,8 +72,8 @@ function exchange1d(filenames::Vector{String})
         result = fit(prob, p0; fixed=fixed)
         display(result)
 
-        plots = plot(result)
-        display(combineplots(plots))
+        GLMakie.activate!()
+        display(combineplots(result))
 
         action = _prompt_after_fit()
         if action == :save
@@ -655,39 +655,6 @@ _format_value(v) = string(v)
 # Step 6: Plotting + post-fit prompt
 # ═══════════════════════════════════════════════════════════════════════════
 
-"""
-    combineplots(plots) -> Plot
-
-Create a combined figure from individual experiment plots, with scaled font sizes
-and figure dimensions so that the result is legible even with many experiments.
-"""
-function combineplots(plots)
-    n = length(plots)
-    ncols = min(n, 4)
-    nrows = ceil(Int, n / ncols)
-
-    # scale figure: each experiment column ~350px wide, each row pair ~280px tall
-    w = max(1200, ncols * 350)
-    h = max(800, nrows * 280)
-
-    plt = plot(plots...; size=(w, h))
-
-    for sp in plt.subplots
-        sp[:titlefontsize] = 8
-
-        # font sizes must be set on each axis object directly
-        for axis in (:xaxis, :yaxis)
-            sp[axis].plotattributes[:guidefontsize] = 7
-            sp[axis].plotattributes[:tickfontsize] = 6
-        end
-
-        for series in sp.series_list
-            series[:markerstrokewidth] = 0.25
-        end
-    end
-
-    return plt
-end
 
 """Prompt user after fit: save, adjust parameters, or quit."""
 function _prompt_after_fit()
@@ -717,15 +684,14 @@ function _save_results(result::FitResult)
     saved = String[]
 
     # every experiment on one grid
-    plots = plot(result)
-    savefig(combineplots(plots), joinpath(outputfolder, "fit.pdf"))
+    save(joinpath(outputfolder, "fit.pdf"), combineplots(result); backend=CairoMakie)
     push!(saved, "fit.pdf")
 
     # one plot per experiment, sharing its basename with that experiment's CSV so the data
     # behind a plot sits beside it
-    for (expt, p) in zip(result.prob.experiments, plots)
+    for (expt, p) in zip(result.prob.experiments, plotresults(result))
         name = safename(short_expt_path(expt))
-        savefig(p, joinpath(outputfolder, "experiments", "$name.pdf"))
+        save(joinpath(outputfolder, "experiments", "$name.pdf"), p; backend=CairoMakie)
         push!(saved, joinpath("experiments", "$name.pdf"))
     end
 
@@ -734,7 +700,7 @@ function _save_results(result::FitResult)
     # the top level under a prefixed name.
     overlays = overlayplots(result)
     for (i, p) in enumerate(overlays)
-        savefig(p, joinpath(outputfolder, "overlay_$i.pdf"))
+        save(joinpath(outputfolder, "overlay_$i.pdf"), p; backend=CairoMakie)
         push!(saved, "overlay_$i.pdf")
     end
 
