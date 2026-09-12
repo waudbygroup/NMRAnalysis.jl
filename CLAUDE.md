@@ -11,14 +11,14 @@ NMRAnalysis.jl is a Julia package for analysis of NMR experiments, specifically 
 ### Package Management
 - `julia --project=.` - Start Julia with the project environment
 - `julia --project=. -e "using Pkg; Pkg.instantiate()"` - Install dependencies
-- `julia --project=. -e "using Pkg; Pkg.test()"` - Run tests (currently not working)
+- `julia --project=. -e "using Pkg; Pkg.test()"` - Run tests
 
 ### Documentation
 - `julia --project=docs docs/make.jl` - Build documentation locally
 - Documentation is built with Documenter.jl and deployed to GitHub Pages
 
 ### Code Formatting
-- Uses JuliaFormatter with "yas" style (configured in `.JuliaFormatter.toml`)
+- Uses JuliaFormatter with "yas" style (configured in `.JuliaFormatter.toml`), checked in CI
 - `julia --project=. -e "using JuliaFormatter; format(\".\")"` - Format all code
 
 ## Architecture
@@ -32,7 +32,7 @@ NMRAnalysis.jl is a Julia package for analysis of NMR experiments, specifically 
 - **MaybeVectorModule**: `src/maybevector/` - shared parameter-vector type used across GUI2D and Exchange1D
 - **Analysis1D module**: `src/analysis1d/` - the interactive 1D analyses (relaxation, diffusion,
   TRACT, nutation calibration, kinetics), sharing one analysis window and one results pipeline.
-  See `src/analysis1d/PLAN.md` for the design and
+  See `docs/src/advanced/pipeline.md` for the three stages every analysis shares and
   `docs/src/advanced/creating_1d_analyses.md` for how to add one
 - **viscosity**: `src/viscosity.jl` - solvent viscosity from temperature, used by diffusion
 
@@ -75,7 +75,8 @@ All 2D functions are provided by the GUI2D module:
 - **NativeFileDialog.jl**: File selection dialogs
 
 ### GUI Architecture
-- Both R1rho and GUI2D modules use Makie for interactive GUIs
+- Every module plots with Makie: GLMakie for the interactive windows, CairoMakie for the
+  saved PDFs (`save(path, fig; backend=CairoMakie)`)
 - State management pattern with modular event handling
 - Mouse and keyboard interaction systems
 - Real-time parameter fitting and visualization

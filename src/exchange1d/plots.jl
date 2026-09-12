@@ -1,9 +1,8 @@
 # Makie plotting shared by every experiment type: GLMakie on screen, CairoMakie for the
-# saved PDFs (see `_save_results`). The layout is the one the Plots.jl version used - a
-# data panel above a residual panel a third its height, sharing an x-axis - drawn in the
-# default Makie palette.
+# saved PDFs (see `_save_results`). A data panel above a residual panel a third its height,
+# sharing an x-axis, drawn in the default Makie palette.
 
-"Default Makie palette, indexed as the Plots.jl version indexed its own (`c=1`, `c=2`, …)."
+"Default Makie palette."
 const PALETTE = Makie.wong_colors()
 palettecolor(i) = PALETTE[mod1(i, length(PALETTE))]
 
@@ -47,7 +46,7 @@ end
     measured!(ax, x, y; color, label=nothing, strokecolor=nothing)
 
 Plot measurements carrying uncertainties: an error bar and a marker per point. Makie draws
-neither from a `Measurement` on its own, unlike Plots.jl.
+neither from a `Measurement` on its own.
 """
 function measured!(ax, x, y; color, label=nothing, strokecolor=nothing)
     value = Measurements.value.(y)
