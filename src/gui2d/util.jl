@@ -115,8 +115,10 @@ function parse_label(label)::ResidueLabel
     return ResidueLabel(resnum, code, atom)
 end
 
-first_letter_or_unknown(label) = (p = findfirst(isletter, label);
-                                  isnothing(p) ? '?' : label[p])
+function first_letter_or_unknown(label)
+    return (p=findfirst(isletter, label);
+            isnothing(p) ? '?' : label[p])
+end
 
 """
     extract_residue_number(label)::Int
