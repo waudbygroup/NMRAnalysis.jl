@@ -3,8 +3,9 @@ function gui!(expt::Experiment)
                       focus_on_show=true)
     # No gridlines anywhere (interactive or exported plots use the same Makie theme); axes
     # still show a visible zero line where one is drawn explicitly.
-    set_theme!(Theme(Axis=(xgridvisible=false, ygridvisible=false,
-                          xminorgridvisible=false, yminorgridvisible=false)))
+    set_theme!(Theme(;
+                     Axis=(xgridvisible=false, ygridvisible=false,
+                           xminorgridvisible=false, yminorgridvisible=false)))
 
     state = expt.state[]
 

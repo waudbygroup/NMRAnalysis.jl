@@ -71,8 +71,9 @@ cantrack(expt::MovingExperiment) = !(expt.model isa RDCModel)
 # learned displacement pattern. Generic moving peaks always walk; RDC only walks until a peak
 # has been fitted, after which new peaks copy the established offsets (addpeak! seeds from
 # average_displacements) so the user need not re-mark every plane.
-needsguidedadd(expt::MovingExperiment) =
-    !(expt.model isa RDCModel) || !any(p -> p.postfitted[], expt.peaks[])
+function needsguidedadd(expt::MovingExperiment)
+    return !(expt.model isa RDCModel) || !any(p -> p.postfitted[], expt.peaks[])
+end
 
 # Moving-peak spectra are normalised per plane by each plane's OWN noise level, so contour
 # levels and signal-to-noise are consistent even when the planes are different experiment
@@ -600,7 +601,8 @@ the two components in the same order for both conditions; if J comes out with th
 swap the pair. Each component can also be given as a Bruker experiment number.
 """
 function rdc2d(; isotropic, aligned, components=("a", "b"), coupling=nothing, scale=1.0)
-    length(isotropic) == 2 || error("`isotropic` must be two component spectra, e.g. [A, B]")
+    length(isotropic) == 2 ||
+        error("`isotropic` must be two component spectra, e.g. [A, B]")
     length(aligned) == 2 || error("`aligned` must be two component spectra, e.g. [A, B]")
 
     files = string.([isotropic[1], isotropic[2], aligned[1], aligned[2]])
@@ -724,7 +726,8 @@ when `spec` carries no sample component metadata (e.g. a plane of a pseudo-3D da
 function sampleconcentrations(spec::NMRData)
     components = sample(spec, :sample, :components)
     isnothing(components) && return Dict{String,Float64}()
-    return Dict(c["name"] => c["concentration_or_amount"] for c in components
+    return Dict(c["name"] => c["concentration_or_amount"]
+                for c in components
                 if haskey(c, "name") && haskey(c, "concentration_or_amount"))
 end
 
@@ -769,12 +772,14 @@ function titrationconcentrations(nmrdata)
     # that otherwise carries sample metadata and still lacks one of the two assigned molecules is
     # very likely a mismatched or incomplete sample entry, so gets a warning rather than a silent
     # zero or silent fallback.
-    missingligand = [i for i in eachindex(concs)
-                      if length(concs[i]) > 1 && !haskey(concs[i], ligand)]
+    missingligand = [i
+                     for i in eachindex(concs)
+                     if length(concs[i]) > 1 && !haskey(concs[i], ligand)]
     isempty(missingligand) ||
         @warn "\"$ligand\" concentration is missing from sample metadata in " *
               "$(length(missingligand))/$(length(concs)) planes despite other components " *
-              "being defined:\n  " * join((nmrdata[i][:filename] for i in missingligand), "\n  ")
+              "being defined:\n  " *
+              join((nmrdata[i][:filename] for i in missingligand), "\n  ")
 
     missingprotein = [i for i in eachindex(concs) if !haskey(concs[i], protein)]
     if !isempty(missingprotein)
@@ -794,10 +799,10 @@ function titrationconcentrations(nmrdata)
 
     formatconc(v) = string(round(v; digits=4))
     tdata = hcat(string.(1:length(concs)), formatconc.(L0),
-                isnothing(P0) ? fill("—", length(concs)) : formatconc.(P0))
+                 isnothing(P0) ? fill("—", length(concs)) : formatconc.(P0))
     pretty_table(tdata; header=["Plane", "[$ligand] (L0)", "[$protein] (P0)"],
-                alignment=[:r, :r, :r], tf=tf_unicode_rounded, crop=:none,
-                header_crayon=Crayon(; bold=true))
+                 alignment=[:r, :r, :r], tf=tf_unicode_rounded, crop=:none,
+                 header_crayon=Crayon(; bold=true))
 
     return (L0, P0)
 end
@@ -879,8 +884,9 @@ function _fraction(Kd, Pt, L)
 end
 
 # Bound fraction in plane `i` of a titration experiment.
-boundfraction(model::TitrationModel, Lt, i, Kd) =
-    _fraction(Kd, isnothing(model.protein) ? nothing : model.protein[i], Lt[i])
+function boundfraction(model::TitrationModel, Lt, i, Kd)
+    return _fraction(Kd, isnothing(model.protein) ? nothing : model.protein[i], Lt[i])
+end
 
 # Weighted linear regression of `y` on `f`: returns (a, b) with model y ≈ a + b·f. `w` are
 # per-point weights. Used both inside the Kd search (variable projection) and to read off the
@@ -1009,8 +1015,9 @@ function _initial_kd(Lt)
     return isempty(nz) ? 1.0 : median(nz)
 end
 
-primaryparam(expt::MovingExperiment) =
-    expt.model isa RDCModel ? :D : expt.model isa TitrationModel ? :CSP : :amp
+function primaryparam(expt::MovingExperiment)
+    return expt.model isa RDCModel ? :D : expt.model isa TitrationModel ? :CSP : :amp
+end
 
 function addpeakhint(expt::MovingPeakExperiment)
     s = "Press (A) to add a peak, marking its position in each plane"
@@ -1325,7 +1332,8 @@ function _titration_curve(model::TitrationModel, Lt, Kd, δfree, δbound; npts=1
         o = sortperm(Lt)
         [_lininterp(Lt[o], model.protein[o], g) for g in grid]
     end
-    return [Point2f(g, _fraction(Kd, isnothing(Pg) ? nothing : Pg[k], g) * (δbound - δfree))
+    return [Point2f(g,
+                    _fraction(Kd, isnothing(Pg) ? nothing : Pg[k], g) * (δbound - δfree))
             for (k, g) in enumerate(grid)]
 end
 
@@ -1367,7 +1375,8 @@ function get_titration_data(peak, expt::MovingExperiment)
 end
 
 function completestate!(state, expt::MovingExperiment, ::TitrationVisualisation)
-    state[:peak_plot_data] = lift(peak -> get_titration_data(peak, expt), state[:current_peak])
+    state[:peak_plot_data] = lift(peak -> get_titration_data(peak, expt),
+                                  state[:current_peak])
     state[:peak_plot_obsX] = lift(d -> d[1], state[:peak_plot_data])
     state[:peak_plot_obsY] = lift(d -> d[2], state[:peak_plot_data])
     state[:peak_plot_fitX] = lift(d -> d[3], state[:peak_plot_data])

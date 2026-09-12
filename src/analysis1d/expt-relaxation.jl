@@ -102,8 +102,8 @@ relaxationseriesmodel(model::SeriesModel) = model
 function relaxationseriesmodel(model::Symbol)
     model === :exponential && return ExponentialModel()
     model === :recovery && return RecoveryModel()
-    throw(ArgumentError("unknown relaxation model :$model " *
-                        "(expected :exponential or :recovery)"))
+    return throw(ArgumentError("unknown relaxation model :$model " *
+                               "(expected :exponential or :recovery)"))
 end
 
 # ---- 3. interface -------------------------------------------------------------
@@ -140,7 +140,9 @@ function resultlabels(e::RelaxationExperiment)
     return ("Relaxation delay / $unit", "Integrated intensity (a.u.)")
 end
 
-spectruminfo(::RelaxationExperiment, vars::NamedTuple) = "$(round(vars.time; digits=3)) s delay"
+function spectruminfo(::RelaxationExperiment, vars::NamedTuple)
+    return "$(round(vars.time; digits=3)) s delay"
+end
 
 # :R means a relaxation rate for both T1/T2 and recovery fits, and :C appears only here,
 # RecoveryModel being this experiment's alone.

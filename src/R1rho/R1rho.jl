@@ -101,9 +101,9 @@ function __init__()
     # Register analysis rule for on-resonance R1rho experiments
     rule = MultiFileRule(expts -> begin
                              matched = filter(e -> "r1rho" in e.types &&
-                                                       "1d" in e.types &&
-                                                       "on_resonance" in
-                                                       e.features,
+                                                   "1d" in e.types &&
+                                                   "on_resonance" in
+                                                   e.features,
                                               expts)
                              length(matched) > 0 ? matched : nothing
                          end,

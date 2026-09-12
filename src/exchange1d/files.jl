@@ -94,8 +94,9 @@ function problemcomments(prob::ExchangeProblem)
     push!(lines, "Number of experiments: $(length(prob.experiments))")
     if !isnothing(prob.integration)
         i = prob.integration
-        push!(lines, "Integration: peak $(i.peakppm) ppm, noise $(i.noiseppm) ppm, " *
-                     "width $(i.ppmwidth) ppm")
+        push!(lines,
+              "Integration: peak $(i.peakppm) ppm, noise $(i.noiseppm) ppm, " *
+              "width $(i.ppmwidth) ppm")
     end
     return lines
 end
@@ -164,8 +165,9 @@ function seriestable(prob::ExchangeProblem)
     header = ["source", "label"]
     append!(header, [csvcolumn(name, coordinateunit(name)) for name in coordnames])
     for (name, unit) in observables
-        append!(header, [csvcolumn(name, unit), csvcolumn("$(name)_err", unit),
-                         csvcolumn("$(name)_fit", unit)])
+        append!(header,
+                [csvcolumn(name, unit), csvcolumn("$(name)_err", unit),
+                 csvcolumn("$(name)_fit", unit)])
     end
 
     rows = Vector{String}[]
@@ -182,9 +184,10 @@ function seriestable(prob::ExchangeProblem)
             for obs in observables
                 if obs == mine
                     y = expt.observed_intensities[i]
-                    append!(row, [csvvalue(Measurements.value(y)),
-                                  csvvalue(Measurements.uncertainty(y)),
-                                  csvvalue(expt.predicted_intensities[i])])
+                    append!(row,
+                            [csvvalue(Measurements.value(y)),
+                             csvvalue(Measurements.uncertainty(y)),
+                             csvvalue(expt.predicted_intensities[i])])
                 else
                     append!(row, ["NA", "NA", "NA"])
                 end
@@ -205,7 +208,8 @@ experiment alone.
 """
 function globaltable(result::FitResult)
     header = ["parameter", "value", "error", "unit", "initial", "fixed"]
-    initial = Dict(item.flat_index => item for item in _flatten_params_items(result.params0))
+    initial = Dict(item.flat_index => item
+                   for item in _flatten_params_items(result.params0))
     rows = Vector{String}[]
     for item in _flatten_params_items(result.params)
         value = _displayvalue(item, result.params)

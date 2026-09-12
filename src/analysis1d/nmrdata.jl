@@ -83,7 +83,7 @@ Build a `Dataset1D` from a pseudo-2D `spec` and a vector of per-plane variable
 `NamedTuple`s (`length(vars) == number of planes`).
 """
 function datasetfromspec(spec, vars::AbstractVector{<:NamedTuple};
-                           noisecenter::Real=defaultnoisecentre(spec))
+                         noisecenter::Real=defaultnoisecentre(spec))
     return Dataset1D(Planes(tracesfromspec(spec), collect(vars)), Float64(noisecenter),
                      speclabel(spec))
 end

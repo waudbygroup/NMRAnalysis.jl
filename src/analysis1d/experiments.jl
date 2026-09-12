@@ -81,8 +81,10 @@ mutable struct RegionResult
     postfitted::Bool
 end
 
-RegionResult(region, series) = RegionResult(region, collect(SeriesResult, series),
-                                            OrderedDict{Symbol,Any}(), false)
+function RegionResult(region, series)
+    return RegionResult(region, collect(SeriesResult, series),
+                        OrderedDict{Symbol,Any}(), false)
+end
 
 """
     seriesname(name, group) -> Symbol

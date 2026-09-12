@@ -162,7 +162,7 @@ end
         pB = 0.05
         dGB = log((1 - pB) / pB)  # ΔG reconstructing pB = 0.05
         params = ComponentArray(;
-                                model=ComponentArray(; logkex=log(1000.0), dGB=dGB),)
+                                model=ComponentArray(; logkex=log(1000.0), dGB=dGB))
         K = exchangematrix(model, params, Dict{String,Float64}())
         @test size(K) == (2, 2)
 
@@ -283,9 +283,9 @@ end
         model = NoExchangeModel()
         params = ComponentArray(; model=ComponentArray(),
                                 spin=ComponentArray(; R2_14p1T=[15.0],
-                                                    R1_14p1T=[2.0],),
+                                                    R1_14p1T=[2.0]),
                                 nuisance=ComponentArray(;
-                                                        R1_14p1T_I0=1.0,),)
+                                                        R1_14p1T_I0=1.0))
 
         simulate!(expt, model, params)
 
@@ -305,9 +305,9 @@ end
         model = NoExchangeModel()
         params = ComponentArray(; model=ComponentArray(),
                                 spin=ComponentArray(; R2_14p1T=[15.0],
-                                                    R1_14p1T=[2.0],),
+                                                    R1_14p1T=[2.0]),
                                 nuisance=ComponentArray(; R1_14p1T_I0=1.0,
-                                                        R1_14p1T_inv_factor=2.0,),)
+                                                        R1_14p1T_inv_factor=2.0))
 
         simulate!(expt, model, params)
 
@@ -410,9 +410,9 @@ end
 
         params = ComponentArray(; model=ComponentArray(),
                                 spin=ComponentArray(; R2_14p1T=[15.0],
-                                                    R1_14p1T=[R1_true],),
+                                                    R1_14p1T=[R1_true]),
                                 nuisance=ComponentArray(;
-                                                        R1_14p1T_I0=I0_true,),)
+                                                        R1_14p1T_I0=I0_true))
 
         # simulate should fill predicted_intensities
         simulate!(prob, params)

@@ -55,11 +55,11 @@ function __init__()
                              oneD = filter(e -> "1d" in e.types, expts)
                              cest = filter(e -> "cest" in e.types, oneD)
                              r1cal = filter(e -> "relaxation" in e.types &&
-                                                "R1" in e.features, oneD)
+                                                 "R1" in e.features, oneD)
                              onres = filter(e -> "r1rho" in e.types &&
-                                                "on_resonance" in e.features, oneD)
+                                                 "on_resonance" in e.features, oneD)
                              offres = filter(e -> "r1rho" in e.types &&
-                                                "off_resonance" in e.features, oneD)
+                                                  "off_resonance" in e.features, oneD)
                              combined = vcat(cest, r1cal, onres, offres)
                              (length(cest) > 0 || length(offres) > 0) ? combined : nothing
                          end,

@@ -60,13 +60,16 @@ function diffusion1d(spec, gradients=nothing; coherence=SQ(H1), δ=nothing, Δ=n
                    1e-6 * ask("Gradient pulse length δ",
                               isnothing(p30) ? nothing : 2e6 * p30;
                               unit="µs", note=" (2*p30)", prompt))
-    Δ = @something(Δ, ask("Diffusion delay Δ", acqusvalue(spec, :d, 20); unit="s",
-                          note=" (d20)", prompt))
+    Δ = @something(Δ,
+                   ask("Diffusion delay Δ", acqusvalue(spec, :d, 20); unit="s",
+                       note=" (d20)", prompt))
     gpnam = acqusvalue(spec, :gpnam, 6)
-    σ = @something(σ, ask("Gradient shape factor σ", shapefactor(gpnam);
-                          note=isnothing(gpnam) ? "" : " (gpnam6 = $gpnam)", prompt))
-    Gmax = @something(Gmax, ask("Maximum gradient strength Gmax", 0.55; unit="T m⁻¹",
-                                note=" (typical for Bruker systems)", prompt))
+    σ = @something(σ,
+                   ask("Gradient shape factor σ", shapefactor(gpnam);
+                       note=isnothing(gpnam) ? "" : " (gpnam6 = $gpnam)", prompt))
+    Gmax = @something(Gmax,
+                      ask("Maximum gradient strength Gmax", 0.55; unit="T m⁻¹",
+                          note=" (typical for Bruker systems)", prompt))
     gradients = @something(gradients, gradientramp(n; prompt))
     length(gradients) == n ||
         throw(ArgumentError("got $(length(gradients)) gradient strengths for $n spectra"))
@@ -182,8 +185,10 @@ end
 
 windowtitle(::DiffusionExperiment) = "Diffusion"
 
-resultlabels(::DiffusionExperiment) = ("Relative gradient strength",
-                                        "Integrated intensity (a.u.)")
+function resultlabels(::DiffusionExperiment)
+    return ("Relative gradient strength",
+            "Integrated intensity (a.u.)")
+end
 
 function spectruminfo(::DiffusionExperiment, vars::NamedTuple)
     return "gradient = $(round(100 * vars.gradient; digits=1))%"

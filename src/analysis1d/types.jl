@@ -31,7 +31,9 @@ struct Region
     label::String
     lo::Float64
     hi::Float64
-    Region(label, a, b) = new(String(label), min(float(a), float(b)), max(float(a), float(b)))
+    function Region(label, a, b)
+        return new(String(label), min(float(a), float(b)), max(float(a), float(b)))
+    end
 end
 
 Region(label, δ::Real) = Region(label, δ, δ)

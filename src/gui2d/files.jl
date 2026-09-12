@@ -295,7 +295,8 @@ end
 
 "Sort peaks by residue number (positive ascending first, then unassigned)."
 function sortedpeaks(expt)
-    return sort(collect(expt.peaks[]); by=peak -> begin
+    return sort(collect(expt.peaks[]);
+                by=peak -> begin
                     r = extract_residue_number(peak.label[])
                     (r ≤ 0, abs(r))
                 end)

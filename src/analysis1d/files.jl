@@ -153,9 +153,10 @@ function seriestable(expt::Experiment1D, ds::Dataset1D, results)
                    csvvalue(plane)]
             append!(row, [csvvalue(get(s.group, k, nothing)) for k in keycols])
             push!(row, csvvalue(s.x[i]))
-            append!(row, [csvvalue(Measurements.value(s.y[i])),
-                          csvvalue(Measurements.uncertainty(s.y[i])),
-                          csvvalue(yfit[i])])
+            append!(row,
+                    [csvvalue(Measurements.value(s.y[i])),
+                     csvvalue(Measurements.uncertainty(s.y[i])),
+                     csvvalue(yfit[i])])
             push!(rows, row)
         end
     end
@@ -185,7 +186,8 @@ function writeresults!(expt::Experiment1D, ds::Dataset1D, results, regs,
     # An experiment that reports nothing per region (kinetics) would get a results.csv of
     # labels and no values, so it gets none - see docs/src/advanced/conventions.md.
     isempty(parameternames(results)) ||
-        writetable(joinpath(folder, "results.csv"), comments, resultstable(expt, results)...)
+        writetable(joinpath(folder, "results.csv"), comments,
+                   resultstable(expt, results)...)
 
     header, rows = seriestable(expt, ds, results)
     filepath = writetable(joinpath(folder, "series.csv"), comments, header, rows)
@@ -350,9 +352,10 @@ function callstring(call::AnalysisCall, regs, noisecentre)
     if length(regs) == 1
         r = only(regs)
         push!(kwargs,
-              :integration => "(peakppm=$(round(centre(r); digits=3)), " *
-                              "noiseppm=$(round(noisecentre; digits=3)), " *
-                              "ppmwidth=$(round(width(r); digits=3)))")
+              :integration =>
+                  "(peakppm=$(round(centre(r); digits=3)), " *
+                  "noiseppm=$(round(noisecentre; digits=3)), " *
+                  "ppmwidth=$(round(width(r); digits=3)))")
     end
     io = IOBuffer()
     print(io, call.func, "(", join(call.args, ", "))
@@ -411,4 +414,3 @@ function writesummary(filepath::AbstractString, expt::Experiment1D, ds::Dataset1
     end
     return filepath
 end
-

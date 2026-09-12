@@ -140,5 +140,3 @@ function fit(prob::ExchangeProblem, params0::ComponentArray; fixed::Set{Int}=Set
                      chi2, chi2 / dof, covar,
                      n_obs, n_params, dof, copy(fixed), prob)
 end
-
-

@@ -655,7 +655,6 @@ _format_value(v) = string(v)
 # Step 6: Plotting + post-fit prompt
 # ═══════════════════════════════════════════════════════════════════════════
 
-
 """Prompt user after fit: save, adjust parameters, or quit."""
 function _prompt_after_fit()
     menu = RadioMenu(["Save results", "Adjust parameters and refit", "Quit without saving"])

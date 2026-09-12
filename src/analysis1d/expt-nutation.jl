@@ -44,8 +44,10 @@ end
 
 """Pulse durations, asked for in µs (as they are set on the spectrometer) but returned in
 the seconds the analysis works in."""
-askdurations(n::Integer; prompt::Bool=true) = 1e-6 .* askvector("pulse durations", n;
-                                                                unit="µs", prompt)
+function askdurations(n::Integer; prompt::Bool=true)
+    return 1e-6 .* askvector("pulse durations", n;
+                             unit="µs", prompt)
+end
 
 """
     nutationphase(annotation) -> Symbol or nothing

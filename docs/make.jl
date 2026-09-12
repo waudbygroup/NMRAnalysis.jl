@@ -20,11 +20,12 @@ makedocs(;
                                      "TRACT" => "analyses/1d/tract.md",
                                      "Pulse Calibration" => "analyses/1d/calibration.md",
                                      "Kinetics" => "analyses/1d/kinetics.md"],
-                "1D Chemical Exchange" => ["R1ρ Relaxation Dispersion" => "analyses/r1rho.md",
-                                           "Exchange Fitting (CEST, R1ρ, R1)" => [
-                                               "Overview" => "analyses/exchange1d/overview.md",
-                                               "Exchange Models" => "analyses/exchange1d/models.md",
-                                               "Theory and Calculation Methods" => "analyses/exchange1d/theory.md"]],
+                "1D Chemical Exchange" =>
+                    ["R1ρ Relaxation Dispersion" => "analyses/r1rho.md",
+                     "Exchange Fitting (CEST, R1ρ, R1)" =>
+                         ["Overview" => "analyses/exchange1d/overview.md",
+                          "Exchange Models" => "analyses/exchange1d/models.md",
+                          "Theory and Calculation Methods" => "analyses/exchange1d/theory.md"]],
                 "2D Experiments" => ["Overview" => "analyses/2d/overview.md",
                                      "Relaxation (R₁, R₂)" => "analyses/2d/relaxation.md",
                                      "Heteronuclear NOE" => "analyses/2d/hetnoe.md",
@@ -35,11 +36,12 @@ makedocs(;
                                      "Methyl CCR (S²τc)" => "analyses/2d/methylccr.md",
                                      "Under Development" => ["CEST" => "analyses/2d/cest.md",
                                                              "CPMG Dispersion" => "analyses/2d/cpmg.md"],
-                                     "Reference" => ["Peak List Formats" => "analyses/2d/peaklistformats.md",
-                                                     "Summary Plots" => "analyses/2d/summary.md",
-                                                     "Simple Fitting" => "analyses/2d/fit.md",
-                                                     "Peak Tracking" => "analyses/2d/peaktracking.md",
-                                                     "Custom Models" => "analyses/2d/modelfit.md"]],
+                                     "Reference" =>
+                                         ["Peak List Formats" => "analyses/2d/peaklistformats.md",
+                                          "Summary Plots" => "analyses/2d/summary.md",
+                                          "Simple Fitting" => "analyses/2d/fit.md",
+                                          "Peak Tracking" => "analyses/2d/peaktracking.md",
+                                          "Custom Models" => "analyses/2d/modelfit.md"]],
                 "Tutorials" => ["¹⁹F R1ρ Acquisition & Analysis" => "tutorials/r1rho.md"],
                 "Ecosystem" => "ecosystem.md",
                 "Advanced" => ["How an Analysis Works" => "advanced/pipeline.md",
@@ -57,11 +59,11 @@ makedocs(;
                                "Index" => "indexes.md"]],
          sitename="NMRAnalysis.jl",
          authors="Chris Waudby",
-         warnonly=[:missing_docs],)
+         warnonly=[:missing_docs])
 
 deploydocs(;
            repo="github.com/waudbylab/NMRAnalysis.jl.git",
            devbranch="main",
            # Build a browsable preview for every pull request, at
            # https://waudbylab.github.io/NMRAnalysis.jl/previews/PR<number>/
-           push_preview=true,)
+           push_preview=true)

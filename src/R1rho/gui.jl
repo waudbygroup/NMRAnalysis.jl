@@ -79,7 +79,8 @@ function gui!(state)
     text_dx = input_panel[2, 2] = Textbox(fig;
                                           stored_string=string(round(state[:dx][];
                                                                      digits=2)),
-                                          validator=Float64, width=50, textpadding=(4, 4, 4, 4))
+                                          validator=Float64, width=50,
+                                          textpadding=(4, 4, 4, 4))
     gui[:text_dx] = text_dx
     on(text_dx.stored_string) do s
         return state[:dx][] = parse(Float64, s)
@@ -94,7 +95,8 @@ function gui!(state)
     text_I0 = input_panel[5, 2:3] = Textbox(fig;
                                             stored_string=string(round(state[:initialI0][];
                                                                        digits=1)),
-                                            validator=Float64, width=150, textpadding=(4, 4, 4, 4))
+                                            validator=Float64, width=150,
+                                            textpadding=(4, 4, 4, 4))
     gui[:text_I0] = text_I0
     on(text_I0.stored_string) do s
         return state[:initialI0][] = parse(Float64, s)
@@ -108,7 +110,8 @@ function gui!(state)
     text_R20 = input_panel[6, 2:3] = Textbox(fig;
                                              stored_string=string(round(state[:initialR20][];
                                                                         digits=1)),
-                                             validator=Float64, width=150, textpadding=(4, 4, 4, 4))
+                                             validator=Float64, width=150,
+                                             textpadding=(4, 4, 4, 4))
     gui[:text_R20] = text_R20
     on(text_R20.stored_string) do s
         return state[:initialR20][] = parse(Float64, s)
@@ -118,7 +121,8 @@ function gui!(state)
     text_Rex = input_panel[7, 2:3] = Textbox(fig;
                                              stored_string=string(round(state[:initialRex][];
                                                                         digits=1)),
-                                             validator=Float64, width=150, textpadding=(4, 4, 4, 4))
+                                             validator=Float64, width=150,
+                                             textpadding=(4, 4, 4, 4))
     gui[:text_Rex] = text_Rex
     on(text_Rex.stored_string) do s
         return state[:initialRex][] = parse(Float64, s)
@@ -128,7 +132,8 @@ function gui!(state)
     text_kex = input_panel[8, 2:3] = Textbox(fig;
                                              stored_string=string(round(exp(state[:initiallnk][]);
                                                                         digits=1)),
-                                             validator=Float64, width=150, textpadding=(4, 4, 4, 4))
+                                             validator=Float64, width=150,
+                                             textpadding=(4, 4, 4, 4))
     gui[:text_kex] = text_kex
     on(text_kex.stored_string) do s
         return state[:initiallnk][] = log(parse(Float64, s))
@@ -138,7 +143,8 @@ function gui!(state)
     text_σΔδ = input_panel[9, 2:3] = Textbox(fig;
                                              stored_string=string(round(state[:σΔδ][];
                                                                         digits=1)),
-                                             validator=Float64, width=150, textpadding=(4, 4, 4, 4))
+                                             validator=Float64, width=150,
+                                             textpadding=(4, 4, 4, 4))
     gui[:text_σΔδ] = text_σΔδ
     on(text_σΔδ.stored_string) do s
         return state[:σΔδ][] = parse(Float64, s)
@@ -376,7 +382,7 @@ function savefig!(state)
         println(f, "Fitted kex (s⁻¹): $(state[:fitkex][])")
         # include no-exchange fit result
         println(f, "")
-        println(f, "Fitted R2,0 no-exchange (s⁻¹): $(state[:fitR20_null][])")
+        return println(f, "Fitted R2,0 no-exchange (s⁻¹): $(state[:fitR20_null][])")
     end
 
     # write dispersion fit data to CSVs

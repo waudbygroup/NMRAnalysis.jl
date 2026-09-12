@@ -28,7 +28,7 @@ function preparestate(expt::Experiment)
         # axis against a new-size matrix ("Incompatible input axes").
         state[:current_mask_x][] = expt.specdata.x[idx]
         state[:current_mask_y][] = expt.specdata.y[idx]
-        state[:current_mask_z][] = m[idx]
+        return state[:current_mask_z][] = m[idx]
     end
 
     state[:current_spec_x] = Observable(expt.specdata.x[1])
@@ -37,7 +37,7 @@ function preparestate(expt::Experiment)
     on(state[:current_slice]) do idx
         state[:current_spec_x][] = expt.specdata.x[idx]
         state[:current_spec_y][] = expt.specdata.y[idx]
-        state[:current_spec_z][] = expt.specdata.z[idx]
+        return state[:current_spec_z][] = expt.specdata.z[idx]
     end
 
     state[:current_fit_x] = Observable(expt.specdata.x[1])
@@ -46,7 +46,7 @@ function preparestate(expt::Experiment)
     onany(expt.specdata.zfit, state[:current_slice]) do zfit, idx
         state[:current_fit_x][] = expt.specdata.x[idx]
         state[:current_fit_y][] = expt.specdata.y[idx]
-        state[:current_fit_z][] = zfit[idx]
+        return state[:current_fit_z][] = zfit[idx]
     end
 
     state[:current_peak_idx] = Observable(0)
@@ -69,7 +69,7 @@ function preparestate(expt::Experiment)
                  :labels => labels,
                  :touched => touched)
         @debug "current_peaks lift" d maxlog = 10
-        d
+        return d
     end
     state[:initialpositions] = Observable{Vector{Point2f}}([])
     state[:positions] = Observable{Vector{Point2f}}([])
@@ -96,7 +96,7 @@ function preparestate(expt::Experiment)
         state[:initialpositions][] = d[:initialpositions]
         notify(state[:peakcolours])
         notify(state[:initialpeaksizes])
-        notify(state[:labels])
+        return notify(state[:labels])
     end
 
     on(state[:current_peak_idx]) do idx
@@ -111,7 +111,7 @@ function preparestate(expt::Experiment)
         state[:peakcolours].val = cols
         state[:initialpeaksizes].val = sizes
         notify(state[:initialpeaksizes])
-        notify(state[:peakcolours])
+        return notify(state[:peakcolours])
     end
 
     # Depends on expt.peaks as well as the selection, so derived results (e.g. a titration's

@@ -138,7 +138,6 @@ end
 "The lineshape parameters of a peak: where it is, and how broad it is in each dimension."
 const POSITION_PARAMS = (:x, :y, :R2x, :R2y)
 
-
 """
     derivedkeys(expt) -> Vector{Symbol}
 
@@ -290,8 +289,9 @@ function globaltable(expt)
     for k in globalparams(expt)
         i = findfirst(p -> haskey(p.postparameters, k), peaks)
         isnothing(i) && continue
-        push!(rows, [string(k), format_post(peaks[i], k, :value),
-                     format_post(peaks[i], k, :uncertainty), paramunit(expt, k)])
+        push!(rows,
+              [string(k), format_post(peaks[i], k, :value),
+               format_post(peaks[i], k, :uncertainty), paramunit(expt, k)])
     end
     return header, rows
 end

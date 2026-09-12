@@ -261,7 +261,9 @@ end
 
 # The model is fitted through the buildup/decay ratio, not through the amplitudes, so no
 # curve passes through the amplitudes to report in `amp_fit`.
-fittedamplitudes(peak, expt::IntensityExperiment, ::MethylCCRModel) = fill(NaN, nslices(expt))
+function fittedamplitudes(peak, expt::IntensityExperiment, ::MethylCCRModel)
+    return fill(NaN, nslices(expt))
+end
 
 function get_model_data(peak, expt::IntensityExperiment, model::MethylCCRModel)
     isnothing(peak) &&

@@ -127,9 +127,10 @@ function experimentinfo(expt::R1Experiment)
     return ["Type" => "R1 relaxation",
             "Field" => _format_field(expt.field_teslas),
             "Fitting model" => string(expt.fitting_model),
-            "Delays" => "$(length(expt.delays)) points, " *
-                        "$(round(minimum(expt.delays); digits=3)) to " *
-                        "$(round(maximum(expt.delays); digits=3)) s"]
+            "Delays" =>
+                "$(length(expt.delays)) points, " *
+                "$(round(minimum(expt.delays); digits=3)) to " *
+                "$(round(maximum(expt.delays); digits=3)) s"]
 end
 
 """

@@ -141,4 +141,3 @@ function plotresult!(gl, expt::R1rhoOnResExperiment, fitresult; axiskw=(;))
     ylims!(ax2, -maximum(abs, wres) * 1.2, maximum(abs, wres) * 1.2)
     return ax1, ax2
 end
-

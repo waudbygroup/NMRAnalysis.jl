@@ -72,7 +72,8 @@ function process_keyboardbutton(expt, state, event)
             return Consume()
         elseif event.action == Keyboard.press && event.key == Keyboard.backspace
             if length(state[:current_peak][].label[]) > 1
-                state[:current_peak][].label[] = state[:current_peak][].label[][1:(end - 2)] * "‸"
+                state[:current_peak][].label[] = state[:current_peak][].label[][1:(end - 2)] *
+                                                 "‸"
                 notify(expt.peaks)
                 return Consume()
             end

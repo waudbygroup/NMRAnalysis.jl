@@ -192,7 +192,8 @@ function available_params(path::AbstractString)
         append!(names, header)
     end
     skip = (_IDENTITY_COLS..., "source", "plane")
-    return unique(Symbol(h) for h in names
+    return unique(Symbol(h)
+                  for h in names
                   if !endswith(h, "_err") && !endswith(h, "_fit") && !(h in skip))
 end
 
@@ -216,7 +217,8 @@ function _defaultparam(path::AbstractString)
     if isfile(_resultsfile(path))
         header, _ = _readtable(_resultsfile(path))
         for h in header
-            (endswith(h, "_err") || h in _IDENTITY_COLS || startswith(h, "amp[")) && continue
+            (endswith(h, "_err") || h in _IDENTITY_COLS || startswith(h, "amp[")) &&
+                continue
             return Symbol(h)
         end
     end
@@ -243,7 +245,8 @@ function _paramper(sources, param)
     elseif param isa AbstractVector
         length(param) == length(sources) ||
             error("Got $(length(param)) parameters for $(length(sources)) sources")
-        return [p === nothing ? _defaultparam(s) : Symbol(p) for (s, p) in zip(sources, param)]
+        return [p === nothing ? _defaultparam(s) : Symbol(p)
+                for (s, p) in zip(sources, param)]
     else
         error("`param` must be a Symbol, a vector of Symbols, or nothing")
     end

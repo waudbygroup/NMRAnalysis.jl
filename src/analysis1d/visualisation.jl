@@ -57,7 +57,8 @@ function resultplotdata(e::Experiment1D, result, activelabel::AbstractString)
     factor = resultxfactor(e)
     return map(result[i].series) do s
         points = Point2f.(factor .* s.x, Measurements.value.(s.y))
-        errors = [(factor * s.x[k], Measurements.value(s.y[k]), Measurements.uncertainty(s.y[k]))
+        errors = [(factor * s.x[k], Measurements.value(s.y[k]),
+                   Measurements.uncertainty(s.y[k]))
                   for k in eachindex(s.x)]
         fitline = if !(s.model isa NoFitting) && !isempty(s.coefficients)
             xs = collect(range(min(0.0, minimum(s.x)), 1.05 * maximum(s.x), 100))
@@ -65,7 +66,7 @@ function resultplotdata(e::Experiment1D, result, activelabel::AbstractString)
         else
             Point2f[]
         end
-        ResultSeries(points, errors, fitline, groupname(s.group))
+        return ResultSeries(points, errors, fitline, groupname(s.group))
     end
 end
 
@@ -167,8 +168,10 @@ visualisationtype(::Experiment1D) = SeriesVisualisation()
 function completeresultstate!(state, expt::Experiment1D)
     return completeresultstate!(state, expt, visualisationtype(expt))
 end
-resultpanel!(gui, state, expt::Experiment1D) = resultpanel!(gui, state, expt,
-                                                            visualisationtype(expt))
+function resultpanel!(gui, state, expt::Experiment1D)
+    return resultpanel!(gui, state, expt,
+                        visualisationtype(expt))
+end
 function plotresult!(ax, expt::Experiment1D, result, label, i0=0)
     return plotresult!(ax, expt, result, label, i0, visualisationtype(expt))
 end
@@ -185,9 +188,11 @@ seriescolor(i) = PALETTE[mod1(i, length(PALETTE))]
 # ---- summary text -------------------------------------------------------------
 
 """Compact, consistently-rounded rendering of a `Measurement` (or plain number)."""
-fmt(x::Measurement, digits=4) = string(round(Measurements.value(x); sigdigits=digits),
-                                       " ± ",
-                                       round(Measurements.uncertainty(x); sigdigits=2))
+function fmt(x::Measurement, digits=4)
+    return string(round(Measurements.value(x); sigdigits=digits),
+                  " ± ",
+                  round(Measurements.uncertainty(x); sigdigits=2))
+end
 fmt(x::Real, digits=4) = string(round(x; sigdigits=digits))
 fmt(::Nothing, digits=4) = "n/a"
 
@@ -407,7 +412,7 @@ function completeresultstate!(state, expt::Experiment1D, ::SeriesVisualisation)
         return resultplotdata(expt, res, lbl)
     end
     state[:flatpoints] = lift(sd -> reduce(vcat, (s.points for s in sd); init=Point2f[]),
-                               state[:seriesdata])
+                              state[:seriesdata])
     state[:flatpointcolors] = lift(state[:seriesdata]) do sd
         return reduce(vcat,
                       (fill(seriescolor(i), length(s.points)) for (i, s) in enumerate(sd));
