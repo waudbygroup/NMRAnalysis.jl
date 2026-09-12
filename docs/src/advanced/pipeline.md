@@ -68,7 +68,8 @@ these files.
 | 2, fit | `postfit!(results, expt)` | `postfit!(peak, expt)` |
 | 3, global fit | `postfitglobal!(results, expt)` | `postfitglobal!(expt)` |
 
-Stage 2 receives everything belonging to one region or peak, so `Analysis1D` passes all of
-a region's series rather than one at a time. In both modules `parameters` holds what the
-fit at that level produced, per plane in 2D and per series in 1D, and `postparameters`
-holds what a later stage derived from it.
+Stage 2 receives the whole region or peak, not one series or plane at a time, which is
+what lets a quantity combining conditions (TRACT's τc) be an ordinary post-fit. In
+`Analysis1D` a region's fitted parameters are named apart by the series they came from
+(`:R_trosy`, `:R_anti`) and kept in one set with everything derived from them, so one
+region is one row of results.

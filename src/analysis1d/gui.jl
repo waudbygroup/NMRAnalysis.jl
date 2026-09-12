@@ -702,8 +702,8 @@ end
 
 """Save the results, covering every region (not just the active one shown live in the GUI
 panels), to the output folder, in the layout described in
-`docs/src/advanced/conventions.md`: `summary.txt` to read, `results.csv` / `series.csv` /
-`global.csv` to compute with (`results.csv` is also the file a region list is restored from
+`docs/src/advanced/conventions.md`: `summary.txt` to read, `results.csv` and `series.csv`
+to compute with (`results.csv` is also the file a region list is restored from
 - see `readregions!`), an overlay of every region in `fit.pdf`, and a `regions/` folder
 holding each region's own plot and the data behind it under the same basename."""
 function saveresults(state)

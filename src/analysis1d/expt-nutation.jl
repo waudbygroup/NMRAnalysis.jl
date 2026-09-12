@@ -117,12 +117,10 @@ end
 
 # Stored in the units `PARAM_UNITS` names for them: a 90° pulse reads naturally in µs,
 # never in seconds.
-function postfit!(rs::AbstractVector{RegionResult}, ::NutationExperiment)
-    for r in rs
-        ν = param(r, :nu)
-        setpost!(r, :pulse90, 1e6 / (4ν))
-        setpost!(r, :inhomogeneity, 100 * param(r, :R) / (2π * ν))
-    end
+function postfit!(r::RegionResult, ::NutationExperiment)
+    ν = param(r, :nu)
+    setpost!(r, :pulse90, 1e6 / (4ν))
+    setpost!(r, :inhomogeneity, 100 * param(r, :R) / (2π * ν))
     return nothing
 end
 

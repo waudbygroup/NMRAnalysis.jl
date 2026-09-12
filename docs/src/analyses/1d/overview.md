@@ -157,7 +157,6 @@ out/
   regionlist.csv
   results.csv
   series.csv
-  global.csv        (only when the analysis fits something globally)
   fit.pdf
   regions/
     signal.csv
@@ -168,9 +167,8 @@ out/
 |---|---|
 | `summary.txt` | The record to read: where the data came from, the regions, and the results rounded and with units |
 | `regionlist.csv` | The regions you picked, and the noise position. This is what **Load** reads |
-| `results.csv` | One row per region (and per series, where an experiment has more than one), with every fitted and derived parameter and its uncertainty |
+| `results.csv` | One row per region, carrying every parameter reported for it with its uncertainty. Where a region was measured under more than one condition, each condition's fitted parameters are named apart on that same row (TRACT's `R_trosy` and `R_anti`) |
 | `series.csv` | The measurements themselves, one row per region per spectrum |
-| `global.csv` | Anything fitted once for the whole analysis. A plain relaxation fit has nothing global and the file is absent |
 | `fit.pdf` | The fit for every region on one set of axes |
 | `regions/<name>.pdf` and `.csv` | Each region's own fit, and the data behind it under the same name |
 

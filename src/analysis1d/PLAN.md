@@ -75,7 +75,7 @@ Module layout deliberately mirrors GUI2D so a shared `AnalysisCore` can later be
 out of both (start parallel, refactor toward shared core once 1D is proven). As of the
 restructure below this is no longer approximate: the two modules share the same file
 layout, the same `postfit!`/`postfitglobal!`/`primaryparam` hooks, the same uniform
-`parameters`/`postparameters` result container, and the same
+result container (`RegionResult` to GUI2D's `Peak`), and the same
 visualisation-strategy composition. See `docs/src/advanced/creating_1d_analyses.md` for the
 full correspondence table.
 

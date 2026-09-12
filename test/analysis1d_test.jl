@@ -12,12 +12,12 @@ using NMRAnalysis.Analysis1D: Trace, Planes, groupseries, hasvar, column, nplane
 using NMRAnalysis.Analysis1D: integrate
 using NMRAnalysis.Analysis1D: width, centre, recentre, setwidth, defaultregionwidth,
                               defaultamideregion
-using NMRAnalysis.Analysis1D: fitaxis, groupcols, primaryparam
+using NMRAnalysis.Analysis1D: fitaxis, groupcols, primaryparam, isconverged
 using NMRAnalysis.Analysis1D: relaxationmodel, relaxationseriesmodel, nutationphase,
                               shapefactor, solventname, tractf, tracttauc
-using NMRAnalysis.Analysis1D: resultstable, seriestable, globaltable, experimentinfo,
-                              writeresults!, csvcolumn, safename, sources, postscope,
-                              regionlisttable, readregions!, NOISE_LABEL
+using NMRAnalysis.Analysis1D: resultstable, seriestable, experimentinfo,
+                              writeresults!, csvcolumn, safename, sources, seriesname,
+                              baseparam, regionlisttable, readregions!, NOISE_LABEL
 using NMRAnalysis.Analysis1D: analysiscall, callstring, callvalue, writesummary
 using NMRAnalysis.Analysis1D: ask, askvector, askchoice, parsevector, acqusvalue
 using Measurements
@@ -114,7 +114,7 @@ signalregion(δ0=8.0) = [Region("signal", δ0 - 0.3, δ0 + 0.3)]
         res = analyse1d(expt)
         @test length(res) == 1
         @test res[1].region == "signal"
-        @test res[1].converged
+        @test isconverged(res[1])
         @test Measurements.value(param(res[1], :R)) ≈ R rtol = 0.05
         @test Measurements.uncertainty(param(res[1], :R)) > 0
         @test !res[1].postfitted                 # relaxation derives nothing
@@ -157,22 +157,21 @@ signalregion(δ0=8.0) = [Region("signal", δ0 - 0.3, δ0 + 0.3)]
         @test groupcols(expt) == (:which,)
 
         res = analyse1d(expt)
-        @test length(res) == 2                                  # one series per component
-        trosy = only(filter(r -> r.group.which == :trosy, res))
-        anti = only(filter(r -> r.group.which == :anti, res))
-        @test Measurements.value(param(trosy, :R)) ≈ Rt rtol = 0.02
-        @test Measurements.value(param(anti, :R)) ≈ Ra rtol = 0.02
+        # one region, two series, and one set of parameters naming them apart
+        @test length(res) == 1
+        r = only(res)
+        @test length(r.series) == 2
+        @test Set(s.group.which for s in r.series) == Set([:trosy, :anti])
+        @test Measurements.value(param(r, :R_trosy)) ≈ Rt rtol = 0.02
+        @test Measurements.value(param(r, :R_anti)) ≈ Ra rtol = 0.02
 
-        # η and τc describe the pair, so they are recorded once, on the TROSY member, and
-        # marked as belonging to the region rather than to that member
-        @test trosy.postfitted
-        @test !anti.postfitted
-        @test postscope(trosy, :tauc) == :region
-        @test postscope(trosy, :etaxy) == :region
-        @test postscope(trosy, :A) == :series     # unrecorded scopes default to :series
-        @test Measurements.value(param(trosy, :etaxy)) ≈ (Ra - Rt) / 2 rtol = 0.05
-        @test Measurements.value(param(trosy, :tauc)) > 0       # ns
-        @test_throws KeyError param(anti, :tauc)
+        # η and τc are computed from both rates and sit beside them on the same region
+        @test r.postfitted
+        @test Measurements.value(param(r, :etaxy)) ≈ (Ra - Rt) / 2 rtol = 0.05
+        @test Measurements.value(param(r, :tauc)) > 0           # ns
+        @test baseparam(:R_trosy) == :R
+        @test seriesname("R", (; which=:anti)) == :R_anti
+        @test seriesname("R", NamedTuple()) == :R
     end
 
     @testset "Nutation calibration" begin
@@ -245,27 +244,29 @@ signalregion(δ0=8.0) = [Region("signal", δ0 - 0.3, δ0 + 0.3)]
         res = analyse1d(expt)
         @test length(res) == 2
         @test isempty(res[1].parameters)                 # NoFitting fits nothing
-        @test res[1].x == times
-        @test length(res[1].y) == 4
+        s1, s2 = only(res[1].series), only(res[2].series)
+        @test s1.x == times
+        @test length(s1.y) == 4
         # reactant falls, product rises
-        @test Measurements.value(res[1].y[1]) > Measurements.value(res[1].y[end])
-        @test Measurements.value(res[2].y[1]) < Measurements.value(res[2].y[end])
+        @test Measurements.value(s1.y[1]) > Measurements.value(s1.y[end])
+        @test Measurements.value(s2.y[1]) < Measurements.value(s2.y[end])
 
         # the measurements, long: one row per region per time point. This is the whole
         # deliverable of a kinetics run, which results.csv cannot carry because nothing
         # was fitted
         header, rows = seriestable(expt, ds, res)
-        @test header == ["source", "label", "time (s)", "I", "I_err", "I_fit"]
+        @test header == ["source", "label", "plane", "time (s)", "I", "I_err", "I_fit"]
         @test length(rows) == 8                          # 2 regions × 4 times
-        @test all(length(row) == 6 for row in rows)
+        @test all(length(row) == 7 for row in rows)
         @test all(row[1] == "synthetic" for row in rows)
         @test rows[1][2] == "reactant"
-        @test parse(Float64, rows[1][3]) == 0.0
-        @test parse(Float64, rows[4][3]) == 180.0
-        @test parse(Float64, rows[1][4]) > parse(Float64, rows[4][4])
-        @test all(row[6] == "NA" for row in rows)        # NoFitting: no fitted curve
+        @test [row[3] for row in rows[1:4]] == ["1", "2", "3", "4"]
+        @test parse(Float64, rows[1][4]) == 0.0
+        @test parse(Float64, rows[4][4]) == 180.0
+        @test parse(Float64, rows[1][5]) > parse(Float64, rows[4][5])
+        @test all(row[7] == "NA" for row in rows)        # NoFitting: no fitted curve
 
-        rheader, rrows = resultstable(expt, res, expt.regions)
+        rheader, rrows = resultstable(expt, res)
         @test rheader == ["label"]      # bounds are input, and live in regionlist.csv
         @test length(rrows) == 2
         @test occursin("Kinetics", experimentinfo(expt))
@@ -282,19 +283,22 @@ signalregion(δ0=8.0) = [Region("signal", δ0 - 0.3, δ0 + 0.3)]
         ds = Dataset1D(Planes(traces, vars), 0.0, "synthetic")
         expt = KineticsExperiment(ds; regions=signalregion())
         res = analyse1d(expt)
-        @test length(res) == 2
+        @test length(res) == 1                  # one region, two runs
+        @test length(only(res).series) == 2
 
         header, rows = seriestable(expt, ds, res)
-        @test header == ["source", "label", "run", "time (s)", "I", "I_err", "I_fit"]
+        @test header ==
+              ["source", "label", "plane", "run", "time (s)", "I", "I_err", "I_fit"]
         @test length(rows) == 4
-        @test [row[3] for row in rows] == ["1", "1", "2", "2"]
-        @test [parse(Float64, row[4]) for row in rows] == [0.0, 1.0, 0.0, 2.0]
+        @test [row[4] for row in rows] == ["1", "1", "2", "2"]
+        @test [parse(Float64, row[5]) for row in rows] == [0.0, 1.0, 0.0, 2.0]
 
-        rheader, _ = resultstable(expt, res, expt.regions)
-        @test rheader == ["label", "run"]
+        rheader, rrows = resultstable(expt, res)
+        @test rheader == ["label"]              # NoFitting: nothing to report per region
+        @test length(rrows) == 1
     end
 
-    @testset "Column headers, scopes and global parameters" begin
+    @testset "Column headers and one row per region" begin
         @test csvcolumn("R", "s-1") == "R (s-1)"
         @test csvcolumn("pB", "") == "pB"
         @test safename("L23N") == "L23N"
@@ -312,19 +316,22 @@ signalregion(δ0=8.0) = [Region("signal", δ0 - 0.3, δ0 + 0.3)]
                        vcat(fill("trosy.fid", 5), fill("anti.fid", 5)))
         res = analyse1d(TractExperiment(ds; ωN, f, regions=signalregion()))
         expt = TractExperiment(ds; ωN, f, regions=signalregion())
-        header, rows = resultstable(expt, res, signalregion())
-        @test header[1:2] == ["label", "which"]
-        @test "R (s-1)" in header && "R_err (s-1)" in header
+        header, rows = resultstable(expt, res)
+        @test header[1] == "label"
+        @test "R_trosy (s-1)" in header && "R_trosy_err (s-1)" in header
+        @test "R_anti (s-1)" in header && "R_anti_err (s-1)" in header
         @test "tauc (ns)" in header && "tauc_err (ns)" in header
+        @test header[2] == "tauc (ns)"          # primaryparam comes first
 
-        # one row per series, plus one region-scoped row with the group key left blank
-        @test length(rows) == 3
-        @test rows[end][2] == ""
-        @test rows[1][2] in ("trosy", "anti")
+        # one row per region, both components on it
+        @test length(rows) == 1
+        @test only(rows)[1] == "signal"
+        @test all(cell != "NA" for cell in only(rows))
 
         # per-plane sources reach series.csv
         sheader, srows = seriestable(expt, ds, res)
-        @test sheader == ["source", "label", "which", "time (s)", "I", "I_err", "I_fit"]
+        @test sheader ==
+              ["source", "label", "plane", "which", "time (s)", "I", "I_err", "I_fit"]
         @test Set(row[1] for row in srows) == Set(["trosy.fid", "anti.fid"])
         @test all(row[end] != "NA" for row in srows)     # fitted curve at the data points
     end
@@ -471,18 +478,17 @@ signalregion(δ0=8.0) = [Region("signal", δ0 - 0.3, δ0 + 0.3)]
         @test isfile(joinpath(dir, "series.csv"))
         @test isfile(joinpath(dir, "regionlist.csv"))
         @test isfile(joinpath(dir, "regions", "signal.csv"))
-        # nothing is fitted globally by a plain relaxation experiment
-        @test !isfile(joinpath(dir, "global.csv"))
 
         datalines(f) = filter(l -> !startswith(l, "#"), readlines(joinpath(dir, f)))
         lines = datalines("series.csv")
         @test length(lines) == 5                       # header plus one row per spectrum
-        @test split(lines[1], ',') == ["source", "label", "time (s)", "I", "I_err", "I_fit"]
+        @test split(lines[1], ',') ==
+              ["source", "label", "plane", "time (s)", "I", "I_err", "I_fit"]
         @test datalines(joinpath("regions", "signal.csv")) == lines
         @test occursin("Noise position", read(joinpath(dir, "results.csv"), String))
 
-        # a diffusion analysis does have a global parameter: the solvent viscosity is a
-        # property of the sample, not of any one region
+        # every quantity a diffusion analysis reports describes its region, the solvent
+        # viscosity included, so they all sit on the one row
         γ, δg, Δ, σ, Gmax = 2.6752218744e8, 4.0e-3, 0.1, 0.9, 0.55
         k = (γ * δg * σ * Gmax)^2 * (Δ - δg / 3) * 1e-10
         g = collect(0.05:0.05:0.95)
@@ -494,17 +500,11 @@ signalregion(δ0=8.0) = [Region("signal", δ0 - 0.3, δ0 + 0.3)]
 
         dird = mktempdir()
         writeresults!(exptd, dsd, resd, exptd.regions, dird)
-        @test isfile(joinpath(dird, "global.csv"))
-        gl = filter(l -> !startswith(l, "#"), readlines(joinpath(dird, "global.csv")))
-        @test split(gl[1], ',') == ["parameter", "value", "error", "unit"]
-        @test split(gl[2], ',')[1] == "viscosity"
-        @test split(gl[2], ',')[4] == "mPa s"
 
-        gheader, grows = globaltable(exptd, resd)
-        @test length(grows) == 1                       # recorded once, not once per region
-        rheader, _ = resultstable(exptd, resd, exptd.regions)
+        rheader, rrows = resultstable(exptd, resd)
         @test "D (1e-10 m2/s)" in rheader
         @test "rH (A)" in rheader
-        @test !("viscosity (mPa s)" in rheader)        # global, so not a per-region column
+        @test "viscosity (mPa s)" in rheader
+        @test length(rrows) == 1
     end
 end

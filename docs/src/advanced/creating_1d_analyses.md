@@ -17,11 +17,10 @@ or more arrayed variables, reduced to quantities over named regions, then fitted
 evolution parameter. An experiment is a thin composition over that shared machinery:
 
 ```
-Dataset1D ──integrate──▶ quantity per plane ──group──▶ series ──fit──▶ parameters
-                                                                          │
-                                                                 postfit! │ postfitglobal!
-                                                                          ▼
-                                                                    postparameters
+Dataset1D ──integrate──▶ quantity per plane ──group──▶ series ──fit──▶ ─┐
+                                                                        │
+                                             postfit! / postfitglobal! ─┴─▶ the region's
+                                                                            parameters
 ```
 
 The three stages are the same as in GUI2D; see
@@ -35,6 +34,8 @@ The three stages are the same as in GUI2D; see
 | `Planes(traces, vars)` | one row per spectrum; `vars[i]` is a `NamedTuple` of that spectrum's arrayed variables |
 | `Region(label, lo, hi)` | a named ppm interval; zero width means a peak height |
 | `Dataset1D(planes, noisecentre, label)` | the planes, the noise position, and where the data came from |
+| `SeriesResult(group, x, y, planes, model, coefficients, converged)` | one series of a region: the planes sharing a grouping key, and the curve fitted through them |
+| `RegionResult(region, series, parameters, postfitted)` | everything reported for one region |
 
 The analysis layer works on plain vectors and never sees an `NMRData`. The adapters in
 `nmrdata.jl` (`loadspec`, `tracesfromspec`, `datasetfromspec`) are the only place NMRData
@@ -130,7 +131,7 @@ Only what differs from the defaults:
 | `seriesmodel(e)` | `e.model` | what is fitted |
 | `fitaxis(e)` | *required* | the arrayed variable forming the x-axis |
 | `groupcols(e)` | `()` | variables that split planes into separate series |
-| `postfit!(rs, e)` | none | quantities derived from one region's series |
+| `postfit!(r, e)` | none | quantities derived from one region's series |
 | `postfitglobal!(results, e)` | none | quantities spanning every region |
 | `primaryparam(e)` | `:A` | the headline quantity |
 | `visualisationtype(e)` | `SeriesVisualisation()` | how results are drawn |
@@ -150,18 +151,16 @@ Derived quantities are computed in `postfit!` (one region) or `postfitglobal!` (
 analysis) and recorded with `setpost!`:
 
 ```julia
-function postfit!(rs::AbstractVector{RegionResult}, ::MyExperiment)
-    for r in rs
-        setpost!(r, :halflife, log(2) / param(r, :R))
-    end
+function postfit!(r::RegionResult, ::MyExperiment)
+    setpost!(r, :halflife, log(2) / param(r, :R))
     return nothing
 end
 ```
 
-`rs` holds every series of one region, so a quantity combining conditions is an ordinary
-`postfit!`: TRACT's τc takes the TROSY and anti-TROSY rates from the two members of `rs`.
-Use `postfitglobal!` only for something spanning regions, such as a parameter fitted once
-across the whole analysis.
+`r` is the whole region, its fitted parameters already named, so a quantity combining
+conditions is an ordinary `postfit!`: TRACT reads `:R_trosy` and `:R_anti` and writes τc
+beside them. Use `postfitglobal!` only for something spanning regions, such as a parameter
+fitted once across the whole analysis.
 
 `postfit!` is also where an experiment does its own fitting when the series must be
 transformed first, rather than fitting the measured quantities directly — `cest2d` does
@@ -193,14 +192,17 @@ appears in one experiment's file belongs in that file.
 ## Results
 
 Every experiment fills the same container, `RegionResult` — the 1D analogue of GUI2D's
-`Peak`:
+`Peak`. One region is one result, holding its `series` and one flat set of `parameters`:
+each series' fitted coefficients named apart by `seriesname` (`:R_trosy`, `:R_anti`)
+alongside whatever `postfit!` derived from them (`:tauc`).
 
-- `parameters` — the fit's own output, keyed by `Symbol`
-- `postparameters` — quantities derived from it by `postfit!`/`postfitglobal!`
+There is no separate category of per-series result. A series is how a region was measured,
+not what is reported about it, so one region is one row of `results.csv`, and a quantity
+combining two conditions sits beside the two it came from rather than on either of them.
 
 Because the container is uniform, everything downstream is generic: the summary text, the
-results panel and `results.csv` all read these two dictionaries without knowing which
-analysis produced them. `analyse(expt)` returns a `Vector{RegionResult}`.
+results panel and `results.csv` all read `parameters` without knowing which analysis
+produced it. `analyse(expt)` returns a `Vector{RegionResult}`.
 
 ## Visualisation strategies
 
@@ -240,12 +242,13 @@ needs to be presented two different ways.
 | `Experiment` | `Experiment1D` |
 | `Peak` | `Region` (input) + `RegionResult` (output) |
 | `SpecData` | `Planes` + `Dataset1D` |
-| `peak.parameters` / `peak.postparameters` | `RegionResult.parameters` / `.postparameters` |
+| `peak.parameters` (per plane) | `RegionResult.series` (per series) |
+| `peak.postparameters` (per peak) | `RegionResult.parameters` (per region) |
 | `postfit!(peak, expt)` / `postfitglobal!(expt)` | `postfit!(r, expt)` / `postfitglobal!(results, expt)` |
 | `primaryparam(expt)` | `primaryparam(expt)` |
 | `preparespecdata` | each experiment's entry point + `nmrdata.jl` |
 | `slicelabel(expt, idx)` | `spectruminfo(expt, vars)` |
-| `peakinfotext(expt, idx)` | generic `resultsheader` / `secondarytext` |
+| `peakinfotext(expt, idx)` | generic `resultstext` |
 | `experimentinfo(expt)` | `experimentinfo(expt)` (generic) |
 | `VisualisationStrategy` | `ResultVisualisation` |
 | `visualisationtype` / `completestate!` / `makepeakplot!` / `plot_peak!` | `visualisationtype` / `completeresultstate!` / `resultpanel!` / `plotresult!` |

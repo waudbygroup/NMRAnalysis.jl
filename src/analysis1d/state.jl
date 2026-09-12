@@ -98,13 +98,8 @@ function preparestate(expt::Experiment1D)
     # content appended to the same growing block, with no second, independently-positioned
     # row for an earlier misjudged height to collide with.
     #
-    # `resultsheader`/`secondarytext` still exist as separate functions - the
-    # fitted-vs-derived split they read (`RegionResult.parameters`/`.postparameters`) is
-    # the real division of labour, used independently by `summarytext`/`resultstable`;
-    # only the panel's *presentation* is merged here. `panelwidth` aligns every block's
-    # values to one shared column, computed once across the whole panel rather than once
-    # per block, so "Amplitude" in a TROSY block and "Correlation time (τc)" in TRACT's
-    # results line up together rather than each block aligning only to its own labels.
+    # `panelwidth` aligns the block's values to one column, computed across the whole
+    # panel, so "Amplitude (trosy)" and "Correlation time (τc)" line up together.
     #
     # Always RichText, for the same Observable-element-type reason `RegionResult` exists:
     # every branch below returns one, including "no region selected" and the
@@ -119,8 +114,7 @@ function preparestate(expt::Experiment1D)
         bounds = plaintext("$(round(r.lo; digits=2)) to $(round(r.hi; digits=2)) ppm")
         fitting || return rich(heading, bounds)
         width = panelwidth(expt, res, r.label)
-        body = rich(resultsheader(expt, res, r.label, width),
-                    secondarytext(expt, res, r.label, width))
+        body = resultstext(expt, res, r.label, width)
         return rich(heading, bounds, "\n\n", body)
     end
 

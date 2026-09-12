@@ -36,12 +36,22 @@ function CurveFitModel(func, paramnames, estimate; xlabel="x", ylabel="Intensity
 end
 
 """
+    paramnames(model) -> Vector{String}
+
+The model's fitted parameter names, in coefficient order. Empty for [`NoFitting`](@ref),
+which fits nothing.
+"""
+paramnames(m::CurveFitModel) = m.paramnames
+
+"""
     NoFitting()
 
 Pass the reduced quantities through without fitting a model (used for kinetics v1,
 where the deliverable is intensity vs time).
 """
 struct NoFitting <: SeriesModel end
+
+paramnames(::NoFitting) = String[]
 
 # ---- shared curve-fit models ---------------------------------------------------
 

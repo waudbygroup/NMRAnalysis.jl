@@ -169,18 +169,13 @@ end
 # the ×10⁻¹⁰ m² s⁻¹ that such coefficients are conventionally quoted in (and that the fit
 # is conditioned on), so it is reported straight from `parameters`. Only the
 # Stokes–Einstein radius is derived, and only when the solvent and temperature are known.
-function postfit!(rs::AbstractVector{RegionResult}, e::DiffusionExperiment)
+function postfit!(r::RegionResult, e::DiffusionExperiment)
     (isnothing(e.solvent) || isnothing(e.temp)) && return nothing
+    D = param(r, :D) * 1e-10                       # m² s⁻¹
     η = viscosity(e.solvent, e.temp)               # mPa s
     kB = 1.38e-23
-    for r in rs
-        D = param(r, :D) * 1e-10                   # m² s⁻¹
-        # The viscosity is a property of the sample at this temperature, identical for
-        # every region, so it is global rather than a per-region result. rH is genuinely
-        # per region.
-        setpost!(r, :viscosity, η; scope=:global)
-        setpost!(r, :rH, kB * e.temp / (6π * η * 0.001 * D) * 1e10)   # Å
-    end
+    setpost!(r, :viscosity, η)
+    setpost!(r, :rH, kB * e.temp / (6π * η * 0.001 * D) * 1e10)   # Å
     return nothing
 end
 

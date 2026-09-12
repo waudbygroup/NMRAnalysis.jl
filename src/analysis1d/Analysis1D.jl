@@ -65,7 +65,7 @@ export ExponentialModel, RecoveryModel, DampedSinusoidModel, StejskalTannerModel
 export Experiment1D, analyse, analyse1d, run1d, Integration
 export RelaxationExperiment, TractExperiment, NutationExperiment, KineticsExperiment
 export DiffusionExperiment
-export RegionResult, param
+export RegionResult, SeriesResult, param
 
 # interactive GUI
 export gui!, pickregion

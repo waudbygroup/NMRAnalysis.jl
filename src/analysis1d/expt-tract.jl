@@ -110,20 +110,13 @@ primaryparam(::TractExperiment) = :tauc
 "¹H gyromagnetic ratio / rad s⁻¹ T⁻¹."
 const GAMMA_H = 2.6752218744e8
 
-function postfit!(rs::AbstractVector{RegionResult}, e::TractExperiment)
-    trosy = findfirst(r -> r.group.which == :trosy, rs)
-    anti = findfirst(r -> r.group.which == :anti, rs)
-    (isnothing(trosy) || isnothing(anti)) && return nothing
-    ηxy = (param(rs[anti], :R) - param(rs[trosy], :R)) / 2
-    τc = tracttauc(e.f, e.ωN, ηxy)
-    # η and τc belong to the region, not to either series of the pair, so they are
-    # recorded once - on the TROSY member by convention - and marked `scope=:region`,
-    # which is what keeps that arbitrary choice out of the output: the results file
-    # writes them as a row with the `which` key blank. Recording them on both would
-    # print them twice in the results panel, which shows every series of the active
-    # region, and duplicate them down the results file.
-    setpost!(rs[trosy], :etaxy, ηxy; scope=:region)
-    setpost!(rs[trosy], :tauc, τc; scope=:region)
+# The two decay rates reach the region as :R_trosy and :R_anti (see `seriesname`), which
+# is what lets η and τc sit beside them on the one row the region reports.
+function postfit!(r::RegionResult, e::TractExperiment)
+    haskey(r.parameters, :R_trosy) && haskey(r.parameters, :R_anti) || return nothing
+    ηxy = (param(r, :R_anti) - param(r, :R_trosy)) / 2
+    setpost!(r, :etaxy, ηxy)
+    setpost!(r, :tauc, tracttauc(e.f, e.ωN, ηxy))
     return nothing
 end
 
@@ -207,13 +200,3 @@ end
 function paramunit(::TractExperiment, name::Symbol)
     return get(TRACT_PARAM_UNITS, name, get(PARAM_UNITS, name, ""))
 end
-
-# Matches the TROSY/anti-TROSY wording `seriesnames` already uses for the plot legend.
-function groupheader(::TractExperiment, group::NamedTuple)
-    return group.which == :trosy ? "TROSY" : "Anti-TROSY"
-end
-
-# η and τc describe the TROSY/anti-TROSY *pair*, not specifically the TROSY series they
-# are recorded on (postfit! has to pick one member to hold them - see there) - so the
-# header names the analysis, not the group.
-derivedheader(::TractExperiment, ::RegionResult) = "TRACT results"

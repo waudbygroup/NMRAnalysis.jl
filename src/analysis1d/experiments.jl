@@ -26,7 +26,7 @@ Interface (with defaults):
 - `seriesmodel(e)`    — `SeriesModel` (default: `e.model`)
 - `fitaxis(e)`        — `Symbol` naming the evolution variable (required)
 - `groupcols(e)`      — `Tuple` of grouping variables (default `()`)
-- `postfit!(rs, e)`   — derived quantities from one region's series (default: none)
+- `postfit!(r, e)`    — derived quantities from one region's series (default: none)
 - `postfitglobal!(results, e)` — derived quantities spanning regions (default: none)
 - `primaryparam(e)`   — the headline quantity (default `:A`)
 """
@@ -55,123 +55,151 @@ interactively-positioned regions and noise.
 integrate(region::Region, e::Experiment1D, ds::Dataset1D=dataset(e)) = integrate(region, ds)
 
 """
-    RegionResult
+    SeriesResult
 
-The analysis of one series: one region × one grouping key. The 1D analogue of GUI2D's
-`Peak`, and like it the *uniform* container every experiment fills, however different
-their science.
+One measured series of a region: the planes sharing a grouping key, the quantity measured
+in each of them, and the curve fitted through those.
 
 # Fields
-- `region`    : region label
-- `group`     : `NamedTuple` of grouping values (empty if ungrouped)
-- `x`         : evolution-parameter values (sorted)
-- `y`         : reduced quantities (`Vector{Measurement}`)
-- `planes`    : which plane of the dataset each point came from, in the same order, so the
-  series file can name its source spectrum
-- `parameters`     : the curve fit's own parameters (`A`, `R`, `ν`, …)
-- `postparameters` : quantities derived from them by [`postfit!`](@ref) /
-  [`postfitglobal!`](@ref) (`tauc`, `pulse90`, `rH`, …)
-- `postscopes`     : what each derived quantity describes - see [`setpost!`](@ref)
-- `model`     : the series model used
-- `converged` : whether the fit converged
-- `postfitted`: whether a derived result has been recorded
+- `group`        : `NamedTuple` of grouping values (empty if ungrouped)
+- `x`            : evolution-parameter values (sorted)
+- `y`            : measured quantities (`Vector{Measurement}`)
+- `planes`       : which plane of the dataset each point came from, in the same order, so
+  the series file can name its source spectrum
+- `model`        : the series model fitted
+- `coefficients` : the model's fitted coefficients, in [`paramnames`](@ref) order
+- `converged`    : whether the fit converged
 
-Both parameter dictionaries are `Symbol`-keyed, mirroring `peak.parameters` /
-`peak.postparameters`, so generic consumers (the summary formatter, `primaryparam`) read
-them by name without knowing the experiment. Values are untyped because not every derived
-quantity carries an uncertainty - a solvent viscosity looked up from temperature is a
-plain number, where a fitted rate is a `Measurement`.
-
-Derived quantities are stored **in the unit named by `PARAM_UNITS`** (a 90° pulse in µs,
-τc in ns), not in SI, so that one stored number serves both the summary and any later
-tabular export.
+The coefficients are held as a plain vector rather than a named dictionary because a
+series is not what an analysis reports: they are named once, on the region, by
+[`liftparameters!`](@ref).
 """
-mutable struct RegionResult
-    region::String
+struct SeriesResult
     group::NamedTuple
     x::Vector{Float64}
     y::Vector{Measurement{Float64}}
     planes::Vector{Int}
-    parameters::OrderedDict{Symbol,Any}
-    postparameters::OrderedDict{Symbol,Any}
-    postscopes::OrderedDict{Symbol,Symbol}
     model::Any
+    coefficients::Vector{Measurement{Float64}}
     converged::Bool
+end
+
+"""
+    RegionResult
+
+Everything an analysis reports for one region. The 1D analogue of GUI2D's `Peak`, and like
+it the *uniform* container every experiment fills, however different their science.
+
+# Fields
+- `region`     : region label
+- `series`     : one [`SeriesResult`](@ref) per grouping key
+- `parameters` : the region's parameters, keyed by `Symbol`
+- `postfitted` : whether an experiment derived anything beyond the fits themselves
+
+There is one parameter set, not one per series: a series' own fitted parameters are named
+apart by [`seriesname`](@ref) (TRACT's `:R_trosy` and `:R_anti`) and sit alongside
+whatever [`postfit!`](@ref) / [`postfitglobal!`](@ref) derives from them (`:tauc`), so one
+region is one row of results. Values are untyped because not every parameter carries an
+uncertainty - a solvent viscosity looked up from temperature is a plain number, where a
+fitted rate is a `Measurement`.
+
+Parameters are stored **in the unit [`paramunit`](@ref) names for them** (a 90° pulse in
+µs, τc in ns), not in SI, so that one stored number serves both the summary and any
+tabular export.
+"""
+mutable struct RegionResult
+    region::String
+    series::Vector{SeriesResult}
+    parameters::OrderedDict{Symbol,Any}
     postfitted::Bool
 end
 
-# Convenience constructor for the common case of a freshly fitted series, which has no
-# derived quantities yet.
-function RegionResult(region, group, x, y, planes, parameters, model, converged)
-    return RegionResult(region, group, x, y, planes, parameters,
-                        OrderedDict{Symbol,Any}(), OrderedDict{Symbol,Symbol}(), model,
-                        converged, false)
+RegionResult(region, series) = RegionResult(region, collect(SeriesResult, series),
+                                            OrderedDict{Symbol,Any}(), false)
+
+"""
+    seriesname(name, group) -> Symbol
+
+The name a series' fitted parameter takes among its region's parameters: bare when the
+region has a single series, and suffixed with the grouping values when it has several, so
+TRACT's two decay rates are `:R_trosy` and `:R_anti` side by side rather than the same
+`:R` written twice. Parameter names carry no underscore of their own, so the suffix can
+always be stripped again by [`baseparam`](@ref).
+"""
+function seriesname(name, group::NamedTuple)
+    isempty(group) && return Symbol(name)
+    return Symbol(name, "_", join(values(group), "_"))
+end
+
+"""
+    baseparam(name) -> Symbol
+
+The quantity a parameter name refers to, with any series suffix removed: `:R_trosy` → `:R`.
+What a parameter *is* belongs to the quantity, not to the series it was measured in, so
+labels and units are looked up under this name.
+"""
+function baseparam(name::Symbol)
+    s = string(name)
+    i = findfirst('_', s)
+    return isnothing(i) ? name : Symbol(s[1:(i - 1)])
+end
+
+"""
+    liftparameters!(result)
+
+Name every series' fitted coefficients onto the region, via [`seriesname`](@ref). Runs as
+each region is measured, so a `RegionResult` always carries its fits and [`postfit!`](@ref)
+has only to add what the experiment derives from them.
+"""
+function liftparameters!(r::RegionResult)
+    for s in r.series
+        for (name, value) in zip(paramnames(s.model), s.coefficients)
+            r.parameters[seriesname(name, s.group)] = value
+        end
+    end
+    return r
 end
 
 """
     param(result, name) -> value
 
-Value of parameter `name` (a `Symbol` or a `String`) from a `RegionResult`: the fit's own
-parameters first, then the quantities derived from them by [`postfit!`](@ref) /
-[`postfitglobal!`](@ref). One accessor for both, so `param(r, :R)` and `param(r, :tauc)`
-read alike and a caller need not know which stage produced a quantity.
+Value of parameter `name` (a `Symbol` or a `String`) for a region.
 """
-function param(r::RegionResult, name::Symbol)
-    haskey(r.parameters, name) && return r.parameters[name]
-    haskey(r.postparameters, name) && return r.postparameters[name]
-    throw(KeyError(name))
-end
+param(r::RegionResult, name::Symbol) = r.parameters[name]
 param(r::RegionResult, name::AbstractString) = param(r, Symbol(name))
 
 """
-    setpost!(result, name, value; scope=:series)
+    isconverged(result) -> Bool
 
-Record a derived quantity on `result` and mark it post-fitted. The `postfit!` /
-`postfitglobal!` counterpart of writing into `peak.postparameters` and setting
-`peak.postfitted[]` in GUI2D.
-
-`scope` says what the quantity actually describes, which decides where it is written (see
-`docs/src/advanced/conventions.md`):
-
-- `:series` (the default) - this series alone, e.g. nutation's 90° pulse length. Written on
-  this result's own row of `results.csv`.
-- `:region` - the whole region, across every group. TRACT's τc combines the TROSY and
-  anti-TROSY rates, so it describes the region rather than either component; `postfit!`
-  still has to record it on one of the two, and the scope is what stops that choice
-  leaking into the output. Written as a row with the group keys left blank.
-- `:global` - the whole analysis, e.g. a solvent viscosity, which is a property of the
-  sample and the same for every region. Written to `global.csv`.
+Whether every one of a region's series fitted successfully.
 """
-function setpost!(r::RegionResult, name::Symbol, value; scope::Symbol=:series)
-    scope in (:series, :region, :global) ||
-        throw(ArgumentError("unknown parameter scope :$scope (expected :series, :region or :global)"))
-    r.postparameters[name] = value
-    r.postscopes[name] = scope
+isconverged(r::RegionResult) = all(s.converged for s in r.series)
+
+"""
+    setpost!(result, name, value)
+
+Record a derived quantity on the region and mark it post-fitted. The [`postfit!`](@ref) /
+[`postfitglobal!`](@ref) counterpart of writing into `peak.postparameters` and setting
+`peak.postfitted[]` in GUI2D.
+"""
+function setpost!(r::RegionResult, name::Symbol, value)
+    r.parameters[name] = value
     r.postfitted = true
     return value
 end
 
 """
-    postscope(result, name) -> Symbol
-
-The scope recorded for a derived quantity by [`setpost!`](@ref), defaulting to `:series`
-for anything written into `postparameters` directly.
-"""
-postscope(r::RegionResult, name::Symbol) = get(r.postscopes, name, :series)
-
-"""
-    postfit!(results, expt)
+    postfit!(result, expt)
 
 Stage 2: derive the quantities reported for one region from its fitted series, recording
 them with [`setpost!`](@ref) - nutation's 90° pulse length from ν, diffusion's rH from D,
 TRACT's τc from the TROSY and anti-TROSY rates together. The default does nothing
 (relaxation and kinetics derive nothing).
 
-`results` holds every series of a single region, so anything combining conditions belongs
-here rather than in [`postfitglobal!`](@ref). Mirrors GUI2D's `postfit!(peak, expt)`, which
-likewise sees the whole peak.
+`result` holds every series of the region, so anything combining conditions belongs here
+rather than in [`postfitglobal!`](@ref). Mirrors GUI2D's `postfit!(peak, expt)`.
 """
-postfit!(::AbstractVector{RegionResult}, ::Experiment1D) = nothing
+postfit!(::RegionResult, ::Experiment1D) = nothing
 
 """
     postfitglobal!(results, expt)
@@ -199,9 +227,9 @@ stage. This is the pipeline shared by every curve-fit experiment.
 The `dataset`/`regions` arguments default to the experiment's own, but can be supplied
 explicitly so the GUI can refit live against interactively-positioned regions and noise.
 `isfitting=false` (the GUI's Fitting toggle switched off) substitutes [`NoFitting`](@ref)
-for the experiment's own model, so the reduced quantities (`x`/`y`) still come through
-for the plotted points, but no `curve_fit` call runs and `parameters` comes back empty -
-not merely a display toggle, an actual "don't fit" switch.
+for the experiment's own model, so the measured quantities (`x`/`y`) still come through
+for the plotted points, but no `curve_fit` call runs and the region's `parameters` come
+back empty - not merely a display toggle, an actual "don't fit" switch.
 """
 seriesresults(e::Experiment1D) = seriesresults(e, dataset(e), regions(e))
 
@@ -211,18 +239,17 @@ function seriesresults(e::Experiment1D, ds::Dataset1D, regs; isfitting::Bool=tru
     results = RegionResult[]
     for region in regs
         I = integrate(region, e, ds)
+        series = SeriesResult[]
         for (gkey, idx) in groupseries(ds.planes, groupcols(e))
             x = Float64[ds.planes.vars[i][axis] for i in idx]
             y = I[idx]
             perm = sortperm(x)
             x, y, planes = x[perm], y[perm], idx[perm]
             fit = fitseries(model, x, y)
-            parameters = OrderedDict{Symbol,Any}(Symbol(n) => p
-                                                 for (n, p) in zip(fit.names, fit.params))
-            push!(results,
-                  RegionResult(region.label, gkey, x, y, planes, parameters, fit.model,
-                               fit.converged))
+            push!(series,
+                  SeriesResult(gkey, x, y, planes, fit.model, fit.params, fit.converged))
         end
+        push!(results, liftparameters!(RegionResult(region.label, series)))
     end
     return results
 end
@@ -230,7 +257,7 @@ end
 """
     analyse(e, [dataset, regions]; isfitting=true) -> Vector{RegionResult}
 
-Run the full analysis: reduce, fit, then post-fit. The return type does not depend on the
+Run the full analysis: measure, fit, then post-fit. The return type does not depend on the
 experiment or on whether anything was fitted, so the GUI's `state[:result]` Observable has
 a stable element type even when it starts out empty - which the old
 `(; series, summary)` shape did not, `summary` being `nothing` for some experiments and a
@@ -241,8 +268,8 @@ analyse(e::Experiment1D) = analyse(e, dataset(e), regions(e))
 function analyse(e::Experiment1D, ds::Dataset1D, regs; isfitting::Bool=true)
     results = seriesresults(e, ds, regs; isfitting)
     isfitting || return results
-    for label in unique(r.region for r in results)
-        postfit!(filter(r -> r.region == label, results), e)
+    for r in results
+        postfit!(r, e)
     end
     postfitglobal!(results, e)
     return results
