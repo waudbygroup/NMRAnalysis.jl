@@ -18,7 +18,7 @@ The two panels of a result plot: data above, weighted residuals below at a third
 height, sharing an x-axis. Returns both axes.
 """
 function resultpanels!(gl; xlabel, ylabel, title="", xreversed=false, axiskw=(;))
-    common = (xgridvisible=false, ygridvisible=false, xreversed=xreversed, axiskw...)
+    common = (; xgridvisible=false, ygridvisible=false, xreversed=xreversed, axiskw...)
     # The upper panel takes no xlabel: the shared axis is labelled once, underneath.
     ax1 = Axis(gl[1, 1]; ylabel=ylabel, title=title, common...)
     ax2 = Axis(gl[2, 1]; xlabel=xlabel, ylabel="Residual / σ", common...)
@@ -68,7 +68,8 @@ One experiment's result plot as a figure of its own, for `experiments/<name>.pdf
 """
 function resultfigure(expt, fitresult)
     f = Figure(; size=(500, 400))
-    plotresult!(f[1, 1] = GridLayout(), expt, fitresult)
+    gl = f[1, 1] = GridLayout()
+    plotresult!(gl, expt, fitresult)
     return f
 end
 
@@ -88,7 +89,8 @@ function combineplots(result::FitResult)
     f = Figure(; size=(max(1200, ncols * 350), max(800, nrows * 280)))
     for (i, expt) in enumerate(experiments)
         row, col = fldmod1(i, ncols)
-        plotresult!(f[row, col] = GridLayout(), expt, result; axiskw=COMPACT)
+        gl = f[row, col] = GridLayout()
+        plotresult!(gl, expt, result; axiskw=COMPACT)
     end
     return f
 end
