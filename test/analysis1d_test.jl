@@ -303,7 +303,7 @@ signalregion(δ0=8.0) = [Region("signal", δ0 - 0.3, δ0 + 0.3)]
         @test csvcolumn("pB", "") == "pB"
         @test safename("L23N") == "L23N"
         @test safename("amide/1") == "amide_1"
-        @test safename("") == "region"
+        @test safename("") == "unnamed"
 
         times = [0.0, 0.005, 0.01, 0.02, 0.04]
         Rt, Ra = 16.0, 54.0

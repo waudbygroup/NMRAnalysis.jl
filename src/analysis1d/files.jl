@@ -101,7 +101,8 @@ function resultstable(expt::Experiment1D, results)
 
     header = ["label"]
     for name in names
-        append!(header, collect(csvcolumns(name, paramunit(expt, name))))
+        # the unit belongs to the quantity, so `R_trosy` is looked up as `R`
+        append!(header, collect(csvcolumns(name, paramunit(expt, baseparam(name)))))
     end
 
     rows = Vector{String}[]

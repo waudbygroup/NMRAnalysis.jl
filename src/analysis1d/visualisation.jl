@@ -253,9 +253,6 @@ function displaylabel(e::Experiment1D, name::Symbol)
     return "$(paramlabel(e, base)) ($(string(name)[(length(string(base)) + 2):end]))"
 end
 
-"Display unit for a parameter stored on a region: its quantity's unit."
-displayunit(e::Experiment1D, name::Symbol) = paramunit(e, baseparam(name))
-
 """
     prettyunit(unit) -> String
 
@@ -275,8 +272,8 @@ const PRETTY_UNITS = Dict("s-1" => "s⁻¹",
                           "m2/s" => "m² s⁻¹",
                           "1e-10 m2/s" => "×10⁻¹⁰ m² s⁻¹")
 
-"Display unit for a parameter: [`displayunit`](@ref) in its typeset form."
-prettyparamunit(e::Experiment1D, name::Symbol) = prettyunit(displayunit(e, name))
+"Display unit for a parameter stored on a region: its quantity's unit, typeset."
+prettyparamunit(e::Experiment1D, name::Symbol) = prettyunit(paramunit(e, baseparam(name)))
 
 """
     coordinateunit(expt, name) -> String
