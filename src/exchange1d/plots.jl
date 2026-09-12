@@ -19,9 +19,10 @@ height, sharing an x-axis. Returns both axes.
 """
 function resultpanels!(gl; xlabel, ylabel, title="", xreversed=false, axiskw=(;))
     common = (; xgridvisible=false, ygridvisible=false, xreversed=xreversed, axiskw...)
+    # Makie.Axis: ComponentArrays also exports `Axis`, so the bare name is ambiguous.
     # The upper panel takes no xlabel: the shared axis is labelled once, underneath.
-    ax1 = Axis(gl[1, 1]; ylabel=ylabel, title=title, common...)
-    ax2 = Axis(gl[2, 1]; xlabel=xlabel, ylabel="Residual / σ", common...)
+    ax1 = Makie.Axis(gl[1, 1]; ylabel=ylabel, title=title, common...)
+    ax2 = Makie.Axis(gl[2, 1]; xlabel=xlabel, ylabel="Residual / σ", common...)
     linkxaxes!(ax1, ax2)
     rowsize!(gl, 1, Auto(false, 3))
     rowsize!(gl, 2, Auto(false, 1))
