@@ -61,4 +61,7 @@ makedocs(;
 
 deploydocs(;
            repo="github.com/waudbylab/NMRAnalysis.jl.git",
-           devbranch="main",)
+           devbranch="main",
+           # Build a browsable preview for every pull request, at
+           # https://waudbylab.github.io/NMRAnalysis.jl/previews/PR<number>/
+           push_preview=true,)
