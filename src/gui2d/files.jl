@@ -231,6 +231,7 @@ function readtrackedpeaks!(expt, filepath::AbstractString, columns=headercolumns
         throw(ArgumentError("$filepath has no label/x/y columns"))
 
     labels = String[]
+    planes = Dict{String,Vector{Union{Nothing,Int}}}()
     positions = Dict{String,Vector{NTuple{4,Union{Nothing,Float64}}}}()
     for line in eachline(filepath)
         sline = strip(line)
@@ -247,6 +248,17 @@ function readtrackedpeaks!(expt, filepath::AbstractString, columns=headercolumns
         label in labels || push!(labels, label)
         push!(get!(positions, label, NTuple{4,Union{Nothing,Float64}}[]),
               (cell("x"), cell("y"), cell("r2x"), cell("r2y")))
+        push!(get!(planes, label, Union{Nothing,Int}[]),
+              haskey(columns, "plane") && columns["plane"] ≤ length(fields) ?
+              tryparse(Int, fields[columns["plane"]]) : nothing)
+    end
+
+    # A row's plane is the plane it belongs to, not the position it happens to occupy in
+    # the file: a list sorted by label or edited by hand can carry them out of order.
+    for label in labels
+        p = planes[label]
+        all(!isnothing, p) && length(unique(p)) == length(p) || continue
+        positions[label] = positions[label][sortperm(Int.(p))]
     end
 
     count = 0

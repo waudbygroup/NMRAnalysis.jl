@@ -67,10 +67,13 @@ peak deleted between one save and the next would otherwise leave its plot and it
 place, looking like part of the current result.
 """
 function backupfolder(folder::AbstractString)
-    if isdir(folder)
-        previous = rstrip(folder, ['/', '\\']) * "_previous"
-        mv(folder, previous; force=true)
-    end
+    path = rstrip(abspath(folder), ['/', '\\'])
+    cwd = rstrip(abspath(pwd()), ['/', '\\'])
+    # An output-folder box left empty resolves to the working directory itself, and the
+    # move below would take the running session's directory with it.
+    (path == cwd || startswith(cwd, path * "/")) &&
+        throw(ArgumentError("refusing to save into $path: it is, or contains, the working directory"))
+    isdir(folder) && mv(folder, path * "_previous"; force=true)
     mkpath(folder)
     return folder
 end

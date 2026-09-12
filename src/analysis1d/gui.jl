@@ -218,8 +218,9 @@ function gui!(expt::Experiment1D; call=nothing)
     # already defaults to "out" independently (see `preparestate`), so leaving this
     # untouched still saves there
     tout = outputrow[1, 1] = Textbox(fig; width=90, placeholder="out")
+    # An empty box means the default rather than the working directory itself.
     on(tout.stored_string) do s
-        return state[:outputdir][] = s
+        return state[:outputdir][] = isempty(strip(s)) ? "out" : strip(s)
     end
     btnsave = outputrow[1, 2] = Button(fig; label="Save")
     on(btnsave.clicks) do _

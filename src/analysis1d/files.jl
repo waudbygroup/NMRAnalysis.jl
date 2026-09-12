@@ -167,9 +167,10 @@ end
 """
     writeresults!(expt, dataset, results, regions, folder) -> String
 
-Write the whole result set into `folder`: `regionlist.csv` (what was picked),
-`results.csv`, `series.csv`, and one `regions/<label>.csv` per region holding that region's
-own rows of `series.csv`. Returns the path of `results.csv`.
+Write the whole result set into `folder`: `regionlist.csv` (what was picked), `series.csv`,
+`results.csv` where anything is reported per region, and one `regions/<label>.csv` per
+region holding that region's own rows of `series.csv`. Returns the path of the series
+file.
 """
 function writeresults!(expt::Experiment1D, ds::Dataset1D, results, regs,
                        folder::AbstractString)
@@ -181,11 +182,13 @@ function writeresults!(expt::Experiment1D, ds::Dataset1D, results, regs,
     writetable(joinpath(folder, "regionlist.csv"), comments,
                regionlisttable(regs, ds.noisecenter, defaultwidth)...)
 
-    filepath = writetable(joinpath(folder, "results.csv"), comments,
-                          resultstable(expt, results)...)
+    # An experiment that reports nothing per region (kinetics) would get a results.csv of
+    # labels and no values, so it gets none - see docs/src/advanced/conventions.md.
+    isempty(parameternames(results)) ||
+        writetable(joinpath(folder, "results.csv"), comments, resultstable(expt, results)...)
 
     header, rows = seriestable(expt, ds, results)
-    writetable(joinpath(folder, "series.csv"), comments, header, rows)
+    filepath = writetable(joinpath(folder, "series.csv"), comments, header, rows)
 
     # per-region files, beside the per-region plots `saveresults` writes
     labelcol = findfirst(==("label"), header)

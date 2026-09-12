@@ -203,7 +203,7 @@ kinetics experiment, where nothing is fitted, this file *is* the result. For eve
 else it is the decay or buildup the fitted parameters came from, which is what you want if
 you would rather plot or fit it yourself.
 
-Units appear in the column headers in ASCII (`R (s-1)`, `tau_c (ns)`), and an uncertainty
+Units appear in the column headers in ASCII (`R (s-1)`, `tauc (ns)`), and an uncertainty
 column repeats the unit of the value it belongs to. Numbers are written at full precision;
 `summary.txt` is where they are rounded. See
 [Output and Interface Conventions](../../advanced/conventions.md) for the full rules.

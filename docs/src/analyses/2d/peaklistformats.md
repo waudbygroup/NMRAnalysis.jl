@@ -129,14 +129,12 @@ The columns of `results.csv` are:
 | `resnum` | Residue number derived from the label (negative for unassigned peaks) |
 | `resname` | One-letter residue code derived from the label |
 | `atom` | Atom name derived from the label (blank for backbone amides) |
-| `x`, `y` | Fitted chemical shifts (ppm), each with an `_err` uncertainty |
-| `R2x`, `R2y` | Fitted linewidths in the direct/indirect dimensions (s⁻¹) |
 | derived | Experiment-specific results (e.g. `hetnoe`, `R20`, `PRE`, `eta`, `R`) |
 
-Positions and linewidths appear here only where they are properties of the peak.
-In a moving-peak experiment (titrations, peak tracking, RDCs) they vary plane by
-plane, so they are in `series.csv` instead and `results.csv` carries the identity
-and derived columns alone.
+Positions and linewidths are not here. They vary plane by plane, so they are in
+`series.csv` for every experiment, moving or not, and a peak that does not move
+simply repeats its position down the rows. `results.csv` carries the identity and
+derived columns alone, which is the table to plot against residue number.
 
 `series.csv` names the plane's own coordinate rather than indexing columns: a
 relaxation series has a `time (s)` column, a titration a `concentration` column,

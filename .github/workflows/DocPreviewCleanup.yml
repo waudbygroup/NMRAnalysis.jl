@@ -21,13 +21,19 @@ jobs:
         with:
           ref: gh-pages
 
+      # Squashing the branch, as the Documenter template does, keeps gh-pages from growing
+      # a commit per preview. It rewrites history, so it runs only when there is actually a
+      # preview to remove.
       - name: Delete the preview and push
         run: |
+          if [ ! -d "previews/PR$PRNUM" ]; then
+            echo "no preview for PR$PRNUM"
+            exit 0
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          rm -rf "previews/PR$PRNUM"
-          git add -A
-          git diff --staged --quiet || git commit -m "delete preview PR$PRNUM"
+          git rm -rf "previews/PR$PRNUM"
+          git commit -m "delete preview PR$PRNUM"
           git branch gh-pages-new "$(echo "delete history" | git commit-tree HEAD^{tree})"
           git push --force origin gh-pages-new:gh-pages
         env:

@@ -169,7 +169,7 @@ this in GUI2D, normalising against its reference plane before fitting.
 Store each derived quantity **in the unit its label names** (a 90° pulse in µs, τc in ns),
 so one stored number serves both the summary and `results.csv`. Keys are unique across all
 experiments — a symbol means one quantity in one unit everywhere — which is why TRACT's
-cross-correlated rate is `:ηxy` and diffusion's viscosity is `:viscosity`.
+cross-correlated rate is `:etaxy` and diffusion's viscosity is `:viscosity`.
 
 ### 5. Presentation
 

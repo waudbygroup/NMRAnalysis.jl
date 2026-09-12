@@ -114,8 +114,9 @@ function gui!(expt::Experiment)
     outputrow = g[:panelinfo][1, 2] = GridLayout()
     g[:toutput] = Textbox(g[:fig]; width=90, placeholder="out")
     outputrow[1, 1] = g[:toutput]
+    # An empty box means the default rather than the working directory itself.
     on(g[:toutput].stored_string) do s
-        return expt.state[][:outputdir][] = s
+        return expt.state[][:outputdir][] = isempty(strip(s)) ? "out" : strip(s)
     end
     g[:cmdsave] = Button(g[:fig]; label="Save")
     outputrow[1, 2] = g[:cmdsave]

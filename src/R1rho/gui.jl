@@ -231,8 +231,9 @@ function gui!(state)
     text_out = results_panel[3, 2] = Textbox(fig; stored_string="out", width=150,
                                              textpadding=(4, 4, 4, 4))
     gui[:text_out] = text_out
+    # An empty box means the default rather than the working directory itself.
     on(text_out.stored_string) do s
-        return state[:outputdir][] = s
+        return state[:outputdir][] = isempty(strip(s)) ? "out" : strip(s)
     end
     button_save = results_panel[4, 1:2] = Button(fig; label="Save results")
     on(button_save.clicks) do _
